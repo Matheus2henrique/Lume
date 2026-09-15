@@ -1,0 +1,150 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=MedievalSharp&display=swap");
+@import "tailwindcss";
+
+:root {
+  --cor-primaria: #13233c;
+  --cor-primaria-hover: #1f3a62;
+  --cor-primaria-suave: #e5ecf5;
+  --cor-fundo: #ffffff;
+  --cor-fundo-suave: #f7f6f3;
+  --cor-fundo-cartao: #ffffff;
+  --cor-texto: #13233c;
+  --cor-texto-suave: #6b7280;
+  --cor-borda: #e5e7eb;
+  --cor-destaque: #d6336c;
+  --fundo-decorativo: linear-gradient(to right, rgba(196, 173, 137, 0.95), rgba(235, 232, 227, 0.5));
+}
+
+.tema-romance {
+  --cor-primaria: #d6336c;
+  --cor-primaria-hover: #b0275a;
+  --cor-primaria-suave: #ffe4ef;
+  --cor-fundo: #fff7fa;
+  --cor-fundo-suave: #fff0f5;
+  --cor-fundo-cartao: #ffffff;
+  --cor-texto: #4a1d2e;
+  --cor-texto-suave: #a0687f;
+  --cor-borda: #f3d6e0;
+  --cor-destaque: #d6336c;
+  --fundo-decorativo: linear-gradient(135deg, #fff0f5 0%, #ffe4ef 55%, #fecdd3 100%);
+}
+
+.tema-fantasia {
+  --cor-primaria: #2f5d50;
+  --cor-primaria-hover: #264a40;
+  --cor-primaria-suave: #e2efe9;
+  --cor-fundo: linear-gradient(135deg, #f0f6f3 0%, #e3efe8 55%, #d6e8de 100%);
+  --cor-fundo-suave: #e3efe8;
+  --cor-fundo-cartao: #ffffff;
+  --cor-texto: #183a2f;
+  --cor-texto-suave: #4c6f62;
+  --cor-borda: #cfdfd6;
+  --cor-destaque: #2f5d50;
+  --fundo-decorativo: linear-gradient(135deg, #e3efe8 0%, #d6e8de 100%);
+}
+
+.tema-suspense {
+  --cor-primaria: #e11d48;
+  --cor-primaria-hover: #be123c;
+  --cor-primaria-suave: #3b111c;
+  --cor-fundo: #0b0f19;
+  --cor-fundo-suave: #111827;
+  --cor-fundo-cartao: #151c2e;
+  --cor-texto: #e2e8f0;
+  --cor-texto-suave: #94a3b8;
+  --cor-borda: #26304a;
+  --cor-destaque: #e11d48;
+  --fundo-decorativo: linear-gradient(135deg, #0b0f19 0%, #1a2236 60%, #2b1a2a 100%);
+}
+
+body {
+  font-family: Arial, sans-serif;
+}
+
+html {
+  font-size: 90%;
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+footer {
+  border-top: 1px solid var(--cor-borda);
+}
+
+.tema-fantasia footer {
+  border-top-color: #000;
+}
+
+.tema-fantasia footer [class*='divide-x'] > :not(:last-child) {
+  border-color: #000;
+}
+
+.tema-suspense .header-icon-lupa,
+.tema-suspense .header-icon-perfil,
+.tema-suspense .header-icon-carrinho {
+  filter: invert(1);
+}
+
+.tema-suspense .header-icon-heart path {
+  stroke: #e2e8f0;
+}
+
+.fantasy-sidebar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 210px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  pointer-events: none;
+  filter: drop-shadow(0 0 12px rgba(120, 100, 60, 0.18));
+}
+
+.fantasy-sidebar.left {
+  left: 0;
+}
+
+.fantasy-sidebar.right {
+  right: 0;
+}
+
+.fantasy-sidebar-svg {
+  width: auto;
+  height: 100%;
+  display: block;
+}
+
+@media (max-width: 1023px) {
+  .fantasy-sidebar {
+    display: none;
+  }
+}
+
+::selection {
+  background: var(--cor-primaria);
+  color: #fff;
+}
+
+.header-icon {
+  filter: none;
+}
+
+.tema-suspense .header-icon {
+  filter: invert(1);
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
