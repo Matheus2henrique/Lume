@@ -62,7 +62,7 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
                 <img src={produto.imagem} alt={produto.nome} className="w-full h-[320px] md:h-[440px] object-cover" />
                 <span
                   className="absolute bottom-4 right-4 text-white text-xs px-3 py-1.5 rounded-full"
-                  style={{ background: 'var(--cor-primaria)' }}
+                  style={{ background: 'var(--cor-laranja)' }}
                 >
                   {produto.tipo === 'colecionavel' ? 'Colecionável' : 'Decoração avulsa'}
                 </span>
@@ -92,8 +92,8 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
             </div>
 
             <div className="mt-6 flex items-end gap-3">
-              <p className="text-4xl font-bold" style={{ color: 'var(--cor-primaria)' }}>
-                R$ {formatarMoeda(produto.preco)}
+              <p className="text-4xl font-bold" style={{ color: 'var(--cor-laranja-claro)' }}>
+                {formatarMoeda(produto.preco)}
               </p>
               <p className="text-xs mb-2" style={{ color: 'var(--cor-texto-suave)' }}>
                 produção sob demanda
@@ -112,7 +112,7 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
                   onClick={diminuir}
                   disabled={quantidade <= 1}
                   className="w-7 h-7 rounded-full cursor-pointer border-none text-lg font-bold disabled:opacity-40"
-                  style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
+                  style={{ background: 'var(--cor-laranja)', color: '#fff' }}
                 >
                   −
                 </button>
@@ -123,7 +123,7 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
                   onClick={aumentar}
                   disabled={quantidade >= produto.estoque}
                   className="w-7 h-7 rounded-full cursor-pointer border-none text-lg font-bold disabled:opacity-40"
-                  style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
+                  style={{ background: 'var(--cor-laranja)', color: '#fff' }}
                 >
                   +
                 </button>
@@ -168,7 +168,7 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
                 }}
                 disabled={esgotado}
                 className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl text-white text-lg font-medium cursor-pointer transition-all duration-300 hover:scale-[1.02] border-none disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: 'var(--cor-primaria)', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
+                style={{ background: 'var(--cor-laranja)', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
               >
                 {noCarrinho ? <Check className="w-5 h-5" /> : <Carrinho className="w-5 h-5" />}
                 {noCarrinho ? `Adicionado — ${formatarMoeda(precoTotal)}` : 'Comprar agora'}
@@ -178,7 +178,7 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
             {noCarrinho && (
               <p
                 className="mt-3 text-sm py-2 px-4 text-center rounded-lg"
-                style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
+                style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-laranja)' }}
               >
                 Item adicionado ao carrinho com sucesso!
               </p>
@@ -196,7 +196,7 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
                   className="flex items-center gap-3 rounded-xl px-4 py-3"
                   style={{ background: 'var(--cor-fundo-suave)' }}
                 >
-                  <span style={{ color: 'var(--cor-primaria)' }}>{spec.icone}</span>
+                  <span style={{ color: 'var(--cor-laranja-claro)' }}>{spec.icone}</span>
                   <div>
                     <p className="text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
                       {spec.label}

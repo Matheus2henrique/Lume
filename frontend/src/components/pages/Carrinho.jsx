@@ -421,7 +421,7 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
                           </button>
                         </div>
                         <p className="text-sm font-bold whitespace-nowrap" style={{ color: 'var(--cor-primaria)' }}>
-                          R$ {formatarMoeda(p.preco * item.quantidade)}
+                          {formatarMoeda(p.preco * item.quantidade)}
                         </p>
                       </div>
                     </div>

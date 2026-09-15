@@ -30,7 +30,7 @@ function Card({ nome, imagem, preco, estoque, tipo, permiteUpload, onClick, favo
           {permiteUpload && (
             <span
               className="text-xs font-semibold px-3 py-1 rounded-full shadow"
-              style={{ background: 'var(--cor-badge-suave)', color: 'var(--cor-badge-primaria)' }}
+              style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)' }}
             >
               Personalizável
             </span>
@@ -78,7 +78,7 @@ function Card({ nome, imagem, preco, estoque, tipo, permiteUpload, onClick, favo
 
         <div className="mt-3 flex items-center justify-between">
           <p className="text-base font-bold" style={{ color: 'var(--cor-laranja-claro)' }}>
-            R$ {formatarMoeda(preco)}
+            {formatarMoeda(preco)}
           </p>
           <span className="text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
             {estoque} em estoque
