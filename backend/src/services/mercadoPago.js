@@ -14,14 +14,14 @@ export async function criarPreferencia({ pedidoId, total, titulo, cliente }) {
     body: JSON.stringify({
       items: [
         {
-          title: titulo || 'Pedido Locus',
+          title: titulo || 'Pedido Lume',
           quantity: 1,
           unit_price: Number(total),
           currency_id: 'BRL',
         },
       ],
       payer: {
-        name: cliente?.nome || 'Cliente Locus',
+        name: cliente?.nome || 'Cliente Lume',
         email: cliente?.email || '',
       },
       external_reference: String(pedidoId),

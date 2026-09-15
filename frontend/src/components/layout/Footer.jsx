@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { generos } from '../data/produtos'
-import { Check } from './Icones'
+import { generos } from '../../data/produtos'
+import { Check } from '../ui/Icones'
 
-function Footer({ onHome, onSelecionarGenero, onAssinar, onIrParaDestaques }) {
+function Footer({ onHome, onSelecionarGenero, onIrParaDestaques }) {
   const [email, setEmail] = useState('')
   const [inscrito, setInscrito] = useState(false)
 
@@ -19,20 +19,18 @@ function Footer({ onHome, onSelecionarGenero, onAssinar, onIrParaDestaques }) {
       className="mt-auto"
       style={{ background: 'var(--cor-fundo-suave)' }}
     >
-      <div className="max-w-[1400px] mx-auto px-6 py-8 grid grid-cols-2 lg:grid-cols-6 gap-8 lg:divide-x divide-[var(--cor-borda)]">
+      <div className="max-w-[1400px] mx-auto px-6 py-8 grid grid-cols-2 lg:grid-cols-5 gap-8 lg:divide-x divide-[var(--cor-borda)]">
         <div className="order-1 col-span-2 lg:col-span-1">
           <button onClick={onHome} className="border-none bg-transparent cursor-pointer flex items-center">
             <span
               className="flex items-center leading-none"
               style={{ fontFamily: 'Cinzel, Georgia, serif', color: 'var(--cor-texto)' }}
             >
-              <span className="font-bold" style={{ fontSize: '36px' }}>L</span>
-              <img src={`${import.meta.env.BASE_URL}logo.jpeg`} alt="" className="h-9 w-9 rounded-full object-cover mx-0.5" />
-              <span className="font-bold" style={{ fontSize: '36px' }}>cus</span>
+              <img src={`${import.meta.env.BASE_URL}nome.jpeg`} alt="" className="h-9 w-9 rounded-full object-cover mx-0.5" />
             </span>
           </button>
           <p className="mt-4 text-sm leading-relaxed" style={{ color: 'var(--cor-texto-suave)' }}>
-            Para quem vive dentro dos livros. Decorações, colecionáveis e o Clube Locus.
+            Para quem vive dentro dos livros. Decorações e colecionáveis.
           </p>
         </div>
 
@@ -45,7 +43,7 @@ function Footer({ onHome, onSelecionarGenero, onAssinar, onIrParaDestaques }) {
               <li key={genero.id}>
                 <button
                   onClick={() => onSelecionarGenero(genero.id)}
-                  className="bg-transparent border-none cursor-pointer text-sm "
+                  className="bg-transparent border-none cursor-pointer text-sm"
                   style={{ color: 'var(--cor-texto-suave)' }}
                 >
                   {genero.nome}
@@ -55,35 +53,11 @@ function Footer({ onHome, onSelecionarGenero, onAssinar, onIrParaDestaques }) {
           </ul>
         </div>
 
-        <div className="order-4 lg:order-3">
-          <h4 className="text-sm font-semibold mb-4 uppercase tracking-wider" style={{ color: 'var(--cor-texto)' }}>
-            Ajuda
-          </h4>
-          <ul className="flex flex-col gap-3 list-none">
-            {['Perguntas frequentes', 'Trocas e devoluções', 'Política de privacidade'].map((ajuda) => (
-              <li key={ajuda}>
-                <a href="#" className="text-sm " style={{ color: 'var(--cor-texto-suave)' }}>
-                  {ajuda}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
+        <div className="order-3">
           <h4 className="text-sm font-semibold mb-4 uppercase tracking-wider" style={{ color: 'var(--cor-texto)' }}>
             Navegue
           </h4>
           <ul className="flex flex-col gap-3 list-none">
-            <li>
-              <button
-                onClick={onAssinar}
-                className="bg-transparent border-none cursor-pointer text-sm text-left"
-                style={{ color: 'var(--cor-texto-suave)' }}
-              >
-                Clube Locus
-              </button>
-            </li>
             <li>
               <button onClick={onIrParaDestaques} className="bg-transparent border-none cursor-pointer text-sm text-left" style={{ color: 'var(--cor-texto-suave)' }}>
                 Produtos em Destaque
@@ -92,14 +66,14 @@ function Footer({ onHome, onSelecionarGenero, onAssinar, onIrParaDestaques }) {
           </ul>
         </div>
 
-        <div className="order-3 lg:order-4">
+        <div className="order-4">
           <h4 className="text-sm font-semibold mb-4 uppercase tracking-wider" style={{ color: 'var(--cor-texto)' }}>
             Ajuda
           </h4>
           <ul className="flex flex-col gap-3 list-none">
             {['Perguntas frequentes', 'Trocas e devoluções', 'Política de privacidade'].map((ajuda) => (
               <li key={ajuda}>
-                <a href="#" className="text-sm " style={{ color: 'var(--cor-texto-suave)' }}>
+                <a href="#" className="text-sm" style={{ color: 'var(--cor-texto-suave)' }}>
                   {ajuda}
                 </a>
               </li>
@@ -112,13 +86,13 @@ function Footer({ onHome, onSelecionarGenero, onAssinar, onIrParaDestaques }) {
             Contato
           </h4>
           <ul className="flex flex-col gap-3 text-sm list-none" style={{ color: 'var(--cor-texto-suave)' }}>
-            <li>ola@clube-locus.com</li>
+            <li>ola@lume.com</li>
             <li>(11) 99999-9999</li>
             <li>Atendemos todo o Brasil</li>
           </ul>
         </div>
 
-        <div className="order-6 col-span-2 lg:col-span-1">
+        <div className="order-6 col-span-2 lg:col-span-5">
           <h4 className="text-sm font-semibold mb-4" style={{ color: 'var(--cor-texto)' }}>
             Receba novidades e ofertas exclusivas!
           </h4>
@@ -150,14 +124,14 @@ function Footer({ onHome, onSelecionarGenero, onAssinar, onIrParaDestaques }) {
               <button
                 type="submit"
                 className="px-4 py-2 rounded-lg text-white text-sm font-semibold cursor-pointer transition-all duration-300 hover:scale-105 border-none"
-                style={{ background: 'var(--cor-primaria)' }}
+                style={{ background: 'var(--cor-laranja)' }}
               >
                 Enviar
               </button>
             </form>
           )}
           <p className="mt-8 text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
-            © {new Date().getFullYear()} Locus — Clube de leitores. Todos os direitos reservados.
+            © {new Date().getFullYear()} Lume. Todos os direitos reservados.
           </p>
         </div>
       </div>

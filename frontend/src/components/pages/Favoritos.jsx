@@ -1,6 +1,6 @@
-import Card from './Card'
-import Reveal from './Reveal'
-import { SetaEsquerda } from './Icones'
+import Card from '../ui/Card'
+import Reveal from '../ui/Reveal'
+import { SetaEsquerda } from '../ui/Icones'
 
 function Favoritos({ favoritos, onVoltar, onSelecionarProduto, onToggleFavorito }) {
   return (
@@ -9,7 +9,7 @@ function Favoritos({ favoritos, onVoltar, onSelecionarProduto, onToggleFavorito 
         <button
           onClick={onVoltar}
           className="flex items-center gap-2 text-base font-medium cursor-pointer hover:underline border-none bg-transparent"
-          style={{ color: 'var(--cor-primaria)' }}
+          style={{ color: 'var(--cor-laranja-claro)' }}
         >
           <SetaEsquerda className="w-5 h-5" />
           Voltar

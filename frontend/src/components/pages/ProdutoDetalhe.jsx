@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import Card from './Card'
-import Reveal from './Reveal'
-import { generos, produtos } from '../data/produtos'
+import Card from '../ui/Card'
+import Reveal from '../ui/Reveal'
+import { generos, produtos } from '../../data/produtos'
+import { formatarMoeda } from '../../utils/formatar'
 import {
   Estrela,
   Carrinho,
@@ -10,9 +11,9 @@ import {
   Download,
   Relogio,
   Camada,
-} from './Icones'
+} from '../ui/Icones'
 
-function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAssinar, onAdicionarAoCarrinho, noCarrinho, favoritos, onToggleFavorito }) {
+function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho, noCarrinho, favoritos, onToggleFavorito }) {
   const [quantidade, setQuantidade] = useState(1)
   const [arquivo, setArquivo] = useState(null)
 
@@ -43,7 +44,7 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAssinar, onAdiciona
         <button
           onClick={onVoltar}
           className="flex items-center gap-2 text-base font-medium cursor-pointer hover:underline border-none bg-transparent"
-          style={{ color: 'var(--cor-primaria)' }}
+          style={{ color: 'var(--cor-laranja-claro)' }}
         >
           <SetaEsquerda className="w-5 h-5" />
           Voltar para {genero?.nome}
@@ -92,7 +93,7 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAssinar, onAdiciona
 
             <div className="mt-6 flex items-end gap-3">
               <p className="text-4xl font-bold" style={{ color: 'var(--cor-primaria)' }}>
-                R$ {produto.preco.toFixed(2).replace('.', ',')}
+                R$ {formatarMoeda(produto.preco)}
               </p>
               <p className="text-xs mb-2" style={{ color: 'var(--cor-texto-suave)' }}>
                 produção sob demanda
@@ -170,14 +171,7 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAssinar, onAdiciona
                 style={{ background: 'var(--cor-primaria)', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
               >
                 {noCarrinho ? <Check className="w-5 h-5" /> : <Carrinho className="w-5 h-5" />}
-                {noCarrinho ? `Adicionado — R$ ${precoTotal.toFixed(2).replace('.', ',')}` : 'Comprar agora'}
-              </button>
-              <button
-                onClick={onAssinar}
-                className="px-6 py-3.5 rounded-xl text-lg font-medium cursor-pointer transition-all duration-300 border-none"
-                style={{ background: 'var(--cor-fundo-cartao)', color: 'var(--cor-primaria)', border: '2px solid var(--cor-primaria)' }}
-              >
-                Assinar
+                {noCarrinho ? `Adicionado — ${formatarMoeda(precoTotal)}` : 'Comprar agora'}
               </button>
             </div>
 

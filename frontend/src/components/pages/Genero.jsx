@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import Card from './Card'
-import Reveal from './Reveal'
-import { produtos } from '../data/produtos'
-import { Check } from './Icones'
-import bannerRomance from '../assets/banner-romance.jpeg'
-import bannerFantasia from '../assets/banner-fantasia.jpeg'
-import bannerSuspense from '../assets/banner-suspense.jpeg'
+import Card from '../ui/Card'
+import Reveal from '../ui/Reveal'
+import { produtos } from '../../data/produtos'
+import bannerRomance from '../../assets/banner-romance.jpeg'
+import bannerFantasia from '../../assets/banner-fantasia.jpeg'
+import bannerSuspense from '../../assets/banner-suspense.jpeg'
 
 const FILTROS = [
   { id: 'todos', nome: 'Todas as peças' },
@@ -13,7 +12,7 @@ const FILTROS = [
   { id: 'colecionavel', nome: 'Colecionáveis' },
 ]
 
-function Genero({ genero, onSelecionarProduto, onAssinar, favoritos, onToggleFavorito }) {
+function Genero({ genero, onSelecionarProduto, favoritos, onToggleFavorito }) {
   const [filtroTipo, setFiltroTipo] = useState('todos')
 
   const produtosDoGenero = produtos.filter((p) => p.genero === genero.id)
@@ -26,7 +25,7 @@ function Genero({ genero, onSelecionarProduto, onAssinar, favoritos, onToggleFav
     {
       id: 'decoracao',
       titulo: 'Decorações avulsas',
-      descricao: 'Peças únicas para decorar a sua estante, mesa ou casa — sem compromisso com assinatura.',
+      descricao: 'Peças únicas para decorar a sua estante, mesa ou casa.',
       icone: '🪄',
       acao: () => {
         setFiltroTipo('decoracao')
@@ -42,13 +41,6 @@ function Genero({ genero, onSelecionarProduto, onAssinar, favoritos, onToggleFav
         setFiltroTipo('colecionavel')
         document.getElementById('vitrine')?.scrollIntoView({ behavior: 'smooth' })
       },
-    },
-    {
-      id: 'clube',
-      titulo: 'Faça parte do Clube Locus',
-      descricao: 'Receba peças exclusivas todos os meses com tema do seu gênero favorito — ou de todos eles.',
-      icone: '📚',
-      acao: onAssinar,
     },
   ]
 
@@ -82,7 +74,7 @@ function Genero({ genero, onSelecionarProduto, onAssinar, favoritos, onToggleFav
         )}
         <div className="relative z-10">
           
-          <h1 className="text-5xl md:text-6xl font-[Georgia,serif]" style={{ color: imagemFundo ? '#fff' : 'var(--cor-texto)' }}>
+          <h1 className="text-5xl md:text-6xl font-[Georgia,serif]" style={{ color: imagemFundo ? 'var(--cor-texto)' : 'var(--cor-texto)' }}>
             Universo {genero.nome}
           </h1>
           <p className="mt-4 text-xl max-w-[620px] mx-auto" style={{ color: imagemFundo ? 'rgba(255,255,255,0.92)' : 'var(--cor-texto-suave)' }}>
@@ -112,14 +104,6 @@ function Genero({ genero, onSelecionarProduto, onAssinar, favoritos, onToggleFav
               <p className="mt-2 text-sm leading-relaxed flex-1" style={{ color: 'var(--cor-texto-suave)' }}>
                 {opcao.descricao}
               </p>
-              {opcao.id === 'clube' && (
-                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium"
-                  style={{ color: 'var(--cor-primaria)' }}
-                >
-                  <Check className="w-4 h-4" />
-                    Benefícios exclusivos
-                  </span>
-              )}
               </button>
             </Reveal>
           ))}
@@ -135,7 +119,7 @@ function Genero({ genero, onSelecionarProduto, onAssinar, favoritos, onToggleFav
           Compre quando quiser, sem precisar assinar. Descrição, quantidade e personalização em cada peça.
         </p>
 
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <div className="mt-8 flex flex-wrap justify-center gap-3 filtro-botoes">
           {FILTROS.map((filtro) => (
             <button
               key={filtro.id}
@@ -147,8 +131,8 @@ function Genero({ genero, onSelecionarProduto, onAssinar, favoritos, onToggleFav
               }`}
               style={
                 filtroTipo === filtro.id
-                  ? { background: 'var(--cor-primaria)', borderColor: 'var(--cor-primaria)' }
-                  : { background: 'var(--cor-fundo-suave)', color: 'var(--cor-texto)', borderColor: 'var(--cor-borda)' }
+                  ? { background: 'var(--cor-filtro-primaria)', borderColor: 'var(--cor-filtro-primaria)' }
+                  : { background: 'var(--cor-filtro-suave)', color: 'var(--cor-filtro-texto)', borderColor: 'var(--cor-filtro-borda)' }
               }
             >
               {filtro.nome}

@@ -106,8 +106,6 @@ Depois de adicionar o mundo no `produtos.js`, ele aparece sozinho em:
 - **Header** (`Header.jsx`) — links de navegação (percorre `generos`)
 - **Página inicial** (`Entrada.jsx`) — cards dos mundos
 - **Footer** (`Footer.jsx`) — coluna "Universos"
-- **Clube Locus** (`ClubeLocus.jsx`) — seletor de mundo na assinatura
-- **Plano de assinatura** — preço (R$ 39,90) e fluxo são genéricos
 
 ---
 

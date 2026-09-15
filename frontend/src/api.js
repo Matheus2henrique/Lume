@@ -1,6 +1,6 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
-const CHAVE_TOKEN = 'locus_token'
-const CHAVE_USUARIO = 'locus_usuario'
+const CHAVE_TOKEN = 'lume_token'
+const CHAVE_USUARIO = 'lume_usuario'
 
 export function salvarSessao({ token, usuario }) {
   localStorage.setItem(CHAVE_TOKEN, token)
@@ -73,5 +73,4 @@ export const api = {
 
   criarPedido: (dados) => requisicao('/pedidos', { metodo: 'POST', corpo: dados }),
   criarPreferencia: (dados) => requisicao('/pagamentos/preferencia', { metodo: 'POST', corpo: dados }),
-  criarAssinatura: (dados) => requisicao('/assinaturas', { metodo: 'POST', corpo: dados, autenticado: true }),
 }

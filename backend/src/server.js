@@ -5,7 +5,6 @@ import pedidosRouter from './routes/pedidos.js'
 import authRouter from './routes/auth.js'
 import produtosRouter from './routes/produtos.js'
 import favoritosRouter from './routes/favoritos.js'
-import assinaturasRouter from './routes/assinaturas.js'
 import pagamentosRouter from './routes/pagamentos.js'
 
 dotenv.config()
@@ -21,14 +20,13 @@ app.use(
 app.use(express.json())
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, servico: 'locus-backend' })
+  res.json({ ok: true, servico: 'lume-backend' })
 })
 
 app.use('/api/pedidos', pedidosRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/produtos', produtosRouter)
 app.use('/api/favoritos', favoritosRouter)
-app.use('/api/assinaturas', assinaturasRouter)
 app.use('/api/pagamentos', pagamentosRouter)
 
 app.use((_req, res) => {
@@ -41,5 +39,5 @@ app.use((err, _req, res, _next) => {
 })
 
 app.listen(porta, () => {
-  console.log(`Locus backend rodando em http://localhost:${porta}`)
+  console.log(`Lume backend rodando em http://localhost:${porta}`)
 })

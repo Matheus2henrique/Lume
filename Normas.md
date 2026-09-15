@@ -1,4 +1,4 @@
-# Normas e Guia de Configuração — Locus
+# Normas e Guia de Configuração — Lume
 
 Este documento reúne as normas do projeto e os passos para configurar a **API do Mercado Pago** e o **banco de dados PostgreSQL**.
 
@@ -32,14 +32,14 @@ DB_HOST=localhost        # host do banco
 DB_PORT=5432             # porta padrão do PostgreSQL
 DB_USER=postgres         # usuário
 DB_PASSWORD=SUA_SENHA    # senha
-DB_NAME=locus            # nome do banco
+DB_NAME=lume            # nome do banco
 ```
 
 **Passos para criar o banco** (o schema não cria o banco, apenas as tabelas):
 
 ```bash
 # com o psql (ajuste o caminho conforme a instalação do Windows)
-"C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -c "CREATE DATABASE locus;"
+"C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -c "CREATE DATABASE lume;"
 ```
 
 > Regra: **nunca** commit o `backend/.env`. Ele já está no `.gitignore`. Sempre use o `backend/.env.example` como modelo e documente novas variáveis ali.
@@ -53,7 +53,6 @@ DB_NAME=locus            # nome do banco
 | `produtos` | Catálogo | `preco NUMERIC`, `estoque INTEGER`, `permite_upload BOOLEAN` |
 | `pedidos` | Pedidos/checkout | `itens JSONB`, `pagamento JSONB`, `status` |
 | `favoritos` | Favoritos por usuário | PK `(usuario_id, produto_id)`, `ON DELETE CASCADE` |
-| `assinaturas` | Clube Locus | `mundos JSONB`, `status` (`ativa`/`cancelada`) |
 
 **Convenções** (seguir sempre ao evoluir o schema):
 
@@ -81,11 +80,11 @@ Ao adicionar uma tabela/coluna nova: edite `src/schema.sql` e rode `npm run migr
 - **Operações atômicas** (ex.: baixar estoque + marcar pedido pago) usam **transações** (`BEGIN` / `COMMIT` / `ROLLBACK`) — veja `src/routes/pedidos.js` e `src/routes/pagamentos.js`.
 - **Backup** do banco:
   ```bash
-  "C:\Program Files\PostgreSQL\17\bin\pg_dump.exe" -U postgres locus > backup_locus.sql
+  "C:\Program Files\PostgreSQL\17\bin\pg_dump.exe" -U postgres lume > backup_lume.sql
   ```
 - **Restore**:
   ```bash
-  "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -d locus -f backup_locus.sql
+  "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -d lume -f backup_lume.sql
   ```
 
 ---
@@ -98,7 +97,7 @@ O Mercado Pago é a plataforma de pagamentos do Mercado Livre e aceita **Pix, ca
 
 1. Entre em [mercadopago.com.br/developers](https://www.mercadopago.com.br/developers) com sua conta (ou crie uma conta Mercado Pago).
 2. No menu **Suas integrações → Configurações** (ou "Minhas integrações"), clique em **Criar aplicação**.
-3. Preencha nome e descrição da aplicação (ex.: "Locus Checkout").
+3. Preencha nome e descrição da aplicação (ex.: "Lume Checkout").
 4. Com a aplicação criada, abra **Credenciais de produção**.
 5. Copie o campo **Access Token** — ele começa com `APP_USR-...`.
 
@@ -130,7 +129,7 @@ Regras:
 
 - `MP_ACCESS_TOKEN` **vazio** = checkout **simulado** (não cobra; baixa o estoque na hora). É o comportamento padrão.
 - `MP_ACCESS_TOKEN` preenchido = checkout **real**: o pedido nasce `pendente`, o cliente é enviado ao Mercado Pago e o estoque só é baixado quando o pagamento é confirmado pelo webhook.
-- `BACKEND_URL` precisa ser uma URL que o Mercado Pago consiga acessar (pública). Em produção é o domínio da API (ex.: `https://api.locus.com.br`); em desenvolvimento use um túnel **ngrok** (§2.5).
+- `BACKEND_URL` precisa ser uma URL que o Mercado Pago consiga acessar (pública). Em produção é o domínio da API (ex.: `https://api.lume.com.br`); em desenvolvimento use um túnel **ngrok** (§2.5).
 
 ### 2.4 Como o pagamento funciona no código
 

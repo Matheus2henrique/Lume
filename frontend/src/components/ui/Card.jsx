@@ -1,3 +1,5 @@
+import { formatarMoeda } from '../../utils/formatar'
+
 function Card({ nome, imagem, preco, estoque, tipo, permiteUpload, onClick, favorito = false, onToggleFavorito }) {
   const tipoLabel = tipo === 'colecionavel' ? 'Colecionável' : 'Decoração'
   const poucoEstoque = estoque <= 5
@@ -5,7 +7,7 @@ function Card({ nome, imagem, preco, estoque, tipo, permiteUpload, onClick, favo
   return (
     <div
       onClick={onClick}
-      className="group rounded-[18px] overflow-hidden text-left transition-all duration-700 ease-in-out cursor-pointer hover:-translate-y-1"
+      className="group rounded-[18px] overflow-hidden text-left transition-all duration-700 ease-in-out cursor-pointer hover:-translate-y-1 card-badges"
       style={{
         background: 'var(--cor-fundo-cartao)',
         border: '1px solid var(--cor-borda)',
@@ -21,14 +23,14 @@ function Card({ nome, imagem, preco, estoque, tipo, permiteUpload, onClick, favo
         <div className="absolute top-3 left-3 flex gap-2">
           <span
             className="text-xs font-semibold px-3 py-1 rounded-full shadow"
-            style={{ background: 'var(--cor-primaria)', color: '#fff' }}
+            style={{ background: 'var(--cor-badge-primaria)', color: '#fff' }}
           >
             {tipoLabel}
           </span>
           {permiteUpload && (
             <span
               className="text-xs font-semibold px-3 py-1 rounded-full shadow"
-              style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
+              style={{ background: 'var(--cor-badge-suave)', color: 'var(--cor-badge-primaria)' }}
             >
               Personalizável
             </span>
@@ -36,7 +38,7 @@ function Card({ nome, imagem, preco, estoque, tipo, permiteUpload, onClick, favo
           {poucoEstoque && (
             <span
               className="text-xs font-semibold px-3 py-1 rounded-full shadow"
-              style={{ background: '#ef4444', color: '#fff' }}
+              style={{ background: 'var(--cor-perigo)', color: '#fff' }}
             >
               Poucas unidades
             </span>
@@ -75,8 +77,8 @@ function Card({ nome, imagem, preco, estoque, tipo, permiteUpload, onClick, favo
         </h3>
 
         <div className="mt-3 flex items-center justify-between">
-          <p className="text-base font-bold" style={{ color: 'var(--cor-primaria)' }}>
-            R$ {preco.toFixed(2).replace('.', ',')}
+          <p className="text-base font-bold" style={{ color: 'var(--cor-laranja-claro)' }}>
+            R$ {formatarMoeda(preco)}
           </p>
           <span className="text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
             {estoque} em estoque
@@ -89,7 +91,7 @@ function Card({ nome, imagem, preco, estoque, tipo, permiteUpload, onClick, favo
             onClick()
           }}
           className="mt-4 w-full py-2 rounded-lg text-white cursor-pointer transition-colors duration-300 border-none"
-          style={{ background: 'var(--cor-primaria)' }}
+          style={{ background: 'var(--cor-laranja)' }}
         >
           Ver detalhes
         </button>

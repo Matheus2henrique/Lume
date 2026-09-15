@@ -13,7 +13,7 @@ Desde 24/09/2025 o Google exige 2SV/MFA para acessar o Google Cloud.
 
 Acesse: https://console.cloud.google.com/projectselector2/apis/credentials?pli=1&supportedpurview=project
 
-1. Defina um **Nome do projeto** (ex.: `locus-login`).
+1. Defina um **Nome do projeto** (ex.: `lume-login`).
 2. O **ID do projeto** é gerado automaticamente (não pode mudar depois).
 3. Em "Recurso pai", deixe "Nenhuma organização" (se aplicável).
 4. Clique em **Criar** e aguarde.

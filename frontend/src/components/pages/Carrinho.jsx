@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Carrinho } from './Icones'
-import { api } from '../api'
+import { api } from '../../api'
+import { formatarMoeda } from '../../utils/formatar'
 
 const estiloInput = {
   borderColor: 'var(--cor-borda)',
@@ -60,7 +60,7 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
         const preferencia = await api.criarPreferencia({
           pedidoId: criado.id,
           total: criado.total,
-          titulo: `Pedido Locus #${criado.id}`,
+          titulo: `Pedido Lume #${criado.id}`,
           cliente,
         })
         window.location.href = preferencia.init_point
@@ -82,15 +82,9 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onFechar} />
 
       <div
-        className="absolute right-0 top-0 h-full w-full max-w-[430px] flex flex-col shadow-2xl animate-[slideIn_0.3s_ease-out]"
+        className="absolute right-0 top-0 h-full w-full max-w-[430px] flex flex-col shadow-2xl animate-[slideIn_0.3s_ease-out] carrinho-drawer"
         style={{ background: 'var(--cor-fundo-cartao)' }}
       >
-        <style>{`
-          @keyframes slideIn {
-            from { transform: translateX(100%); }
-            to { transform: translateX(0); }
-          }
-        `}</style>
 
         <div
           className="flex items-center justify-between px-6 py-5 border-b"
@@ -98,10 +92,14 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
         >
           <div className="flex items-center gap-3">
             <span
-              className="w-10 h-10 rounded-full flex items-center justify-center"
+              className="w-12 h-12 rounded-full flex items-center justify-center"
               style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
             >
-              <Carrinho className="w-5 h-5" />
+              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                <circle cx="9" cy="21" r="1" fill="currentColor" />
+                <circle cx="20" cy="21" r="1" fill="currentColor" />
+              </svg>
             </span>
             <div>
               <h2 className="text-xl font-[Georgia,serif] leading-tight" style={{ color: 'var(--cor-texto)' }}>
@@ -154,7 +152,7 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
             </h3>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--cor-texto-suave)' }}>
               Recebemos seu pedido no valor de{' '}
-              <strong style={{ color: 'var(--cor-primaria)' }}>R$ {Number(pedido?.total || 0).toFixed(2).replace('.', ',')}</strong>.
+              <strong style={{ color: 'var(--cor-primaria)' }}>{formatarMoeda(pedido?.total || 0)}</strong>.
               <br />
               Produzimos sob demanda e enviamos para todo o Brasil.
             </p>
@@ -168,12 +166,16 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
           </div>
         ) : itens.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
-            <span
-              className="w-20 h-20 rounded-full flex items-center justify-center"
-              style={{ background: 'var(--cor-fundo-suave)' }}
+          <span
+              className="w-30 h-30 rounded-full flex items-center justify-center"
+              style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
             >
-              <Carrinho className="w-9 h-9" style={{ color: 'var(--cor-texto-suave)' }} />
-            </span>
+              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                <circle cx="9" cy="21" r="1" fill="currentColor" />
+                <circle cx="20" cy="21" r="1" fill="currentColor" />
+              </svg>
+          </span>
             <h3 className="text-lg font-semibold" style={{ color: 'var(--cor-texto)' }}>
               Seu carrinho está vazio
             </h3>
@@ -318,7 +320,7 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
               )}
 
               {erro && (
-                <p className="text-sm" style={{ color: '#e11d48' }}>
+                <p className="text-sm" style={{ color: 'var(--cor-perigo)' }}>
                   {erro}
                 </p>
               )}
@@ -333,7 +335,7 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
                   Total ({totalItens} {totalItens === 1 ? 'item' : 'itens'})
                 </span>
                 <span className="text-2xl font-bold" style={{ color: 'var(--cor-texto)' }}>
-                  R$ {total.toFixed(2).replace('.', ',')}
+                  {formatarMoeda(total)}
                 </span>
               </div>
               <button
@@ -383,7 +385,7 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
                         <button
                           onClick={() => onRemover(p.id)}
                           className="bg-transparent border-none cursor-pointer text-xs hover:underline shrink-0 flex items-center gap-1.5"
-                          style={{ color: '#ef4444' }}
+                          style={{ color: 'var(--cor-perigo)' }}
                           aria-label={`Remover ${p.nome}`}
                         >
                           <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden="true">
@@ -419,7 +421,7 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
                           </button>
                         </div>
                         <p className="text-sm font-bold whitespace-nowrap" style={{ color: 'var(--cor-primaria)' }}>
-                          R$ {(p.preco * item.quantidade).toFixed(2).replace('.', ',')}
+                          R$ {formatarMoeda(p.preco * item.quantidade)}
                         </p>
                       </div>
                     </div>
@@ -437,7 +439,7 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
                   Subtotal ({totalItens} {totalItens === 1 ? 'item' : 'itens'})
                 </span>
                 <span className="text-2xl font-bold" style={{ color: 'var(--cor-texto)' }}>
-                  R$ {total.toFixed(2).replace('.', ',')}
+                  {formatarMoeda(total)}
                 </span>
               </div>
               <button

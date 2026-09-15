@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { api, obterToken, obterUsuario, salvarSessao, limparSessao } from '../api'
+import { api, obterToken, obterUsuario, salvarSessao, limparSessao } from '../../api'
 
 // Crie um Client ID OAuth no Google Cloud Console
 // (APIs e serviços > Credenciais > Criar credenciais > ID do cliente OAuth > App da Web)
@@ -155,7 +155,7 @@ function Perfil({ onVoltar }) {
             Olá, {usuario.nome || 'leitor(a)'}!
           </h2>
           <p className="text-center mb-8" style={{ color: 'var(--cor-texto-suave)' }}>
-            Sua conta Locus (dados vindos do banco de dados).
+            Sua conta Lume (dados vindos do banco de dados).
           </p>
 
           <div className="rounded-2xl p-6 flex flex-col gap-4" style={{ background: 'var(--cor-fundo-cartao)', border: '1px solid var(--cor-borda)' }}>
@@ -205,8 +205,8 @@ function Perfil({ onVoltar }) {
         </h2>
         <p className="text-center mb-8" style={{ color: 'var(--cor-texto-suave)' }}>
           {modo === 'login'
-            ? 'Acesse sua conta Locus para continuar.'
-            : 'Crie sua conta e faça parte do Clube Locus.'}
+            ? 'Acesse sua conta Lume para continuar.'
+            : 'Crie sua conta para começar a comprar.'}
         </p>
 
         {sucesso && (
@@ -249,7 +249,7 @@ function Perfil({ onVoltar }) {
             </div>
 
             {erro && (
-              <p className="text-sm" style={{ color: '#e11d48' }}>
+              <p className="text-sm" style={{ color: 'var(--cor-perigo)' }}>
                 {erro}
               </p>
             )}
@@ -318,7 +318,7 @@ function Perfil({ onVoltar }) {
             </div>
 
             {erro && (
-              <p className="text-sm" style={{ color: '#e11d48' }}>
+              <p className="text-sm" style={{ color: 'var(--cor-perigo)' }}>
                 {erro}
               </p>
             )}

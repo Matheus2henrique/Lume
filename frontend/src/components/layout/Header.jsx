@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { generos } from '../data/produtos'
+import { generos } from '../../data/produtos'
 
-function Header({ generoId, onSelecionarGenero, onHome, onAssinar, onMostrarPerfil, totalCarrinho = 0, onMostrarCarrinho, totalFavoritos = 0, onMostrarFavoritos }) {
+function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCarrinho = 0, onMostrarCarrinho, totalFavoritos = 0, onMostrarFavoritos }) {
   const [menuAberto, setMenuAberto] = useState(false)
   const [buscando, setBuscando] = useState(false)
   const [busca, setBusca] = useState('')
@@ -44,7 +44,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onAssinar, onMostrarPerf
 
   return (
     <header
-      className="h-[64px] md:h-[90px] border-b fixed top-0 left-0 right-0 z-40"
+      className="h-[64px] md:h-[90px] border-b fixed top-0 left-0 right-0 z-40 header-tema"
       style={{
         background: 'var(--cor-fundo-cartao)',
         borderColor: 'var(--cor-borda)',
@@ -54,19 +54,17 @@ function Header({ generoId, onSelecionarGenero, onHome, onAssinar, onMostrarPerf
         <button
           onClick={onHome}
           className="border-none bg-transparent cursor-pointer flex items-center shrink-0"
-          aria-label="Locus — início"
+          aria-label="Lume — início"
         >
           <span
             className="flex items-center leading-none"
             style={{ fontFamily: 'Cinzel, Georgia, serif', color: 'var(--cor-texto)' }}
           >
-            <span className="font-bold" style={{ fontSize: 'clamp(28px, 5vw, 44px)' }}>L</span>
             <img
-              src={`${import.meta.env.BASE_URL}logo.jpeg`}
+              src={`${import.meta.env.BASE_URL}nome.jpeg`}
               alt=""
-              className="h-9 w-9 md:h-11 md:w-11 rounded-full object-cover mx-0.5"
+              className="h-15 w-15 md:h-24 md:w-24 rounded-full object-cover mx-0.5"
             />
-            <span className="font-bold" style={{ fontSize: 'clamp(28px, 5vw, 44px)' }}>cus</span>
           </span>
         </button>
 
@@ -87,15 +85,6 @@ function Header({ generoId, onSelecionarGenero, onHome, onAssinar, onMostrarPerf
                 </button>
               </li>
             ))}
-            <li>
-              <button
-                onClick={onAssinar}
-                className="px-4 py-2 rounded-full text-sm font-medium text-white cursor-pointer transition-transform duration-200 hover:scale-105 border-none"
-                style={{ background: 'var(--cor-primaria)' }}
-              >
-                Clube Locus
-              </button>
-            </li>
           </ul>
         </nav>
 
@@ -106,12 +95,12 @@ function Header({ generoId, onSelecionarGenero, onHome, onAssinar, onMostrarPerf
             aria-label="Buscar universos"
             aria-expanded={buscando}
           >
-            <img
-              className="header-icon-lupa w-7 h-7 md:w-8 md:h-8"
-              src="https://cdn-icons-png.flaticon.com/256/64/64673.png"
-              alt="Buscar"
-            />
+            <svg viewBox="0 0 24 24" className="header-icon-lupa w-7 h-7 md:w-8 md:h-8" fill="none" stroke="var(--cor-texto)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
           </button>
+
           <button
             className="relative bg-transparent border-none p-0 cursor-pointer"
             onClick={onMostrarFavoritos}
@@ -126,7 +115,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onAssinar, onMostrarPerf
               ) : (
                 <path
                   d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-fill="none"
+                  fill="none"
                   stroke="var(--cor-texto)"
                   strokeWidth="2"
                 />
@@ -141,23 +130,27 @@ fill="none"
               </span>
             )}
           </button>
+
           <button
             className="bg-transparent border-none p-0 cursor-pointer"
             onClick={onMostrarPerfil}
             aria-label="Perfil"
           >
-<img className="header-icon-perfil w-7 h-7 md:w-8 md:h-8" src="https://cdn-icons-png.flaticon.com/512/3106/3106921.png" alt="Perfil" />
+            <svg viewBox="0 0 24 24" className="header-icon-perfil w-7 h-7 md:w-8 md:h-8" fill="none" stroke="var(--cor-texto)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
           </button>
           <button
             className="relative bg-transparent border-none p-0 cursor-pointer"
             onClick={onMostrarCarrinho}
             aria-label="Carrinho"
           >
-            <img
-className="header-icon-carrinho w-7 h-7 md:w-8 md:h-8"
-              src="https://cdn-icons-png.flaticon.com/512/4202/4202388.png"
-              alt="Carrinho"
-            />
+            <svg viewBox="0 0 24 24" className="header-icon-carrinho w-7 h-7 md:w-8 md:h-8" fill="none" stroke="var(--cor-texto)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+              <circle cx="9" cy="21" r="1" fill="var(--cor-texto)" />
+              <circle cx="20" cy="21" r="1" fill="var(--cor-texto)" />
+            </svg>
             {totalCarrinho > 0 && (
               <span
                 className="absolute -top-2 -right-2 min-w-[20px] h-[20px] px-1 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
@@ -199,7 +192,10 @@ className="header-icon-carrinho w-7 h-7 md:w-8 md:h-8"
               className="flex items-center gap-2 rounded-xl border px-3"
               style={{ borderColor: 'var(--cor-borda)', background: 'var(--cor-fundo-suave)' }}
             >
-              <img className="header-icon-lupa w-5 h-5" src="https://cdn-icons-png.flaticon.com/256/64/64673.png" alt="" />
+              <svg className="header-icon-lupa w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="var(--cor-texto)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
               <input
                 autoFocus
                 type="text"
@@ -255,12 +251,6 @@ className="header-icon-carrinho w-7 h-7 md:w-8 md:h-8"
             className="absolute left-0 top-0 h-full w-[82%] max-w-[340px] flex flex-col shadow-2xl animate-[slideInLeft_0.3s_ease-out]"
             style={{ background: 'var(--cor-fundo-cartao)' }}
           >
-            <style>{`
-              @keyframes slideInLeft {
-                from { transform: translateX(-100%); }
-                to { transform: translateX(0); }
-              }
-            `}</style>
 
             <div
               className="flex items-center justify-between px-5 py-4 border-b"
@@ -301,15 +291,6 @@ className="header-icon-carrinho w-7 h-7 md:w-8 md:h-8"
                   </button>
                 </li>
               ))}
-              <li>
-                <button
-                  onClick={() => navegar(onAssinar)}
-                  className="mt-3 w-full py-3.5 rounded-xl text-white text-base font-medium cursor-pointer border-none"
-                  style={{ background: 'var(--cor-primaria)' }}
-                >
-                  Clube Locus
-                </button>
-              </li>
             </ul>
           </div>
         </div>

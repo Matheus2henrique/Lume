@@ -1,4 +1,4 @@
-# Locus — Loja de Impressão 3D (MVP)
+# Lume — Loja de Impressão 3D (MVP)
 
 **Loja virtual (MVP) de peças impressas em 3D sob demanda.** Catálogo por universos (Romance, Fantasia e Suspense), página de detalhes do produto, carrinho, checkout com pagamento (simulado ou Mercado Pago), favoritos e área de perfil com autenticação.
 
@@ -70,7 +70,6 @@ MVP-grafica/
 │           ├── Carrinho.jsx     # Carrinho + checkout
 │           ├── Perfil.jsx       # Login / registro / dados da conta
 │           ├── Favoritos.jsx
-│           ├── ClubeLocus.jsx   # Assinatura (planos)
 │           ├── Footer.jsx
 │           └── Icones.jsx
 ├── backend/                     # API Express + PostgreSQL
@@ -92,7 +91,6 @@ MVP-grafica/
 │           ├── produtos.js      # catálogo
 │           ├── favoritos.js     # favoritos por usuário
 │           ├── pedidos.js       # checkout com pagamento + estoque
-│           ├── assinaturas.js   # Clube Locus
 │           └── pagamentos.js    # preferência + webhook do Mercado Pago
 └── package-lock.json
 ```
@@ -122,7 +120,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=SUA_SENHA
-DB_NAME=locus
+DB_NAME=lume
 ```
 
 **b) Instale as dependências, crie as tabelas e popule os produtos:**
@@ -130,7 +128,7 @@ DB_NAME=locus
 ```bash
 cd backend
 npm install
-npm run migrate   # cria as tabelas (usuarios, clientes, produtos, pedidos, favoritos, assinaturas)
+npm run migrate   # cria as tabelas (usuarios, clientes, produtos, pedidos, favoritos)
 npm run seed      # insere os 18 produtos do catálogo
 ```
 
@@ -177,8 +175,6 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 | `GET` | `/api/pagamentos/status` | Informa se o gateway está ativo | — |
 | `POST` | `/api/pagamentos/preferencia` | Cria o checkout no Mercado Pago | — |
 | `POST` | `/api/pagamentos/webhook` | Confirma o pagamento (webhook do MP) | — |
-| `POST` | `/api/assinaturas` | Ativa assinatura do Clube Locus | Token |
-| `GET` | `/api/assinaturas` | Lista assinaturas do usuário | Token |
 
 ## 📜 Scripts
 
@@ -214,15 +210,13 @@ Consulte **[Normas.md](./Normas.md)** para:
 - [x] Autenticação e cadastro de usuários
 - [x] Favoritos persistidos por usuário
 - [x] Checkout com pagamento e baixa de estoque
-- [x] Assinaturas do Clube Locus (API)
 - [x] Estrutura do gateway Mercado Pago (preferência + webhook)
 - [ ] Ativar gateway com credenciais reais do Mercado Pago
 - [ ] Validar assinatura do webhook (`x-signature`)
-- [ ] Integrar assinatura na tela do Clube Locus
 - [ ] Consumir `/api/produtos` no frontend (hoje o catálogo usa mock)
 - [ ] Upload de modelos customizados pelos usuários
 - [ ] Login com Google no backend
 
 ## 📄 Licença
 
-Este projeto é privado e de uso exclusivo da **Gráfica 3D Store**. Todos os direitos reservados.
+Este projeto é privado e de uso exclusivo da **Lume**. Todos os direitos reservados.

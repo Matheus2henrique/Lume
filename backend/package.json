@@ -1,9 +1,9 @@
 {
-  "name": "locus-backend",
+  "name": "lume-backend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Backend da loja Locus (pedidos, clientes e autenticação)",
+  "description": "Backend da loja Lume (pedidos, clientes e autenticação)",
   "main": "src/server.js",
   "scripts": {
     "dev": "node --watch src/server.js",
