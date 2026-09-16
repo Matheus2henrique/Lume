@@ -10,8 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
-  },
+"deploy": "cd dist && git init && git checkout -b gh-pages && git add -A && git commit -m \"deploy: update github pages\" && git remote add origin https://github.com/Matheus2henrique/Lume.git && git push -u origin gh-pages --force"  },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",
     "react": "^19.2.6",

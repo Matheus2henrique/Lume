@@ -25,7 +25,6 @@
 
 .card-badges {
   --cor-badge-primaria: #925b2c;
-  --cor-badge-suave: #1a120a;
 }
 
 .header-tema {
@@ -39,7 +38,6 @@
 
 .carrinho-drawer {
   --cor-primaria: #d67f33;
-  --cor-primaria-hover: #c06e28;
   --cor-primaria-suave: #2a1a0a;
   --cor-fundo: #0b0805;
   --cor-fundo-suave: #11100a;

@@ -224,7 +224,6 @@ function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleF
             {destaque.map((produto, i) => (
               <Reveal key={produto.id} delay={i * 90}>
                 <Card
-                  id={produto.id}
                   nome={produto.nome}
                   imagem={produto.imagem}
                   preco={produto.preco}

@@ -243,7 +243,6 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
             {relacionados.map((p, i) => (
               <Reveal key={p.id} delay={i * 90}>
                 <Card
-                  id={p.id}
                   nome={p.nome}
                   imagem={p.imagem}
                   preco={p.preco}

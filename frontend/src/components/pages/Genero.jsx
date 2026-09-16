@@ -143,9 +143,8 @@ function Genero({ genero, onSelecionarProduto, favoritos, onToggleFavorito }) {
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {produtosFiltrados.map((produto, i) => (
             <Reveal key={produto.id} delay={i * 90}>
-              <Card
-                id={produto.id}
-                nome={produto.nome}
+                <Card
+                  nome={produto.nome}
                 imagem={produto.imagem}
                 preco={produto.preco}
                 estoque={produto.estoque}
