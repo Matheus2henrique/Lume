@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import pool from '../db.js'
 import { autenticar } from '../middleware/auth.js'
+import { limiterAuth } from '../middleware/rateLimiter.js'
+import logger from '../logger.js'
 
 const router = Router()
 
@@ -16,7 +18,7 @@ function publico(usuario) {
   return { id: usuario.id, nome: usuario.nome, email: usuario.email, provedor: usuario.provedor }
 }
 
-router.post('/registrar', async (req, res) => {
+router.post('/registrar', limiterAuth, async (req, res) => {
   const { nome, email, senha } = req.body || {}
 
   if (!email || !email.includes('@')) {
@@ -35,17 +37,18 @@ router.post('/registrar', async (req, res) => {
       [nome?.trim() || '', email, senhaHash]
     )
     const usuario = resultado.rows[0]
+    logger.info({ userId: usuario.id }, 'Novo usuário registrado')
     res.status(201).json({ usuario: publico(usuario), token: tokenPara(usuario) })
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ erro: 'Já existe uma conta com este e-mail.' })
     }
-    console.error(err)
+    logger.error({ err }, 'Erro ao registrar usuário')
     res.status(500).json({ erro: 'Não foi possível criar a conta.' })
   }
 })
 
-router.post('/login', async (req, res) => {
+router.post('/login', limiterAuth, async (req, res) => {
   const { email, senha } = req.body || {}
 
   if (!email || !senha) {
@@ -58,9 +61,10 @@ router.post('/login', async (req, res) => {
     if (!usuario || !bcrypt.compareSync(String(senha), usuario.senha_hash)) {
       return res.status(401).json({ erro: 'E-mail ou senha incorretos.' })
     }
+    logger.info({ userId: usuario.id }, 'Login realizado')
     res.json({ usuario: publico(usuario), token: tokenPara(usuario) })
   } catch (err) {
-    console.error(err)
+    logger.error({ err }, 'Erro ao fazer login')
     res.status(500).json({ erro: 'Não foi possível entrar.' })
   }
 })

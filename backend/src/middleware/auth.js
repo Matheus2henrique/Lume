@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import pool from '../db.js'
+import logger from '../logger.js'
 
 export async function autenticar(req, res, next) {
   const auth = req.headers.authorization

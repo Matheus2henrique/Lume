@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import pool from '../db.js'
 import { autenticar } from '../middleware/auth.js'
+import logger from '../logger.js'
 
 const router = Router()
 
@@ -18,7 +19,7 @@ router.get('/', async (req, res) => {
     )
     res.json(rows)
   } catch (err) {
-    console.error(err)
+    logger.error({ err }, 'Erro ao listar favoritos')
     res.status(500).json({ erro: 'Não foi possível listar os favoritos.' })
   }
 })
@@ -37,7 +38,7 @@ router.post('/:produtoId', async (req, res) => {
     )
     res.status(201).json({ mensagem: 'Produto adicionado aos favoritos.' })
   } catch (err) {
-    console.error(err)
+    logger.error({ err }, 'Erro ao adicionar favorito')
     res.status(500).json({ erro: 'Não foi possível adicionar aos favoritos.' })
   }
 })
@@ -51,7 +52,7 @@ router.delete('/:produtoId', async (req, res) => {
     )
     res.json({ mensagem: 'Produto removido dos favoritos.' })
   } catch (err) {
-    console.error(err)
+    logger.error({ err }, 'Erro ao remover favorito')
     res.status(500).json({ erro: 'Não foi possível remover dos favoritos.' })
   }
 })

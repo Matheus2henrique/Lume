@@ -71,4 +71,5 @@ export const api = {
 
   criarPedido: (dados) => requisicao('/pedidos', { metodo: 'POST', corpo: dados }),
   criarPreferencia: (dados) => requisicao('/pagamentos/preferencia', { metodo: 'POST', corpo: dados }),
+  newsletter: (email) => requisicao('/newsletter', { metodo: 'POST', corpo: { email } }),
 }

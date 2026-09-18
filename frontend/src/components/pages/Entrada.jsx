@@ -2,18 +2,26 @@ import { useState } from 'react'
 import Card from '../ui/Card'
 import Reveal from '../ui/Reveal'
 import { generos, produtos } from '../../data/produtos'
+import { api } from '../../api'
+import bannerFantasia from '../../assets/banner-fantasia.jpeg'
+import bannerRomance from '../../assets/banner-romance.jpeg'
+import bannerSuspense from '../../assets/banner-suspense.jpeg'
 
 function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleFavorito }) {
-  const [lampadaLigada, setLampadaLigada] = useState(false)
+  const [newsletterEmail, setNewsletterEmail] = useState('')
+  const [newsletterEnviado, setNewsletterEnviado] = useState(false)
+  const [newsletterErro, setNewsletterErro] = useState('')
   const destaque = [1, 11, 15, 9]
     .map((id) => produtos.find((p) => p.id === id))
     .filter(Boolean)
 
   return (
     <section>
-      <div className="min-h-[380px] md:min-h-[420px] flex items-center justify-between px-5 md:px-6 lg:pl-[calc((100vw-1200px)/2+1.5rem)] lg:pr-[calc((100vw-1200px)/2+1.5rem)]"
-        style={{ background: 'var(--fundo-decorativo)' }}
+      <div className="min-h-[380px] md:min-h-[420px] flex items-center justify-between px-5 md:px-6 lg:pl-[calc((100vw-1200px)/2+1.5rem)] lg:pr-[calc((100vw-1200px)/2+1.5rem)] relative overflow-hidden"
+        style={{ background: '#0a0a0a' }}
       >
+        <div className="absolute top-1/2 left-[20%] -translate-y-1/2 w-[500px] h-[300px] rounded-full opacity-30 blur-[120px]" style={{ background: 'var(--cor-laranja)' }} />
+        <div className="absolute top-1/2 left-[35%] -translate-y-1/2 w-[250px] h-[200px] rounded-full opacity-15 blur-[80px]" style={{ background: 'var(--cor-laranja-claro)' }} />
         <div>
           <span
             className="tracking-[8px] text-xs md:text-sm text-left"
@@ -39,8 +47,7 @@ function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleF
         </div>
         <div className="hidden lg:block flex-shrink-0 -mr-[-110px]" style={{ animation: 'aparecer 0.7s ease-out 0.56s both' }}>
           <svg viewBox="0 0 300 340" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
-            className="w-[220px] h-auto cursor-pointer select-none"
-            onClick={() => setLampadaLigada(!lampadaLigada)}
+            className="w-[220px] h-auto"
           >
             <defs>
               <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -62,26 +69,9 @@ function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleF
               </radialGradient>
             </defs>
 
-            {/* Halo de luz - aparece ao ligar */}
-            <circle cx="150" cy="90" r="90"
-              fill="url(#haloLuz)"
-              style={{
-                opacity: lampadaLigada ? 1 : 0,
-                transition: 'opacity 0.6s ease-in-out',
-              }}
-            />
+            <circle cx="150" cy="90" r="90" fill="url(#haloLuz)" opacity="0" />
 
-            {/* Linhas de brilho - aparecem ao ligar */}
-            <g style={{ opacity: lampadaLigada ? 1 : 0, transition: 'opacity 0.5s ease-in-out 0.1s' }}>
-              <line x1="150" y1="14" x2="150" y2="28" stroke="#FDE68A" strokeWidth="2.5" filter="url(#glow)" />
-              <line x1="112" y1="26" x2="120" y2="38" stroke="#FDE68A" strokeWidth="2.5" filter="url(#glow)" />
-              <line x1="188" y1="26" x2="180" y2="38" stroke="#FDE68A" strokeWidth="2.5" filter="url(#glow)" />
-              <line x1="96" y1="60" x2="110" y2="60" stroke="#FDE68A" strokeWidth="2.5" filter="url(#glow)" />
-              <line x1="204" y1="60" x2="190" y2="60" stroke="#FDE68A" strokeWidth="2.5" filter="url(#glow)" />
-            </g>
-
-            {/* Linhas de brilho - desligadas */}
-            <g style={{ opacity: lampadaLigada ? 0 : 1, transition: 'opacity 0.3s ease-in-out' }}>
+            <g>
               <line x1="150" y1="14" x2="150" y2="28" stroke="#E8A93B" strokeWidth="1.6" />
               <line x1="112" y1="26" x2="120" y2="38" stroke="#E8A93B" strokeWidth="1.6" />
               <line x1="188" y1="26" x2="180" y2="38" stroke="#E8A93B" strokeWidth="1.6" />
@@ -89,50 +79,35 @@ function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleF
               <line x1="204" y1="60" x2="190" y2="60" stroke="#E8A93B" strokeWidth="1.6" />
             </g>
 
-            {/* Bulbo da lâmpada - preenchimento de luz */}
             <path d="M150 40C130 40 114 56 114 76c0 15 9 24 15 30 4 4 6 7 6 11h30c0-4 2-7 6-11 6-6 15-15 15-30 0-20-16-36-36-36z"
-              fill={lampadaLigada ? 'url(#luzGradiente)' : 'none'}
-              stroke={lampadaLigada ? '#FDE68A' : '#E8A93B'}
-              strokeWidth={lampadaLigada ? '2.2' : '1.8'}
-              filter={lampadaLigada ? 'url(#glow)' : 'none'}
-              style={{ transition: 'all 0.5s ease-in-out' }}
+              fill="none"
+              stroke="#E8A93B"
+              strokeWidth="1.8"
             />
 
-            {/* Letra L */}
             <text x="150" y="90" textAnchor="middle" fontFamily="Space Grotesk" fontSize="26"
-              fill={lampadaLigada ? '#FDE68A' : '#F5F4EF'}
-              fontWeight="600"
-              style={{ transition: 'fill 0.5s ease-in-out' }}
+              fill="#F5F4EF" fontWeight="600"
             >L</text>
 
-            {/* Base da lâmpada */}
-            <g style={{ transition: 'opacity 0.4s ease-in-out' }}>
+            <g>
               <line x1="129" y1="117" x2="171" y2="117" stroke="#F5F4EF" strokeWidth="1.6" />
               <path d="M133 117 L133 128 L167 128 L167 117" stroke="#F5F4EF" strokeWidth="1.6" fill="none" />
               <path d="M142 128 L142 140 L158 140 L158 128" stroke="#F5F4EF" strokeWidth="1.4" fill="none" />
               <path d="M148 140 L148 150" stroke="#F5F4EF" strokeWidth="1.4" />
             </g>
 
-            {/* Cristal / power indicator */}
             <polygon points="150,152 156,158 150,164 144,158"
-              fill={lampadaLigada ? '#FDE68A' : '#E8A93B'}
-              fillOpacity={lampadaLigada ? '0.8' : '0.25'}
-              stroke={lampadaLigada ? '#FDE68A' : '#E8A93B'}
-              strokeWidth="1.4"
-              filter={lampadaLigada ? 'url(#glow)' : 'none'}
-              style={{ transition: 'all 0.4s ease-in-out' }}
+              fill="#E8A93B" fillOpacity="0.25"
+              stroke="#E8A93B" strokeWidth="1.4"
             />
 
-            {/* Mesa / prateleira */}
             <polygon points="90,190 210,190 170,250 50,250"
-              stroke="#F5F4EF" strokeOpacity={lampadaLigada ? '0.55' : '0.35'}
+              stroke="#F5F4EF" strokeOpacity="0.35"
               strokeWidth="1.4" fill="none"
-              style={{ transition: 'stroke-opacity 0.5s ease-in-out' }}
             />
             <polygon points="105,205 195,205 165,238 75,238"
-              stroke="#F5F4EF" strokeOpacity={lampadaLigada ? '0.7' : '0.5'}
+              stroke="#F5F4EF" strokeOpacity="0.5"
               strokeWidth="1.4" fill="none"
-              style={{ transition: 'stroke-opacity 0.5s ease-in-out' }}
             />
           </svg>
         </div>
@@ -202,6 +177,76 @@ function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleF
           ))}
         </div>
 
+        <div className="py-24 px-6 lg:px-12" style={{ background: 'linear-gradient(to bottom, transparent, var(--cor-fundo))' }}>
+          <div className="max-w-7xl mx-auto">
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              <div className="order-2 lg:order-1">
+                <div className="relative">
+                  <div className="absolute -inset-4 rounded-3xl blur-2xl opacity-20" style={{ background: 'linear-gradient(to right, var(--cor-laranja), transparent)' }} />
+                  <div className="relative grid grid-cols-3 gap-3">
+                    <div className="col-span-2 aspect-video rounded-2xl overflow-hidden" style={{ border: '1px solid var(--cor-borda)' }}>
+                      <img src={bannerFantasia} alt="Fantasia" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="aspect-square rounded-2xl overflow-hidden" style={{ border: '1px solid var(--cor-borda)' }}>
+                      <img src={bannerRomance} alt="Romance" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="aspect-square rounded-2xl overflow-hidden" style={{ border: '1px solid var(--cor-borda)' }}>
+                      <img src={bannerSuspense} alt="Suspense" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="col-span-2 aspect-video rounded-2xl overflow-hidden" style={{ border: '1px solid var(--cor-borda)' }}>
+                      <img src={bannerFantasia} alt="Fantasia" className="w-full h-full object-cover" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="order-1 lg:order-2 space-y-8">
+                <span className="inline-block px-4 py-2 rounded-full text-xs tracking-widest uppercase" style={{ background: 'color-mix(in srgb, var(--cor-laranja) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--cor-laranja) 30%, transparent)', color: 'var(--cor-laranja)' }}>
+                  Por que Lume 3D
+                </span>
+                <h2 className="font-[Georgia,serif] text-3xl md:text-4xl lg:text-5xl" style={{ color: 'var(--cor-texto)' }}>
+                  Feito com carinho, pensado para durar
+                </h2>
+                <div className="space-y-6">
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--cor-laranja) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--cor-laranja) 30%, transparent)' }}>
+                      <svg className="w-6 h-6" style={{ color: 'var(--cor-laranja)' }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-1" style={{ color: 'var(--cor-texto)' }}>Impressão 3D de alta qualidade</h3>
+                      <p className="text-sm" style={{ color: 'var(--cor-texto-suave)' }}>Cada peça é impressa com precisão e acabamento profissional.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--cor-laranja) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--cor-laranja) 30%, transparent)' }}>
+                      <svg className="w-6 h-6" style={{ color: 'var(--cor-laranja)' }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-1" style={{ color: 'var(--cor-texto)' }}>Design exclusivo para leitores</h3>
+                      <p className="text-sm" style={{ color: 'var(--cor-texto-suave)' }}>Criações únicas inspiradas nos universos literários que você ama.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--cor-laranja) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--cor-laranja) 30%, transparent)' }}>
+                      <svg className="w-6 h-6" style={{ color: 'var(--cor-laranja)' }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-1" style={{ color: 'var(--cor-texto)' }}>Envio para todo o Brasil</h3>
+                      <p className="text-sm" style={{ color: 'var(--cor-texto-suave)' }}>Entrega segura e rastreável, do pedido até a sua porta.</p>
+                    </div>
+                  </div>
+                </div>
+            </div>
+            
+          </div>
+          </div>
+        </div>
+
         <div id="destaques" className="mt-[100px]">
           <div className="flex items-end justify-between">
             <div>
@@ -240,6 +285,119 @@ function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleF
         </div>
 
       </div>
+
+      <div className="py-20 px-6 md:px-12" style={{ borderTop: '1px solid var(--cor-borda)' }}>
+        <div
+          className="max-w-7xl mx-auto rounded-3xl p-8 md:p-14 shadow-2xl relative overflow-hidden"
+          style={{ background: 'linear-gradient(to right, var(--cor-fundo), var(--cor-borda), var(--cor-fundo))', border: '1px solid var(--cor-borda)' }}
+        >
+          <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-10" style={{ background: 'var(--cor-laranja)' }} />
+          <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full opacity-5" style={{ background: 'var(--cor-laranja)' }} />
+          <div className="relative z-10 grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--cor-laranja)' }}>
+                Comunidade de Leitores
+              </span>
+              <h2 className="font-[Georgia,serif] text-3xl md:text-4xl mt-2 mb-4" style={{ color: 'var(--cor-texto)' }}>
+                Receba novidades e ofertas exclusivas
+              </h2>
+              <p className="text-sm md:text-base mb-8 leading-relaxed" style={{ color: 'var(--cor-texto-suave)' }}>
+                Cadastre-se para ser o primeiro a saber quando novos universos literários forem lançados na Lume 3D.
+              </p>
+              {newsletterEnviado ? (
+                <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--cor-laranja)' }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Inscrição confirmada!
+                </div>
+              ) : (
+                <form className="flex flex-col sm:flex-row gap-3 max-w-lg" onSubmit={async (e) => {
+                  e.preventDefault()
+                  setNewsletterErro('')
+                  try {
+                    await api.newsletter(newsletterEmail)
+                    setNewsletterEnviado(true)
+                    setNewsletterEmail('')
+                  } catch (err) {
+                    setNewsletterErro(err.message)
+                  }
+                }}>
+                  <input
+                    type="email"
+                    placeholder="Seu melhor e-mail"
+                    className="flex-1 px-4 py-3.5 rounded-lg text-sm focus:outline-none focus:border-[var(--cor-laranja)]"
+                    style={{ background: 'var(--cor-fundo)', border: '1px solid var(--cor-borda)', color: 'var(--cor-texto)' }}
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="px-8 py-3.5 font-semibold text-sm rounded-lg transition-colors whitespace-nowrap shadow-md hover:opacity-90"
+                    style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)' }}
+                  >
+                    Enviar
+                  </button>
+                  {newsletterErro && (
+                    <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{newsletterErro}</p>
+                  )}
+                </form>
+              )}
+            </div>
+            <div className="hidden lg:flex justify-center">
+              <svg viewBox="0 0 300 340" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+                className="w-[200px] h-auto"
+              >
+                <defs>
+                  <filter id="glow2" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="12" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                  <radialGradient id="luzGradiente2" cx="50%" cy="30%" r="60%">
+                    <stop offset="0%" stopColor="#FDE68A" stopOpacity="0.9" />
+                    <stop offset="60%" stopColor="#F59E0B" stopOpacity="0.4" />
+                    <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
+                  </radialGradient>
+                  <radialGradient id="haloLuz2" cx="50%" cy="35%" r="50%">
+                    <stop offset="0%" stopColor="#FDE68A" stopOpacity="0.5" />
+                    <stop offset="50%" stopColor="#F59E0B" stopOpacity="0.15" />
+                    <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
+                  </radialGradient>
+                </defs>
+                <circle cx="150" cy="90" r="90" fill="url(#haloLuz2)" />
+                <g>
+                  <line x1="150" y1="14" x2="150" y2="28" stroke="#FDE68A" strokeWidth="2.5" filter="url(#glow2)" />
+                  <line x1="112" y1="26" x2="120" y2="38" stroke="#FDE68A" strokeWidth="2.5" filter="url(#glow2)" />
+                  <line x1="188" y1="26" x2="180" y2="38" stroke="#FDE68A" strokeWidth="2.5" filter="url(#glow2)" />
+                  <line x1="96" y1="60" x2="110" y2="60" stroke="#FDE68A" strokeWidth="2.5" filter="url(#glow2)" />
+                  <line x1="204" y1="60" x2="190" y2="60" stroke="#FDE68A" strokeWidth="2.5" filter="url(#glow2)" />
+                </g>
+                <path d="M150 40C130 40 114 56 114 76c0 15 9 24 15 30 4 4 6 7 6 11h30c0-4 2-7 6-11 6-6 15-15 15-30 0-20-16-36-36-36z"
+                  fill="url(#luzGradiente2)" stroke="#FDE68A" strokeWidth="2.2" filter="url(#glow2)" />
+                <text x="150" y="90" textAnchor="middle" fontFamily="Space Grotesk" fontSize="26"
+                  fill="#FDE68A" fontWeight="600">L</text>
+                <g>
+                  <line x1="129" y1="117" x2="171" y2="117" stroke="#F5F4EF" strokeWidth="1.6" />
+                  <path d="M133 117 L133 128 L167 128 L167 117" stroke="#F5F4EF" strokeWidth="1.6" fill="none" />
+                  <path d="M142 128 L142 140 L158 140 L158 128" stroke="#F5F4EF" strokeWidth="1.4" fill="none" />
+                  <path d="M148 140 L148 150" stroke="#F5F4EF" strokeWidth="1.4" />
+                </g>
+                <polygon points="150,152 156,158 150,164 144,158"
+                  fill="#FDE68A" fillOpacity="0.8" stroke="#FDE68A" strokeWidth="1.4" filter="url(#glow2)" />
+                <polygon points="90,190 210,190 170,250 50,250"
+                  stroke="#F5F4EF" strokeOpacity="0.55" strokeWidth="1.4" fill="none" />
+                <polygon points="105,205 195,205 165,238 75,238"
+                  stroke="#F5F4EF" strokeOpacity="0.7" strokeWidth="1.4" fill="none" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </section>
   )
 }

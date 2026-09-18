@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import pool from '../db.js'
+import logger from '../logger.js'
 
 const router = Router()
 
@@ -8,7 +9,7 @@ router.get('/', async (_req, res) => {
     const { rows } = await pool.query('SELECT * FROM produtos ORDER BY id')
     res.json(rows)
   } catch (err) {
-    console.error(err)
+    logger.error({ err }, 'Erro ao listar produtos')
     res.status(500).json({ erro: 'Não foi possível listar os produtos.' })
   }
 })
@@ -21,7 +22,7 @@ router.get('/:id', async (req, res) => {
     }
     res.json(rows[0])
   } catch (err) {
-    console.error(err)
+    logger.error({ err }, 'Erro ao buscar produto')
     res.status(500).json({ erro: 'Não foi possível buscar o produto.' })
   }
 })

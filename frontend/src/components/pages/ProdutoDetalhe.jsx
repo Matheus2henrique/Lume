@@ -234,12 +234,12 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
             <button
               onClick={onVoltar}
               className="text-sm underline cursor-pointer border-none bg-transparent"
-              style={{ color: 'var(--cor-primaria)' }}
+              style={{ color: 'var(--cor-laranja-claro)' }}
             >
               Ver todas
             </button>
           </div>
-          <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-[30px]">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[30px]">
             {relacionados.map((p, i) => (
               <Reveal key={p.id} delay={i * 90}>
                 <Card

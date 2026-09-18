@@ -1,16 +1,22 @@
 import { useState } from 'react'
 import { generos } from '../../data/produtos'
 import { Check } from '../ui/Icones'
+import { api } from '../../api'
 
 function Footer({ onHome, onSelecionarGenero, onIrParaDestaques }) {
   const [email, setEmail] = useState('')
   const [inscrito, setInscrito] = useState(false)
+  const [erro, setErro] = useState('')
 
-  function handleNewsletter(e) {
+  async function handleNewsletter(e) {
     e.preventDefault()
-    if (email.trim() && email.includes('@')) {
+    setErro('')
+    try {
+      await api.newsletter(email)
       setInscrito(true)
       setEmail('')
+    } catch (err) {
+      setErro(err.message)
     }
   }
 
@@ -105,30 +111,33 @@ function Footer({ onHome, onSelecionarGenero, onIrParaDestaques }) {
               Inscrição confirmada!
             </div>
           ) : (
-            <form onSubmit={handleNewsletter} className="flex gap-2">
-              <input
-                type="email"
-                required
-                placeholder="Seu email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 min-w-0 rounded-lg px-3 py-2 text-sm outline-none border transition-all"
-                style={{
-                  background: 'var(--cor-fundo-cartao)',
-                  color: 'var(--cor-texto)',
-                  borderColor: 'var(--cor-borda)',
-                }}
-                onFocus={(e) => (e.target.style.borderColor = 'var(--cor-primaria)')}
-                onBlur={(e) => (e.target.style.borderColor = 'var(--cor-borda)')}
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-lg text-white text-sm font-semibold cursor-pointer transition-all duration-300 hover:scale-105 border-none"
-                style={{ background: 'var(--cor-laranja)' }}
-              >
-                Enviar
-              </button>
-            </form>
+            <>
+              <form onSubmit={handleNewsletter} className="flex gap-2">
+                <input
+                  type="email"
+                  required
+                  placeholder="Seu email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="flex-1 min-w-0 rounded-lg px-3 py-2 text-sm outline-none border transition-all"
+                  style={{
+                    background: 'var(--cor-fundo-cartao)',
+                    color: 'var(--cor-texto)',
+                    borderColor: 'var(--cor-borda)',
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--cor-primaria)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'var(--cor-borda)')}
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg text-white text-sm font-semibold cursor-pointer transition-all duration-300 hover:scale-105 border-none"
+                  style={{ background: 'var(--cor-laranja)' }}
+                >
+                  Enviar
+                </button>
+              </form>
+              {erro && <p className="text-xs mt-2" style={{ color: '#ef4444' }}>{erro}</p>}
+            </>
           )}
           <p className="mt-8 text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
             © {new Date().getFullYear()} Lume. Todos os direitos reservados.

@@ -220,3 +220,8 @@ Consulte **[Normas.md](./Normas.md)** para:
 ## 📄 Licença
 
 Este projeto é privado e de uso exclusivo da **Lume**. Todos os direitos reservados.
+
+
+Copy-Item -Recurse -Force "C:\Users\token\AppData\Local\Temp\backend-install\node_modules" "D:\projeto_camiseta\Site-Impressao3D\backend\node_modules"
+cd backend
+npm test

@@ -55,3 +55,9 @@ CREATE INDEX IF NOT EXISTS idx_pedidos_usuario ON pedidos (usuario_id);
 CREATE INDEX IF NOT EXISTS idx_pedidos_cliente ON pedidos (cliente_id);
 CREATE INDEX IF NOT EXISTS idx_favoritos_produto ON favoritos (produto_id);
 CREATE INDEX IF NOT EXISTS idx_produtos_genero ON produtos (genero);
+
+CREATE TABLE IF NOT EXISTS newsletter (
+  id SERIAL PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);

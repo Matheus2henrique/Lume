@@ -1,21 +1,20 @@
 import pg from 'pg'
-import dotenv from 'dotenv'
-
-dotenv.config()
+import env from './env.js'
+import logger from './logger.js'
 
 pg.types.setTypeParser(1700, (valor) => Number(valor))
 
 const pool = new pg.Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT || 5432),
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_NAME || 'lume',
+  host: env.DB_HOST,
+  port: env.DB_PORT,
+  user: env.DB_USER,
+  password: env.DB_PASSWORD,
+  database: env.DB_NAME,
   max: 10,
 })
 
 pool.on('error', (err) => {
-  console.error('Erro inesperado no pool do PostgreSQL:', err.message)
+  logger.error({ err }, 'Erro inesperado no pool do PostgreSQL')
 })
 
 export default pool

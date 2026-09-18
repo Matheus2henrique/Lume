@@ -2,6 +2,7 @@ import { Router } from 'express'
 import pool from '../db.js'
 import { autenticar } from '../middleware/auth.js'
 import { gatewayConfigurado } from '../services/mercadoPago.js'
+import logger from '../logger.js'
 
 const router = Router()
 
@@ -99,19 +100,21 @@ router.post('/', async (req, res) => {
       ]
     )
 
-    // Sem gateway, o pagamento é simulado: baixa o estoque na hora.
     if (!gatewayAtivo) {
-      for (const item of itens) {
-        await client.query('UPDATE produtos SET estoque = estoque - $1 WHERE id = $2', [
-          item.quantidade,
-          item.produtoId || item.produto.id,
-        ])
-      }
+      const idsEstoque = itens.map((item) => item.produtoId || item.produto.id)
+      const qtdsEstoque = itens.map((item) => item.quantidade)
+      await client.query(
+        `UPDATE produtos SET estoque = estoque - v.qtd
+         FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qtd) AS v
+         WHERE produtos.id = v.id`,
+        [idsEstoque, qtdsEstoque]
+      )
     }
 
     await client.query('COMMIT')
 
     const pedido = pedidos[0]
+    logger.info({ pedidoId: pedido.id, total, status, usuarioId }, 'Pedido criado')
     res.status(201).json({
       id: pedido.id,
       total: Number(pedido.total),
@@ -123,7 +126,7 @@ router.post('/', async (req, res) => {
     })
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})
-    console.error(err)
+    logger.error({ err }, 'Erro ao criar pedido')
     res.status(500).json({ erro: 'Não foi possível concluir o pedido.' })
   } finally {
     client.release()
@@ -138,7 +141,7 @@ router.get('/', autenticar, async (req, res) => {
     )
     res.json(rows)
   } catch (err) {
-    console.error(err)
+    logger.error({ err }, 'Erro ao listar pedidos')
     res.status(500).json({ erro: 'Não foi possível listar os pedidos.' })
   }
 })
