@@ -11,7 +11,7 @@ import { generos, produtos } from './data/produtos'
 import { api, obterToken } from './api'
 import { normalizarProduto } from './utils/formatar'
 
-const BASE = '/lume'
+const BASE = '/Lume'
 
 function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, mostrarFavoritos }) {
   if (mostrarPerfil) return `${BASE}/login`
