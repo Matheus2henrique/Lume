@@ -1,39 +1,57 @@
 export const generos = [
   {
-    id: "romance",
-    nome: "Romance",
-    tagline: "Encontros que ficam para sempre no coração.",
+    id: "sensoriais",
+    nome: "Sensoriais",
+    tagline: "Estímulos que despertam os sentidos.",
     descricao:
-      "Peças delicadas que celebram grandes histórias de amor. Presentes pensados para quem vive cada capítulo com emoção.",
+      "Peças pensadas para tocar, sentir e explorar. Texturas, formas e volumes que transformam o contato em experiência.",
     imagem:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShUpIIvldF_e2CicERkNYox_nbvwKSvsa9mN47sEu4WwzF5QnBTPP2tQY&s=10",
   },
   {
-    id: "fantasia",
-    nome: "Fantasia",
-    tagline: "Portais para mundos onde tudo é possível.",
+    id: "articulados",
+    nome: "Articulados",
+    tagline: "Peças que se movem e ganham vida.",
     descricao:
-      "Dragões, castelos e encantamentos impressos em 3D para levar a magia dos livros para dentro da sua casa.",
+      "Figuras e objetos com articulações funcionais. Brinque, pose e explore o movimento em cada peça impressa em 3D.",
     imagem:
       "https://img.magnific.com/fotos-gratis/uma-porta-que-se-estende-para-o-mundo-da-fantasia_23-2151661315.jpg?semt=ais_hybrid&w=740&q=80",
   },
   {
-    id: "suspense",
-    nome: "Suspense",
-    tagline: "Cada detalhe esconde uma pista.",
+    id: "personagens",
+    nome: "Personagens",
+    tagline: "Seus favoritos ganhando forma.",
     descricao:
-      "Peças sombrias e cheias de mistério para os leitores que amam uma boa trama, um crime e a tensão de cada página.",
+      "Figuras colecionáveis e miniaturas dos personagens que você ama. Detalhes feitos com carinho para os fãs mais dedicados.",
     imagem:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQN4tctKkyKUJggyYalKWzUWZDJ6T7QGT8TNBo-CMEimj5ItFqSO0LGmQ0&s=10",
+  },
+  {
+    id: "casa-decoracao",
+    nome: "Casa/Decoração",
+    tagline: "Decorando espaços com personalidade.",
+    descricao:
+      "Peças decorativas para transformar a sua casa. Organizadores, luminárias, suportes e muito estilo impresso em 3D.",
+    imagem:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShUpIIvldF_e2CicERkNYox_nbvwKSvsa9mN47sEu4WwzF5QnBTPP2tQY&s=10",
+  },
+  {
+    id: "faca-voce-mesmo",
+    nome: "Faça Você Mesmo",
+    tagline: "Crie, personalize, seja o autor.",
+    descricao:
+      "Peças com upload personalizado, moldes e kits para você montar e customizar. Seu projeto, o seu jeito.",
+    imagem:
+      "https://img.magnific.com/fotos-gratis/uma-porta-que-se-estende-para-o-mundo-da-fantasia_23-2151661315.jpg?semt=ais_hybrid&w=740&q=80",
   },
 ]
 
 export const produtos = [
-  // ─────────────────────────── ROMANCE ───────────────────────────
+  // ─────────────────────────── SENSORIAIS ───────────────────────────
   {
     id: 1,
     nome: "Porta-retrato Coração de Papel",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "decoracao",
     preco: 29.9,
     estoque: 12,
@@ -46,7 +64,7 @@ export const produtos = [
   {
     id: 2,
     nome: "Marca-páginas Beijo de Pétalas",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "decoracao",
     preco: 19.9,
     estoque: 25,
@@ -59,7 +77,7 @@ export const produtos = [
   {
     id: 3,
     nome: "Suporte de Livros Dois Amantes",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "decoracao",
     preco: 59.9,
     estoque: 8,
@@ -72,7 +90,7 @@ export const produtos = [
   {
     id: 4,
     nome: "Chaveiro Poema de Amor",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "decoracao",
     preco: 24.9,
     estoque: 18,
@@ -85,7 +103,7 @@ export const produtos = [
   {
     id: 5,
     nome: "Colecionável Casal de Capa",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "colecionavel",
     preco: 89.9,
     estoque: 5,
@@ -98,7 +116,7 @@ export const produtos = [
   {
     id: 6,
     nome: "Colecionável Herói do Livro",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "colecionavel",
     preco: 79.9,
     estoque: 6,
@@ -109,11 +127,11 @@ export const produtos = [
       "https://makerworld.bblmw.com/makerworld/model/DSM00000001280560/design/2025-04-03_9216a2734aba5.jpg?x-oss-process=image/resize,w_1000/format,webp",
   },
 
-  // ─────────────────────────── FANTASIA ───────────────────────────
+  // ─────────────────────────── ARTICULADOS ───────────────────────────
   {
     id: 7,
     nome: "Marca-páginas Porta dos Mundos",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "decoracao",
     preco: 19.9,
     estoque: 20,
@@ -126,7 +144,7 @@ export const produtos = [
   {
     id: 8,
     nome: "Suporte Dragão Guardião",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "decoracao",
     preco: 69.9,
     estoque: 7,
@@ -139,7 +157,7 @@ export const produtos = [
   {
     id: 9,
     nome: "Luminária Castelo Encantado",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "decoracao",
     preco: 89.9,
     estoque: 4,
@@ -152,7 +170,7 @@ export const produtos = [
   {
     id: 10,
     nome: "Chaveiro Varinha Mágica",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "decoracao",
     preco: 27.9,
     estoque: 15,
@@ -165,7 +183,7 @@ export const produtos = [
   {
     id: 11,
     nome: "Colecionável Dragão dos Ventos",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "colecionavel",
     preco: 129.9,
     estoque: 3,
@@ -178,7 +196,7 @@ export const produtos = [
   {
     id: 12,
     nome: "Colecionável Elfa das Estrelas",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "colecionavel",
     preco: 109.9,
     estoque: 4,
@@ -189,11 +207,11 @@ export const produtos = [
       "https://makerworld.bblmw.com/makerworld/model/USea5cf9cb2d0057/design/2025-01-23_9d59945f3212d8.jpg?x-oss-process=image/resize,w_1000/format,webp",
   },
 
-  // ─────────────────────────── SUSPENSE ───────────────────────────
+  // ─────────────────────────── PERSONAGENS ───────────────────────────
   {
     id: 13,
     nome: "Marca-páginas Olho do Detetive",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "decoracao",
     preco: 21.9,
     estoque: 22,
@@ -206,7 +224,7 @@ export const produtos = [
   {
     id: 14,
     nome: "Suporte Cofre Mistério",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "decoracao",
     preco: 74.9,
     estoque: 6,
@@ -219,7 +237,7 @@ export const produtos = [
   {
     id: 15,
     nome: "Luminária Lua de Crime",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "decoracao",
     preco: 94.9,
     estoque: 4,
@@ -232,7 +250,7 @@ export const produtos = [
   {
     id: 16,
     nome: "Chaveiro Pegada Escura",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "decoracao",
     preco: 26.9,
     estoque: 14,
@@ -245,7 +263,7 @@ export const produtos = [
   {
     id: 17,
     nome: "Colecionável Detetive Noir",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "colecionavel",
     preco: 139.9,
     estoque: 3,
@@ -258,7 +276,7 @@ export const produtos = [
   {
     id: 18,
     nome: "Colecionável Sombra da Meia-Noite",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "colecionavel",
     preco: 119.9,
     estoque: 4,

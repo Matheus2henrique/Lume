@@ -1,13 +1,9 @@
 import { useState } from 'react'
 import Card from '../ui/Card'
 import Reveal from '../ui/Reveal'
-import { generos, produtos } from '../../data/produtos'
 import { api } from '../../api'
-import bannerFantasia from '../../assets/banner-fantasia.jpeg'
-import bannerRomance from '../../assets/banner-romance.jpeg'
-import bannerSuspense from '../../assets/banner-suspense.jpeg'
 
-function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleFavorito }) {
+function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto }) {
   const [newsletterEmail, setNewsletterEmail] = useState('')
   const [newsletterEnviado, setNewsletterEnviado] = useState(false)
   const [newsletterErro, setNewsletterErro] = useState('')
@@ -121,8 +117,8 @@ function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleF
           Toque em um gênero e entre em uma página com a cara dele.
         </p>
 
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-          {generos.map((genero) => (
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
+          {nichos.map((genero) => (
             <button
               key={genero.id}
               onClick={() => onSelecionarGenero(genero.id)}
@@ -150,7 +146,7 @@ function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleF
         </div>
 
         <div className="mt-16 flex flex-wrap justify-center gap-6 sm:gap-10">
-          {generos.map((genero) => (
+          {nichos.map((genero) => (
             <button
               key={genero.id}
               onClick={() => onSelecionarGenero(genero.id)}
@@ -185,16 +181,16 @@ function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleF
                   <div className="absolute -inset-4 rounded-3xl blur-2xl opacity-20" style={{ background: 'linear-gradient(to right, var(--cor-laranja), transparent)' }} />
                   <div className="relative grid grid-cols-3 gap-3">
                     <div className="col-span-2 aspect-video rounded-2xl overflow-hidden" style={{ border: '1px solid var(--cor-borda)' }}>
-                      <img src={bannerFantasia} alt="Fantasia" className="w-full h-full object-cover" />
+                      <img src={nichos[0]?.imagem} alt={nichos[0]?.nome} className="w-full h-full object-cover" />
                     </div>
                     <div className="aspect-square rounded-2xl overflow-hidden" style={{ border: '1px solid var(--cor-borda)' }}>
-                      <img src={bannerRomance} alt="Romance" className="w-full h-full object-cover" />
+                      <img src={nichos[1]?.imagem} alt={nichos[1]?.nome} className="w-full h-full object-cover" />
                     </div>
                     <div className="aspect-square rounded-2xl overflow-hidden" style={{ border: '1px solid var(--cor-borda)' }}>
-                      <img src={bannerSuspense} alt="Suspense" className="w-full h-full object-cover" />
+                      <img src={nichos[2]?.imagem} alt={nichos[2]?.nome} className="w-full h-full object-cover" />
                     </div>
                     <div className="col-span-2 aspect-video rounded-2xl overflow-hidden" style={{ border: '1px solid var(--cor-borda)' }}>
-                      <img src={bannerFantasia} alt="Fantasia" className="w-full h-full object-cover" />
+                      <img src={nichos[3]?.imagem} alt={nichos[3]?.nome} className="w-full h-full object-cover" />
                     </div>
                   </div>
                 </div>
@@ -278,6 +274,9 @@ function Entrada({ onSelecionarGenero, onSelecionarProduto, favoritos, onToggleF
                   onClick={() => onSelecionarProduto(produto)}
                   favorito={favoritos.some((f) => f.id === produto.id)}
                   onToggleFavorito={() => onToggleFavorito(produto)}
+                  admin={admin}
+                  onEditarProduto={onEditarProduto}
+                  produto={produto}
                 />
               </Reveal>
             ))}

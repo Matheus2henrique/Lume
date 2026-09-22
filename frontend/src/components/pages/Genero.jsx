@@ -1,10 +1,6 @@
 import { useState } from 'react'
 import Card from '../ui/Card'
 import Reveal from '../ui/Reveal'
-import { produtos } from '../../data/produtos'
-import bannerRomance from '../../assets/banner-romance.jpeg'
-import bannerFantasia from '../../assets/banner-fantasia.jpeg'
-import bannerSuspense from '../../assets/banner-suspense.jpeg'
 
 const FILTROS = [
   { id: 'todos', nome: 'Todas as peças' },
@@ -12,7 +8,7 @@ const FILTROS = [
   { id: 'colecionavel', nome: 'Colecionáveis' },
 ]
 
-function Genero({ genero, onSelecionarProduto, favoritos, onToggleFavorito }) {
+function Genero({ genero, produtos, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto }) {
   const [filtroTipo, setFiltroTipo] = useState('todos')
 
   const produtosDoGenero = produtos.filter((p) => p.genero === genero.id)
@@ -44,66 +40,45 @@ function Genero({ genero, onSelecionarProduto, favoritos, onToggleFavorito }) {
     },
   ]
 
-  const IMAGENS_FUNDO = {
-    romance:
-      `url(${bannerRomance})`,
-    fantasia:
-      `url(${bannerFantasia})`,
-    suspense:
-      `url(${bannerSuspense})`,
-  }
-  const OVERLAYS_FUNDO = {
-    romance: 'linear-gradient(to bottom, rgba(90, 20, 45, 0.08), rgba(90, 20, 45, 0.25))',
-    fantasia: 'linear-gradient(to bottom, rgba(15, 32, 27, 0.55), rgba(15, 32, 27, 0.75))',
-    suspense: 'linear-gradient(to bottom, rgba(8, 8, 16, 0.55), rgba(8, 8, 16, 0.8))',
-  }
-  const imagemFundo = IMAGENS_FUNDO[genero.id]
-  const overlayFundo = OVERLAYS_FUNDO[genero.id]
-
   return (
     <section>
       <div
         className="relative min-h-[300px] md:min-h-[460px] flex flex-col items-center justify-center text-center px-6 py-16 overflow-hidden"
-        style={imagemFundo ? { backgroundImage: imagemFundo, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: 'var(--fundo-decorativo)' }}
+        style={{ background: '#0a0a0a' }}
       >
-        {overlayFundo && (
-          <div
-            className="absolute inset-0"
-            style={{ background: overlayFundo }}
-          />
-        )}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full opacity-30 blur-[120px]" style={{ background: 'var(--cor-laranja)' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[200px] rounded-full opacity-15 blur-[80px]" style={{ background: 'var(--cor-laranja-claro)' }} />
         <div className="relative z-10">
-          
-          <h1 className="text-5xl md:text-6xl font-[Georgia,serif]" style={{ color: imagemFundo ? 'var(--cor-texto)' : 'var(--cor-texto)' }}>
-            Universo {genero.nome}
+          <h1 className="text-5xl md:text-6xl font-[Georgia,serif]" style={{ color: 'var(--cor-texto)' }}>
+            Universo <span style={{ color: 'var(--cor-laranja-claro)' }}>{genero.nome}</span>
           </h1>
-          <p className="mt-4 text-xl max-w-[620px] mx-auto" style={{ color: imagemFundo ? 'rgba(255,255,255,0.92)' : 'var(--cor-texto-suave)' }}>
+          <p className="mt-4 text-xl max-w-[620px] mx-auto" style={{ color: 'rgba(255,255,255,0.92)' }}>
             {genero.descricao}
           </p>
         </div>
       </div>
 
       <div className="max-w-[1200px] mx-auto px-6 -mt-10 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex flex-wrap justify-center gap-6">
           {opcoes.map((opcao, i) => (
             <Reveal key={opcao.id} delay={i * 90} className="h-full">
-<button
+              <button
                 onClick={opcao.acao}
                 className="text-left rounded-[20px] p-7 cursor-pointer transition-all duration-700 hover:-translate-y-1 shadow-[0_10px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_18px_40px_rgba(0,0,0,0.2)] h-full w-full flex flex-col"
-                style={{ background: 'var(--cor-fundo-cartao)', border: '1px solid var(--cor-borda)' }}
+                style={{ background: 'var(--cor-fundo-cartao)', border: '1px solid var(--cor-borda)', width: '360px' }}
               >
-              <span
-                className="w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-4"
-                style={{ background: 'var(--cor-primaria-suave)' }}
-              >
-                {opcao.icone}
-              </span>
-              <h3 className="text-xl font-semibold" style={{ color: 'var(--cor-texto)' }}>
-                {opcao.titulo}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed flex-1" style={{ color: 'var(--cor-texto-suave)' }}>
-                {opcao.descricao}
-              </p>
+                <span
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-4"
+                  style={{ background: 'var(--cor-primaria-suave)' }}
+                >
+                  {opcao.icone}
+                </span>
+                <h3 className="text-xl font-semibold" style={{ color: 'var(--cor-texto)' }}>
+                  {opcao.titulo}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed flex-1" style={{ color: 'var(--cor-texto-suave)' }}>
+                  {opcao.descricao}
+                </p>
               </button>
             </Reveal>
           ))}
@@ -153,6 +128,9 @@ function Genero({ genero, onSelecionarProduto, favoritos, onToggleFavorito }) {
                 onClick={() => onSelecionarProduto(produto)}
                 favorito={favoritos.some((f) => f.id === produto.id)}
                 onToggleFavorito={() => onToggleFavorito(produto)}
+                admin={admin}
+                onEditarProduto={onEditarProduto}
+                produto={produto}
               />
             </Reveal>
           ))}

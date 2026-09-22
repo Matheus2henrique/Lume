@@ -30,7 +30,7 @@ function IconeGoogle({ className = "w-5 h-5" }) {
   )
 }
 
-function Perfil({ onVoltar }) {
+function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
   const [modo, setModo] = useState('login') // login | registrar
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -51,18 +51,21 @@ function Perfil({ onVoltar }) {
       const salvo = obterUsuario()
       if (!salvo) return
       setUsuario(salvo)
+      if (salvo.admin) {
+        onAdminLogin?.()
+        return
+      }
       try {
-        // Consulta o perfil mais recente diretamente no banco via /api/auth/perfil
         const { usuario: doBanco } = await api.perfil()
         setUsuario(doBanco)
         salvarSessao({ token: obterToken(), usuario: doBanco })
       } catch {
-        // sessão expirada
         limparSessao()
         setUsuario(null)
       }
     }
     carregarSessao()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function concluirLogin(resposta) {
@@ -116,6 +119,7 @@ function Perfil({ onVoltar }) {
     setUsuario(null)
     setSucesso('')
     setErro('')
+    onAdminLogout?.()
   }
 
   async function handleGoogleLogin() {
@@ -177,10 +181,19 @@ function Perfil({ onVoltar }) {
           </div>
 
           <div className="mt-8 flex flex-col gap-3">
+            {usuario.admin && (
+              <button
+                onClick={() => onMostrarAdmin?.()}
+                className="border-none px-[30px] py-3 rounded-full text-white cursor-pointer text-lg transition-all duration-300 hover:scale-105"
+                style={{ background: 'var(--cor-laranja)' }}
+              >
+                Painel Admin
+              </button>
+            )}
             <button
               onClick={handleSair}
-              className="border-none px-[30px] py-3 rounded-full text-white cursor-pointer text-lg transition-all duration-300 hover:scale-105"
-              style={{ background: 'var(--cor-primaria)' }}
+              className="border-none px-[30px] py-3 rounded-full bg-transparent cursor-pointer text-base transition-all duration-300 hover:underline"
+              style={{ color: 'var(--cor-texto-suave)', border: '1px solid var(--cor-borda)' }}
             >
               Sair da conta
             </button>
@@ -259,7 +272,7 @@ function Perfil({ onVoltar }) {
                 <input type="checkbox" className="accent-[var(--cor-primaria)] w-4 h-4" />
                 Lembrar de mim
               </label>
-              <button type="button" className="bg-transparent border-none cursor-pointer text-sm hover:underline" style={{ color: 'var(--cor-primaria)' }}>
+              <button type="button" className="bg-transparent border-none cursor-pointer text-sm hover:underline" style={{ color: 'var(--cor-laranja)' }}>
                 Esqueci minha senha
               </button>
             </div>
@@ -268,7 +281,7 @@ function Perfil({ onVoltar }) {
               type="submit"
               disabled={carregando}
               className="mt-2 border-none px-[30px] py-3 rounded-full text-white cursor-pointer text-lg transition-all duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
-              style={{ background: 'var(--cor-primaria)' }}
+              style={{ background: 'var(--cor-laranja)' }}
             >
               {carregando ? 'Entrando…' : 'Entrar'}
             </button>
@@ -367,7 +380,7 @@ function Perfil({ onVoltar }) {
                   setErro('')
                 }}
                 className="bg-transparent border-none cursor-pointer font-semibold hover:underline"
-                style={{ color: 'var(--cor-primaria)' }}
+                style={{ color: 'var(--cor-laranja)' }}
               >
                 Crie Sua Conta
               </button>

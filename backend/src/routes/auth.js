@@ -15,7 +15,7 @@ function tokenPara(usuario) {
 }
 
 function publico(usuario) {
-  return { id: usuario.id, nome: usuario.nome, email: usuario.email, provedor: usuario.provedor }
+  return { id: usuario.id, nome: usuario.nome, email: usuario.email, provedor: usuario.provedor, admin: Boolean(usuario.admin) }
 }
 
 router.post('/registrar', limiterAuth, async (req, res) => {

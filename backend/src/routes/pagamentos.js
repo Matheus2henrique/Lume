@@ -1,4 +1,4 @@
-import { Router } from 'express'
+:import { Router } from 'express'
 import pool from '../db.js'
 import { gatewayConfigurado, criarPreferencia, obterPagamento, validarAssinaturaWebhook } from '../services/mercadoPago.js'
 import { autenticar } from '../middleware/auth.js'

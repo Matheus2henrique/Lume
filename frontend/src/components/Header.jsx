@@ -191,7 +191,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onAssinar, onMostrarPerf
               <input
                 autoFocus
                 type="text"
-                placeholder="Pesquise um universo (ex.: romance, fantasia, suspense)"
+                placeholder="Pesquise uma categoria (ex.: sensoriais, articulados, personagens)"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 onKeyDown={(e) => {

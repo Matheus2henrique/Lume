@@ -6,8 +6,10 @@ import { limiterGlobal } from './middleware/rateLimiter.js'
 import pedidosRouter from './routes/pedidos.js'
 import authRouter from './routes/auth.js'
 import produtosRouter from './routes/produtos.js'
+import generosRouter from './routes/generos.js'
 import favoritosRouter from './routes/favoritos.js'
 import pagamentosRouter from './routes/pagamentos.js'
+import newsletterRouter from './routes/newsletter.js'
 
 const app = express()
 
@@ -27,8 +29,10 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/pedidos', pedidosRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/produtos', produtosRouter)
+app.use('/api/generos', generosRouter)
 app.use('/api/favoritos', favoritosRouter)
 app.use('/api/pagamentos', pagamentosRouter)
+app.use('/api/newsletter', newsletterRouter)
 
 app.use((_req, res) => {
   res.status(404).json({ erro: 'Rota não encontrada.' })

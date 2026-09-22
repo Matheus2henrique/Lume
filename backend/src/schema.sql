@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   email TEXT NOT NULL UNIQUE,
   senha_hash TEXT NOT NULL,
   provedor TEXT NOT NULL DEFAULT 'email',
+  admin BOOLEAN NOT NULL DEFAULT FALSE,
   criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -17,6 +18,15 @@ CREATE TABLE IF NOT EXISTS clientes (
   email TEXT NOT NULL UNIQUE,
   telefone TEXT NOT NULL DEFAULT '',
   endereco TEXT NOT NULL DEFAULT '',
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS generos (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL,
+  tagline TEXT NOT NULL DEFAULT '',
+  descricao TEXT NOT NULL DEFAULT '',
+  imagem TEXT NOT NULL DEFAULT '',
   criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -61,3 +71,13 @@ CREATE TABLE IF NOT EXISTS newsletter (
   email TEXT NOT NULL UNIQUE,
   criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Migração: adicionar coluna admin se não existir
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'admin'
+  ) THEN
+    ALTER TABLE usuarios ADD COLUMN admin BOOLEAN NOT NULL DEFAULT FALSE;
+  END IF;
+END $$;

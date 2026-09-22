@@ -1,7 +1,7 @@
 export const produtos = [
   {
     nome: "Porta-retrato Coração de Papel",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "decoracao",
     preco: 29.9,
     estoque: 12,
@@ -13,7 +13,7 @@ export const produtos = [
   },
   {
     nome: "Marca-páginas Beijo de Pétalas",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "decoracao",
     preco: 19.9,
     estoque: 25,
@@ -25,7 +25,7 @@ export const produtos = [
   },
   {
     nome: "Suporte de Livros Dois Amantes",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "decoracao",
     preco: 59.9,
     estoque: 8,
@@ -37,7 +37,7 @@ export const produtos = [
   },
   {
     nome: "Chaveiro Poema de Amor",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "decoracao",
     preco: 24.9,
     estoque: 18,
@@ -49,7 +49,7 @@ export const produtos = [
   },
   {
     nome: "Colecionável Casal de Capa",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "colecionavel",
     preco: 89.9,
     estoque: 5,
@@ -61,7 +61,7 @@ export const produtos = [
   },
   {
     nome: "Colecionável Herói do Livro",
-    genero: "romance",
+    genero: "sensoriais",
     tipo: "colecionavel",
     preco: 79.9,
     estoque: 6,
@@ -73,7 +73,7 @@ export const produtos = [
   },
   {
     nome: "Marca-páginas Porta dos Mundos",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "decoracao",
     preco: 19.9,
     estoque: 20,
@@ -85,7 +85,7 @@ export const produtos = [
   },
   {
     nome: "Suporte Dragão Guardião",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "decoracao",
     preco: 69.9,
     estoque: 7,
@@ -97,7 +97,7 @@ export const produtos = [
   },
   {
     nome: "Luminária Castelo Encantado",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "decoracao",
     preco: 89.9,
     estoque: 4,
@@ -109,7 +109,7 @@ export const produtos = [
   },
   {
     nome: "Chaveiro Varinha Mágica",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "decoracao",
     preco: 27.9,
     estoque: 15,
@@ -121,7 +121,7 @@ export const produtos = [
   },
   {
     nome: "Colecionável Dragão dos Ventos",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "colecionavel",
     preco: 129.9,
     estoque: 3,
@@ -133,7 +133,7 @@ export const produtos = [
   },
   {
     nome: "Colecionável Elfa das Estrelas",
-    genero: "fantasia",
+    genero: "articulados",
     tipo: "colecionavel",
     preco: 109.9,
     estoque: 4,
@@ -145,7 +145,7 @@ export const produtos = [
   },
   {
     nome: "Marca-páginas Olho do Detetive",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "decoracao",
     preco: 21.9,
     estoque: 22,
@@ -157,7 +157,7 @@ export const produtos = [
   },
   {
     nome: "Suporte Cofre Mistério",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "decoracao",
     preco: 74.9,
     estoque: 6,
@@ -169,7 +169,7 @@ export const produtos = [
   },
   {
     nome: "Luminária Lua de Crime",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "decoracao",
     preco: 94.9,
     estoque: 4,
@@ -181,7 +181,7 @@ export const produtos = [
   },
   {
     nome: "Chaveiro Pegada Escura",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "decoracao",
     preco: 26.9,
     estoque: 14,
@@ -193,7 +193,7 @@ export const produtos = [
   },
   {
     nome: "Colecionável Detetive Noir",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "colecionavel",
     preco: 139.9,
     estoque: 3,
@@ -205,7 +205,7 @@ export const produtos = [
   },
   {
     nome: "Colecionável Sombra da Meia-Noite",
-    genero: "suspense",
+    genero: "personagens",
     tipo: "colecionavel",
     preco: 119.9,
     estoque: 4,

@@ -1,4 +1,5 @@
 import pool from './db.js'
+import bcrypt from 'bcryptjs'
 import { produtos } from './data/produtos.js'
 
 const { rowCount } = await pool.query('SELECT COUNT(*)::int AS total FROM produtos')
@@ -13,6 +14,21 @@ if (rowCount[0].total > 0) {
     )
   }
   console.log(`Seed concluído: ${produtos.length} produtos inseridos.`)
+}
+
+const adminEmail = 'admin@lume.com'
+const adminSenha = 'admin123'
+const { rows: existente } = await pool.query('SELECT id FROM usuarios WHERE email = $1', [adminEmail])
+if (existente.length === 0) {
+  const senhaHash = bcrypt.hashSync(adminSenha, 10)
+  await pool.query(
+    `INSERT INTO usuarios (nome, email, senha_hash, admin)
+     VALUES ($1, $2, $3, TRUE)`,
+    ['Administrador', adminEmail, senhaHash]
+  )
+  console.log(`Admin criado: ${adminEmail} / ${adminSenha}`)
+} else {
+  console.log(`Admin já existe (${adminEmail}).`)
 }
 
 await pool.end()

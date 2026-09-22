@@ -2,7 +2,7 @@ import Card from '../ui/Card'
 import Reveal from '../ui/Reveal'
 import { SetaEsquerda } from '../ui/Icones'
 
-function Favoritos({ favoritos, onVoltar, onSelecionarProduto, onToggleFavorito }) {
+function Favoritos({ favoritos, onVoltar, onSelecionarProduto, onToggleFavorito, admin = false, onEditarProduto }) {
   return (
     <section className="min-h-screen py-12 px-6" style={{ background: 'var(--cor-fundo-suave)' }}>
       <div className="max-w-[1200px] mx-auto">
@@ -41,7 +41,7 @@ function Favoritos({ favoritos, onVoltar, onSelecionarProduto, onToggleFavorito 
             <button
               onClick={onVoltar}
               className="mt-6 px-7 py-3.5 rounded-xl text-white font-medium cursor-pointer transition-all duration-300 hover:scale-[1.02] border-none"
-              style={{ background: 'var(--cor-primaria)' }}
+              style={{ background: 'var(--cor-laranja)' }}
             >
               Explorar os mundos
             </button>
@@ -60,6 +60,9 @@ function Favoritos({ favoritos, onVoltar, onSelecionarProduto, onToggleFavorito 
                   favorito
                   onClick={() => onSelecionarProduto(produto)}
                   onToggleFavorito={() => onToggleFavorito(produto)}
+                  admin={admin}
+                  onEditarProduto={onEditarProduto}
+                  produto={produto}
                 />
               </Reveal>
             ))}

@@ -63,6 +63,21 @@ export const api = {
   login: (dados) => requisicao('/auth/login', { metodo: 'POST', corpo: dados }),
   perfil: () => requisicao('/auth/perfil', { autenticado: true }),
 
+  produtos: {
+    listar: () => requisicao('/produtos'),
+    buscar: (id) => requisicao(`/produtos/${id}`),
+    criar: (dados) => requisicao('/produtos', { metodo: 'POST', corpo: dados, autenticado: true }),
+    atualizar: (id, dados) => requisicao(`/produtos/${id}`, { metodo: 'PUT', corpo: dados, autenticado: true }),
+    excluir: (id) => requisicao(`/produtos/${id}`, { metodo: 'DELETE', autenticado: true }),
+  },
+
+  generos: {
+    listar: () => requisicao('/generos'),
+    criar: (dados) => requisicao('/generos', { metodo: 'POST', corpo: dados, autenticado: true }),
+    atualizar: (id, dados) => requisicao(`/generos/${id}`, { metodo: 'PUT', corpo: dados, autenticado: true }),
+    excluir: (id) => requisicao(`/generos/${id}`, { metodo: 'DELETE', autenticado: true }),
+  },
+
   favoritos: {
     listar: () => requisicao('/favoritos', { autenticado: true }),
     adicionar: (produtoId) => requisicao(`/favoritos/${produtoId}`, { metodo: 'POST', autenticado: true }),

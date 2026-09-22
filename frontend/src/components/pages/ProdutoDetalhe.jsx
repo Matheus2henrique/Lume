@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import Card from '../ui/Card'
 import Reveal from '../ui/Reveal'
-import { generos, produtos } from '../../data/produtos'
 import { formatarMoeda } from '../../utils/formatar'
 import {
   Estrela,
@@ -13,11 +12,11 @@ import {
   Camada,
 } from '../ui/Icones'
 
-function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho, noCarrinho, favoritos, onToggleFavorito }) {
+function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onAdicionarAoCarrinho, noCarrinho, favoritos, onToggleFavorito, admin = false, onEditarProduto }) {
   const [quantidade, setQuantidade] = useState(1)
   const [arquivo, setArquivo] = useState(null)
 
-  const genero = generos.find((g) => g.id === produto.genero)
+  const genero = nichos.find((g) => g.id === produto.genero)
   const relacionados = produtos
     .filter((p) => p.genero === produto.genero && p.id !== produto.id)
     .slice(0, 4)
@@ -41,14 +40,29 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
   return (
     <section className="min-h-screen py-10" style={{ background: 'var(--cor-fundo-suave)' }}>
       <div className="max-w-[1200px] mx-auto px-6">
-        <button
-          onClick={onVoltar}
-          className="flex items-center gap-2 text-base font-medium cursor-pointer hover:underline border-none bg-transparent"
-          style={{ color: 'var(--cor-laranja-claro)' }}
-        >
-          <SetaEsquerda className="w-5 h-5" />
-          Voltar para {genero?.nome}
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onVoltar}
+            className="flex items-center gap-2 text-base font-medium cursor-pointer hover:underline border-none bg-transparent"
+            style={{ color: 'var(--cor-laranja-claro)' }}
+          >
+            <SetaEsquerda className="w-5 h-5" />
+            Voltar para {genero?.nome}
+          </button>
+          {admin && onEditarProduto && (
+            <button
+              onClick={() => onEditarProduto(produto)}
+              className="flex items-center gap-2 px-4 py-2 rounded-full border-none cursor-pointer text-sm font-medium transition-all duration-300 hover:scale-105"
+              style={{ background: 'var(--cor-laranja)', color: '#fff' }}
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              Editar produto
+            </button>
+          )}
+        </div>
 
         <div className="mt-8 flex flex-col lg:flex-row gap-10">
           <div className="flex-1">
@@ -139,7 +153,7 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
                 style={{ border: `1px dashed var(--cor-primaria)`, background: 'var(--cor-primaria-suave)' }}
               >
                 <p className="text-sm font-medium" style={{ color: 'var(--cor-texto)' }}>
-                  📎 Personalize esta peça
+                  Personalize esta peça
                 </p>
                 <p className="mt-1 text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
                   Envie o arquivo com a frase, nome, imagem ou logo que você quer na peça.
@@ -252,6 +266,9 @@ function ProdutoDetalhe({ produto, onVoltar, onSelecionar, onAdicionarAoCarrinho
                   onClick={() => onSelecionar(p)}
                   favorito={favoritos.some((f) => f.id === p.id)}
                   onToggleFavorito={() => onToggleFavorito(p)}
+                  admin={admin}
+                  onEditarProduto={onEditarProduto}
+                  produto={p}
                 />
               </Reveal>
             ))}
