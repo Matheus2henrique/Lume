@@ -1,4 +1,4 @@
-import { cleanEnv, str, port, num } from 'envalid'
+import { cleanEnv, str, port, num, bool } from 'envalid'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -14,6 +14,11 @@ const env = cleanEnv(process.env, {
   BACKEND_URL: str({ default: 'http://localhost:4000' }),
   JWT_SECRET: str({ devDefault: 'segredo-dev-inseguro-apenas-para-desenvolvimento' }),
   MP_ACCESS_TOKEN: str({ default: '' }),
+  // Segredo do painel do Mercado Pago para validar a assinatura dos webhooks.
+  MP_WEBHOOK_SECRET: str({ default: '' }),
+  // Ative quando houver um proxy reverso na frente (nginx/Railway/Render)
+  // para o rate limit enxergar o IP real do cliente.
+  TRUST_PROXY: bool({ default: false }),
 })
 
 export default env

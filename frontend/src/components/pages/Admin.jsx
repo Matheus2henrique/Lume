@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { formatarMoeda } from '../../utils/formatar'
 import ProdutoFormModal from '../ui/ProdutoFormModal'
 
-function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, onSalvarProduto, onExcluirProduto, onEditarProduto }) {
+function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, onSalvarProduto, onExcluirProduto }) {
   const [filtroNichos, setFiltroNichos] = useState('todos')
   const [mostrarForm, setMostrarForm] = useState(false)
   const [produtoEditando, setProdutoEditando] = useState(null)

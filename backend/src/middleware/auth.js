@@ -51,3 +51,43 @@ export function serAdmin(req, res, next) {
   }
   next()
 }
+
+/**
+ * Autentica se houver token válido, mas permite seguir como convidado.
+ * Usado no checkout: quem tem conta vincula o pedido; quem não tem,
+ * recebe um checkoutToken curto para pagar em seguida.
+ */
+export async function autenticarOpcional(req, _res, next) {
+  const auth = req.headers.authorization
+  if (!auth) return next()
+
+  try {
+    const token = auth.replace('Bearer ', '')
+    const payload = jwt.verify(token, process.env.JWT_SECRET)
+    const { rows } = await pool.query('SELECT * FROM usuarios WHERE id = $1', [payload.id])
+    if (rows[0]) req.usuario = rows[0]
+  } catch {
+    // Token ausente/inválido — segue como convidado sem quebrar o fluxo.
+  }
+  next()
+}
+
+/**
+ * Token de curta duração (30 min) devolvido na criação do pedido para
+ * permitir que um convidado gere o pagamento sem criar conta.
+ */
+export function criarCheckoutToken(pedidoId) {
+  return jwt.sign({ pedidoId: Number(pedidoId), escopo: 'checkout' }, process.env.JWT_SECRET, {
+    expiresIn: '30m',
+  })
+}
+
+export function validarCheckoutToken(token, pedidoId) {
+  if (!token) return false
+  try {
+    const payload = jwt.verify(String(token), process.env.JWT_SECRET)
+    return payload.escopo === 'checkout' && Number(payload.pedidoId) === Number(pedidoId)
+  } catch {
+    return false
+  }
+}

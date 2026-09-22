@@ -1,10 +1,11 @@
 import pool from './db.js'
+import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { produtos } from './data/produtos.js'
 
-const { rowCount } = await pool.query('SELECT COUNT(*)::int AS total FROM produtos')
-if (rowCount[0].total > 0) {
-  console.log(`Produtos já existentes (${rowCount[0].total}). Nada a fazer.`)
+const { rows } = await pool.query('SELECT COUNT(*)::int AS total FROM produtos')
+if (rows[0].total > 0) {
+  console.log(`Produtos já existentes (${rows[0].total}). Nada a fazer.`)
 } else {
   for (const p of produtos) {
     await pool.query(
@@ -16,8 +17,17 @@ if (rowCount[0].total > 0) {
   console.log(`Seed concluído: ${produtos.length} produtos inseridos.`)
 }
 
-const adminEmail = 'admin@lume.com'
-const adminSenha = 'admin123'
+// Admin inicial — credenciais vêm do .env (ADMIN_EMAIL/ADMIN_SENHA); se a
+// senha não vier, gera uma forte e imprime uma única vez. Nunca senha fixa.
+const adminEmail = process.env.ADMIN_EMAIL || 'admin@lume.com'
+const senhaGerada = !process.env.ADMIN_SENHA
+const adminSenha = process.env.ADMIN_SENHA || crypto.randomBytes(18).toString('base64url')
+
+if (!adminEmail.includes('@')) {
+  console.error('ADMIN_EMAIL inválido — defina um e-mail válido no backend/.env')
+  process.exit(1)
+}
+
 const { rows: existente } = await pool.query('SELECT id FROM usuarios WHERE email = $1', [adminEmail])
 if (existente.length === 0) {
   const senhaHash = bcrypt.hashSync(adminSenha, 10)
@@ -26,7 +36,10 @@ if (existente.length === 0) {
      VALUES ($1, $2, $3, TRUE)`,
     ['Administrador', adminEmail, senhaHash]
   )
-  console.log(`Admin criado: ${adminEmail} / ${adminSenha}`)
+  console.log(`Admin criado: ${adminEmail}`)
+  if (senhaGerada) {
+    console.log(`Senha gerada (guarde e troque depois): ${adminSenha}`)
+  }
 } else {
   console.log(`Admin já existe (${adminEmail}).`)
 }

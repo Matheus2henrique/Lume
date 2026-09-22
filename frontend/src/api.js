@@ -84,7 +84,8 @@ export const api = {
     remover: (produtoId) => requisicao(`/favoritos/${produtoId}`, { metodo: 'DELETE', autenticado: true }),
   },
 
-  criarPedido: (dados) => requisicao('/pedidos', { metodo: 'POST', corpo: dados }),
-  criarPreferencia: (dados) => requisicao('/pagamentos/preferencia', { metodo: 'POST', corpo: dados }),
+  criarPedido: (dados) => requisicao('/pedidos', { metodo: 'POST', corpo: dados, autenticado: true }),
+  criarPreferencia: (dados) => requisicao('/pagamentos/preferencia', { metodo: 'POST', corpo: dados, autenticado: true }),
+  statusPagamento: () => requisicao('/pagamentos/status'),
   newsletter: (email) => requisicao('/newsletter', { metodo: 'POST', corpo: { email } }),
 }

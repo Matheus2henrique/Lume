@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { generos } from '../../data/produtos'
-import { Check } from '../ui/Icones'
+import { Check, Instagram, WhatsApp } from '../ui/Icones'
 import { api } from '../../api'
+
+const LINK_INSTAGRAM = 'https://www.instagram.com/3d_.lume/'
+const LINK_WHATSAPP = '#' // TODO: colocar o link do WhatsApp quando for enviado
 
 function Footer({ onHome, onSelecionarGenero, onIrParaDestaques }) {
   const [email, setEmail] = useState('')
@@ -96,6 +99,38 @@ function Footer({ onHome, onSelecionarGenero, onIrParaDestaques }) {
             <li>(11) 99999-9999</li>
             <li>Atendemos todo o Brasil</li>
           </ul>
+
+          <div className="mt-5 flex items-center gap-3">
+            <a
+              href={LINK_INSTAGRAM}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram da Lume"
+              title="Instagram"
+              className="flex items-center justify-center w-10 h-10 rounded-full border transition-all duration-300 hover:scale-110"
+              style={{
+                background: 'var(--cor-fundo-cartao)',
+                borderColor: 'var(--cor-borda)',
+                color: 'var(--cor-texto)',
+              }}
+            >
+              <Instagram className="w-5 h-5" />
+            </a>
+            <a
+              href={LINK_WHATSAPP}
+              aria-label="WhatsApp da Lume"
+              title="WhatsApp"
+              {...(LINK_WHATSAPP !== '#' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              className="flex items-center justify-center w-10 h-10 rounded-full border transition-all duration-300 hover:scale-110"
+              style={{
+                background: 'var(--cor-fundo-cartao)',
+                borderColor: 'var(--cor-borda)',
+                color: 'var(--cor-texto)',
+              }}
+            >
+              <WhatsApp className="w-5 h-5" />
+            </a>
+          </div>
         </div>
 
         <div className="order-6 col-span-2 lg:col-span-5">

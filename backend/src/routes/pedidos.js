@@ -1,12 +1,14 @@
 import { Router } from 'express'
 import pool from '../db.js'
-import { autenticar } from '../middleware/auth.js'
+import { autenticar, autenticarOpcional, criarCheckoutToken } from '../middleware/auth.js'
 import { gatewayConfigurado } from '../services/mercadoPago.js'
 import logger from '../logger.js'
 
 const router = Router()
 
-router.post('/', async (req, res) => {
+const idDoItem = (item) => item?.produtoId ?? item?.produto?.id
+
+router.post('/', autenticarOpcional, async (req, res) => {
   const { cliente, itens, pagamento } = req.body || {}
 
   if (!cliente || typeof cliente.nome !== 'string' || !cliente.nome.trim()) {
@@ -20,26 +22,29 @@ router.post('/', async (req, res) => {
   }
 
   for (const item of itens) {
-    const produtoId = item.produtoId || item.produto?.id
-    if (!produtoId || typeof item.quantidade !== 'number' || item.quantidade <= 0) {
+    const produtoId = idDoItem(item)
+    if (!produtoId || !Number.isInteger(item?.quantidade) || item.quantidade <= 0 || item.quantidade > 999) {
       return res.status(400).json({ erro: 'Item do carrinho inválido.' })
     }
   }
 
-  const client = await pool.connect()
+  let client = null
   try {
+    client = await pool.connect()
     await client.query('BEGIN')
 
-    const ids = itens.map((item) => item.produtoId || item.produto.id)
+    // IDs únicos em ordem + lock de linha: evita corrida de estoque
+    // entre checkouts simultâneos (e deadlock por ordem de lock).
+    const ids = [...new Set(itens.map(idDoItem))].sort((a, b) => a - b)
     const { rows: produtos } = await client.query(
-      'SELECT * FROM produtos WHERE id = ANY($1)',
+      'SELECT * FROM produtos WHERE id = ANY($1) ORDER BY id FOR UPDATE',
       [ids]
     )
     const porId = new Map(produtos.map((p) => [p.id, p]))
 
     let total = 0
     for (const item of itens) {
-      const produtoId = item.produtoId || item.produto.id
+      const produtoId = idDoItem(item)
       const produto = porId.get(produtoId)
       if (!produto) {
         await client.query('ROLLBACK')
@@ -76,9 +81,15 @@ router.post('/', async (req, res) => {
 
     const gatewayAtivo = gatewayConfigurado() && Boolean(pagamento)
     const status = gatewayAtivo ? 'pendente' : pagamento ? 'pago' : 'novo'
-    const pagamentoSalvo = gatewayAtivo
-      ? { metodo: pagamento.metodo || 'mercado_pago', gateway: 'mercado_pago', status: 'pendente' }
-      : pagamento || null
+
+    // Nunca persiste dados de cartão — guarda apenas o método escolhido.
+    const pagamentoSalvo = pagamento
+      ? {
+          metodo: typeof pagamento.metodo === 'string' ? pagamento.metodo : 'desconhecido',
+          ...(gatewayAtivo ? { gateway: 'mercado_pago', status: 'pendente' } : { status: 'simulado' }),
+        }
+      : null
+
     const { rows: pedidos } = await client.query(
       `INSERT INTO pedidos (usuario_id, cliente_id, total, status, itens, pagamento)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -89,25 +100,35 @@ router.post('/', async (req, res) => {
         total,
         status,
         JSON.stringify(
-          itens.map((item) => ({
-            produtoId: item.produtoId || item.produto.id,
-            nome: porId.get(item.produtoId || item.produto.id).nome,
-            preco: Number(porId.get(item.produtoId || item.produto.id).preco),
-            quantidade: item.quantidade,
-          }))
+          itens.map((item) => {
+            const produto = porId.get(idDoItem(item))
+            return {
+              produtoId: produto.id,
+              nome: produto.nome,
+              preco: Number(produto.preco),
+              quantidade: item.quantidade,
+            }
+          })
         ),
         pagamentoSalvo ? JSON.stringify(pagamentoSalvo) : null,
       ]
     )
 
     if (!gatewayAtivo) {
-      const idsEstoque = itens.map((item) => item.produtoId || item.produto.id)
-      const qtdsEstoque = itens.map((item) => item.quantidade)
+      // Simulado: baixa na hora. O lock de linha já garante consistência.
+      const baixa = new Map()
+      for (const item of itens) {
+        const id = idDoItem(item)
+        baixa.set(id, (baixa.get(id) || 0) + item.quantidade)
+      }
+      const idsBaixa = [...baixa.keys()].sort((a, b) => a - b)
+      const quantidadesBaixa = idsBaixa.map((id) => baixa.get(id))
+
       await client.query(
         `UPDATE produtos SET estoque = estoque - v.qtd
          FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qtd) AS v
          WHERE produtos.id = v.id`,
-        [idsEstoque, qtdsEstoque]
+        [idsBaixa, quantidadesBaixa]
       )
     }
 
@@ -123,13 +144,17 @@ router.post('/', async (req, res) => {
       mensagem: gatewayAtivo
         ? 'Pedido criado. Finalize o pagamento no Mercado Pago.'
         : 'Pedido recebido com sucesso!',
+      // Convidado precisa deste token para gerar o pagamento em seguida.
+      ...(req.usuario ? {} : { checkoutToken: criarCheckoutToken(pedido.id) }),
     })
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {})
+    if (client) await client.query('ROLLBACK').catch(() => {})
     logger.error({ err }, 'Erro ao criar pedido')
-    res.status(500).json({ erro: 'Não foi possível concluir o pedido.' })
+    if (!res.headersSent) {
+      res.status(500).json({ erro: 'Não foi possível concluir o pedido.' })
+    }
   } finally {
-    client.release()
+    client?.release()
   }
 })
 

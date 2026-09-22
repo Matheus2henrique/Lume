@@ -9,10 +9,10 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "migrate": "node src/migrate.js",
-    "seed": "node src/seed.js",
+    "seed": "node src/seed.js && node src/seed-generos.js",
     "seed:admin": "node src/seed-admin.js",
     "seed:generos": "node src/seed-generos.js",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest --forceExit --detectOpenHandles"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit --detectOpenHandles"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

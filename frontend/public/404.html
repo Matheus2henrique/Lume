@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Lume</title>
+    <script>
+      // GitHub Pages não conhece rotas SPA (ex.: /Lume/fantasia/produto/12).
+      // Salva o caminho pretendido e devolve o visitante para o index.html.
+      try {
+        sessionStorage.setItem('lume_redirect', location.pathname + location.search + location.hash)
+      } catch (e) {}
+      location.replace('/Lume/')
+    </script>
+  </head>
+  <body></body>
+</html>

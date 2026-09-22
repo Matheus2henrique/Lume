@@ -37,10 +37,12 @@ DB_NAME=lume            # nome do banco
 
 **Passos para criar o banco** (o schema não cria o banco, apenas as tabelas):
 
-```bash
+```console
 # com o psql (ajuste o caminho conforme a instalação do Windows)
 "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -c "CREATE DATABASE lume;"
 ```
+
+> ⚠️ O PostgreSQL diferencia maiúsculas: `lume` ≠ `Lume`. O valor de `DB_NAME` no `.env` precisa ser **idêntico** ao nome do banco criado. Se o seu PostgreSQL estiver em outra porta (ex.: 5434), ajuste também `DB_PORT`.
 
 > Regra: **nunca** commit o `backend/.env`. Ele já está no `.gitignore`. Sempre use o `backend/.env.example` como modelo e documente novas variáveis ali.
 
@@ -66,10 +68,10 @@ DB_NAME=lume            # nome do banco
 
 O schema é idempotente (`CREATE TABLE IF NOT EXISTS`), então pode rodar quantas vezes quiser:
 
-```bash
+```console
 cd backend
 npm run migrate   # aplica src/schema.sql
-npm run seed      # insere os 18 produtos só se a tabela estiver vazia
+npm run seed      # insere os 18 produtos e os 5 gêneros (só se as tabelas estiverem vazias)
 ```
 
 Ao adicionar uma tabela/coluna nova: edite `src/schema.sql` e rode `npm run migrate` novamente.
@@ -79,11 +81,11 @@ Ao adicionar uma tabela/coluna nova: edite `src/schema.sql` e rode `npm run migr
 - **Consultas**: sempre usar *prepared statements* com placeholders `$1, $2...` (evita SQL injection). Nunca concatenar valores do usuário no SQL.
 - **Operações atômicas** (ex.: baixar estoque + marcar pedido pago) usam **transações** (`BEGIN` / `COMMIT` / `ROLLBACK`) — veja `src/routes/pedidos.js` e `src/routes/pagamentos.js`.
 - **Backup** do banco:
-  ```bash
+  ```console
   "C:\Program Files\PostgreSQL\17\bin\pg_dump.exe" -U postgres lume > backup_lume.sql
   ```
 - **Restore**:
-  ```bash
+  ```console
   "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -d lume -f backup_lume.sql
   ```
 
@@ -141,8 +143,10 @@ Fluxo completo:
    → pedido criado como "pendente" (se gateway ativo), sem baixar estoque
 
 2. Frontend (Carrinho.jsx)
-   POST /api/pagamentos/preferencia  { pedidoId, total, titulo, cliente }
-   → services/mercadoPago.js chama:
+   POST /api/pagamentos/preferencia  { pedidoId, titulo, cliente, checkoutToken? }
+   → o backend lê o total SEMPRE do banco (nunca do corpo da requisição),
+     valida a permissão (dono logado, ou checkoutToken para convidado)
+     e services/mercadoPago.js chama:
      POST https://api.mercadopago.com/checkout/preferences
    → devolve init_point (URL do checkout do MP)
 
@@ -154,7 +158,13 @@ Fluxo completo:
 
 5. routes/pagamentos.js consulta o pagamento:
    GET https://api.mercadopago.com/v1/payments/:id
-   → se status = "approved": pedido vira "pago" e o estoque é baixado (em transação)
+   → se status = "approved": confere se transaction_amount bate com o total
+     do pedido; se bater, pedido vira "pago" e o estoque é baixado em
+     transação com lock de linha (falta de estoque gera alerta, nunca
+     estoque negativo)
+   → se status = "rejected"/"cancelled"/"expired": pedido cancelado
+   → se status = "pending"/"in_process" (normal no Pix): pedido permanece
+     pendente até a confirmação
 ```
 
 Arquivos envolvidos:
@@ -172,12 +182,12 @@ Arquivos envolvidos:
 O webhook só funciona se o Mercado Pago alcançar o seu backend. Em desenvolvimento:
 
 1. Instale o [ngrok](https://ngrok.com) e suba o backend:
-   ```bash
+   ```console
    cd backend
    npm run dev
    ```
 2. Em outro terminal, exponha a porta 4000:
-   ```bash
+   ```console
    ngrok http 4000
    ```
 3. Copie a URL `https://xxxx.ngrok-free.app` gerada e use-a no `.env`:
@@ -202,12 +212,23 @@ Para simular **recusa** (pagamento negado), use o valor `999999999` como CVV. A 
 
 ### 2.7 Segurança do webhook
 
-O webhook é um endpoint público — qualquer um pode chamá-lo. Para produção, o Mercado Pago assina as notificações e é **obrigatório validar** a assinatura antes de confirmar o pedido:
+O webhook é um endpoint público — qualquer um pode chamá-lo. O Mercado Pago assina cada notificação e a validação está implementada em `services/mercadoPago.js`:
 
-- Headers recebidos: `x-signature` e `x-request-id`
-- Fórmula oficial: SHA-256 de `id:` + `data.id` + `request-id:` + `x-request-id` + `uri:` + caminho + `access_token:` + token, comparado com o valor de `x-signature` (com timestamp válido dentro de uma janela pequena)
+- **Headers recebidos**: `x-signature` (`ts=...,v1=...`) e `x-request-id`
+- **Manifesto oficial**: `id:{data.id};request-id:{x-request-id};ts:{ts};`
+  (o `data.id` vem do corpo da notificação ou da query string)
+- **Assinatura**: HMAC-SHA256 do manifesto com o **segredo gerado no painel
+  do Mercado Pago** (Suas integrações → Webhooks → Configurar notificação →
+  revelar chave), configurado em `MP_WEBHOOK_SECRET`. A comparação é feita em
+  tempo constante e os hashes nunca são logados.
+- **Sem `MP_WEBHOOK_SECRET`**: a validação é ignorada com aviso no log —
+  **não use assim em produção**.
 
-Esse item está na lista de **próximos passos** do README. Até implementar, em produção prefira **não expor o backend com token real** ou restrinja o acesso por IP/segredo, e mantenha o `MP_ACCESS_TOKEN` com permissões mínimas.
+Além da assinatura, há duas defesas independentes no `routes/pagamentos.js`:
+o pagamento é **reconsultado na API do Mercado Pago** com o nosso token antes
+de alterar o pedido, e o `transaction_amount` é **conferido com o total do
+pedido** — um webhook forjado não consegue aprovar um pedido que não existe
+pago na sua conta.
 
 ---
 

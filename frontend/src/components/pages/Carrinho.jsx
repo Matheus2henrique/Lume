@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { api } from '../../api'
 import { formatarMoeda } from '../../utils/formatar'
 
@@ -12,10 +12,16 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
   const [etapa, setEtapa] = useState('itens') // itens | dados | pagando | sucesso
   const [cliente, setCliente] = useState({ nome: '', email: '', telefone: '', endereco: '' })
   const [metodo, setMetodo] = useState('cartao')
-  const [cartao, setCartao] = useState({ numero: '', nome: '', validade: '', cvv: '' })
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [pedido, setPedido] = useState(null)
+  const [gateway, setGateway] = useState(false)
+
+  useEffect(() => {
+    api.statusPagamento()
+      .then((r) => setGateway(Boolean(r.gateway)))
+      .catch(() => setGateway(false))
+  }, [])
 
   const total = itens.reduce((soma, item) => soma + item.produto.preco * item.quantidade, 0)
   const totalItens = itens.reduce((soma, item) => soma + item.quantidade, 0)
@@ -23,10 +29,6 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
   function validarDados() {
     if (!cliente.nome.trim() || !cliente.email.trim()) {
       setErro('Informe nome e e-mail para continuar.')
-      return false
-    }
-    if (metodo === 'cartao' && (!cartao.numero.trim() || !cartao.nome.trim() || !cartao.validade.trim() || !cartao.cvv.trim())) {
-      setErro('Preencha os dados do cartão.')
       return false
     }
     return true
@@ -38,20 +40,11 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
     setErro('')
     setCarregando(true)
     try {
-      const pagamento = {
-        metodo,
-        ...(metodo === 'cartao'
-          ? {
-              numero: cartao.numero.replace(/\s/g, ''),
-              nomeCartao: cartao.nome,
-              validade: cartao.validade,
-              cvv: cartao.cvv,
-            }
-          : {}),
-      }
+      // Nunca enviamos dados de cartão: o pagamento (real) é feito pelo
+      // Mercado Pago e o simulado não cobra ninguém.
       const criado = await onFinalizar({
         cliente,
-        pagamento,
+        pagamento: { metodo },
         itens: itens.map((item) => ({ produtoId: item.produto.id, quantidade: item.quantidade })),
       })
 
@@ -59,9 +52,11 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
         setEtapa('pagando')
         const preferencia = await api.criarPreferencia({
           pedidoId: criado.id,
-          total: criado.total,
           titulo: `Pedido Lume #${criado.id}`,
           cliente,
+          // Convidado usa o token devolvido na criação do pedido;
+          // o valor cobrado vem do banco, não daqui.
+          checkoutToken: criado.checkoutToken,
         })
         window.location.href = preferencia.init_point
         return
@@ -260,64 +255,14 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
                 ))}
               </div>
 
-              {metodo === 'cartao' && (
-                <>
-                  <div className="text-left">
-                    <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
-                      Número do cartão
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="0000 0000 0000 0000"
-                      value={cartao.numero}
-                      onChange={(e) => setCartao({ ...cartao, numero: e.target.value })}
-                      className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors"
-                      style={estiloInput}
-                    />
-                  </div>
-                  <div className="text-left">
-                    <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
-                      Nome no cartão
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Como está no cartão"
-                      value={cartao.nome}
-                      onChange={(e) => setCartao({ ...cartao, nome: e.target.value })}
-                      className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors"
-                      style={estiloInput}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-left">
-                      <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
-                        Validade
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="MM/AA"
-                        value={cartao.validade}
-                        onChange={(e) => setCartao({ ...cartao, validade: e.target.value })}
-                        className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors"
-                        style={estiloInput}
-                      />
-                    </div>
-                    <div className="text-left">
-                      <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
-                        CVV
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="123"
-                        value={cartao.cvv}
-                        onChange={(e) => setCartao({ ...cartao, cvv: e.target.value })}
-                        className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors"
-                        style={estiloInput}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
+              <p
+                className="text-xs leading-relaxed rounded-lg px-3 py-2"
+                style={{ background: 'var(--cor-fundo-suave)', color: 'var(--cor-texto-suave)' }}
+              >
+                {gateway
+                  ? 'Você será levado ao Mercado Pago para pagar com Pix, cartão ou boleto. Nunca digite os dados do seu cartão aqui — eles são informados apenas no ambiente seguro do Mercado Pago.'
+                  : 'Pagamento simulado para demonstração: nenhum valor será cobrado.'}
+              </p>
 
               {erro && (
                 <p className="text-sm" style={{ color: 'var(--cor-perigo)' }}>

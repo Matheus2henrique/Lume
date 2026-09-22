@@ -105,7 +105,7 @@ MVP-grafica/
 
 ### 1. Frontend (React + Vite)
 
-```bash
+```console
 cd frontend
 npm install
 npm run dev        # http://localhost:5173
@@ -125,16 +125,16 @@ DB_NAME=lume
 
 **b) Instale as dependências, crie as tabelas e popule os produtos:**
 
-```bash
+```console
 cd backend
 npm install
 npm run migrate   # cria as tabelas (usuarios, clientes, produtos, pedidos, favoritos)
-npm run seed      # insere os 18 produtos do catálogo
+npm run seed      # insere os 18 produtos e os gêneros
 ```
 
 **c) Inicie o servidor:**
 
-```bash
+```console
 npm run dev       # http://localhost:4000
 ```
 
@@ -194,7 +194,8 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 | `npm run dev` | Inicia o servidor com hot reload (porta `4000`) |
 | `npm run start` | Inicia o servidor em produção |
 | `npm run migrate` | Aplica o schema no PostgreSQL |
-| `npm run seed` | Popula produtos (só se a tabela estiver vazia) |
+| `npm run seed` | Popula produtos e gêneros (só se as tabelas estiverem vazias) |
+| `npm run seed:admin` | Cria/eleva o admin inicial (senha via `ADMIN_SENHA` ou gerada) |
 
 ## 📐 Normas e boas práticas
 
@@ -206,14 +207,17 @@ Consulte **[Normas.md](./Normas.md)** para:
 
 ## 🗺️ Próximos passos
 
+> O plano completo (com prioridades e esforço) está em **[PLANO_PRODUCAO.md](./PLANO_PRODUCAO.md)**.
+
 - [x] Integração com backend e banco de dados (PostgreSQL)
 - [x] Autenticação e cadastro de usuários
 - [x] Favoritos persistidos por usuário
 - [x] Checkout com pagamento e baixa de estoque
 - [x] Estrutura do gateway Mercado Pago (preferência + webhook)
+- [x] Validar assinatura do webhook (`x-signature`) — requer `MP_WEBHOOK_SECRET`
+- [x] Consumir `/api/produtos` no frontend (catálogo ligado à API)
 - [ ] Ativar gateway com credenciais reais do Mercado Pago
-- [ ] Validar assinatura do webhook (`x-signature`)
-- [ ] Consumir `/api/produtos` no frontend (hoje o catálogo usa mock)
+- [ ] Tela de pedido pago/histórico para cliente e dono da loja
 - [ ] Upload de modelos customizados pelos usuários
 - [ ] Login com Google no backend
 

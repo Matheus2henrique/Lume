@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { validarAssinaturaWebhook } from '../src/services/mercadoPago.js'
 
 describe('validarAssinaturaWebhook', () => {
@@ -5,7 +6,8 @@ describe('validarAssinaturaWebhook', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv }
-    process.env.MP_ACCESS_TOKEN = 'test-token-123'
+    delete process.env.MP_WEBHOOK_SECRET
+    delete process.env.MP_ACCESS_TOKEN
   })
 
   afterEach(() => {
@@ -18,8 +20,6 @@ describe('validarAssinaturaWebhook', () => {
   })
 
   it('deve retornar true quando não há secret configurado', () => {
-    delete process.env.MP_WEBHOOK_SECRET
-    delete process.env.MP_ACCESS_TOKEN
     const req = {
       headers: { 'x-signature': 'ts=123,v1=abc' },
       body: { test: true },
@@ -28,10 +28,54 @@ describe('validarAssinaturaWebhook', () => {
   })
 
   it('deve retornar false para assinatura inválida', () => {
+    process.env.MP_WEBHOOK_SECRET = 'segredo-teste'
     const req = {
       headers: { 'x-signature': 'ts=1234567890,v1=invalidsignature' },
       body: { type: 'payment', data: { id: 123 } },
     }
     expect(validarAssinaturaWebhook(req)).toBe(false)
+  })
+
+  it('deve retornar false para assinatura de outro segredo', () => {
+    process.env.MP_WEBHOOK_SECRET = 'segredo-de-outro-ambiente'
+    const xRequestId = 'req-456'
+    const ts = '1704908010'
+    const dataId = '999'
+    const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
+    const v1 = crypto.createHmac('sha256', 'segredo-diferente').update(manifest).digest('hex')
+    const req = {
+      headers: { 'x-signature': `ts=${ts},v1=${v1}`, 'x-request-id': xRequestId },
+      body: { type: 'payment', data: { id: dataId } },
+    }
+    expect(validarAssinaturaWebhook(req)).toBe(false)
+  })
+
+  it('deve retornar true para assinatura válida (manifesto oficial do MP)', () => {
+    process.env.MP_WEBHOOK_SECRET = 'segredo-teste'
+    const xRequestId = 'req-123'
+    const ts = '1704908010'
+    const dataId = '999'
+    // Manifesto oficial: id:{data.id};request-id:{x-request-id};ts:{ts};
+    const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
+    const v1 = crypto.createHmac('sha256', 'segredo-teste').update(manifest).digest('hex')
+    const req = {
+      headers: { 'x-signature': `ts=${ts},v1=${v1}`, 'x-request-id': xRequestId },
+      body: { type: 'payment', data: { id: dataId } },
+    }
+    expect(validarAssinaturaWebhook(req)).toBe(true)
+  })
+
+  it('deve aceitar data.id vindo da query string (envio do MP)', () => {
+    process.env.MP_WEBHOOK_SECRET = 'segredo-teste'
+    const xRequestId = 'req-789'
+    const ts = '1704908011'
+    const manifest = `id:12345;request-id:${xRequestId};ts:${ts};`
+    const v1 = crypto.createHmac('sha256', 'segredo-teste').update(manifest).digest('hex')
+    const req = {
+      headers: { 'x-signature': `ts=${ts},v1=${v1}`, 'x-request-id': xRequestId },
+      body: {},
+      query: { 'data.id': '12345' },
+    }
+    expect(validarAssinaturaWebhook(req)).toBe(true)
   })
 })

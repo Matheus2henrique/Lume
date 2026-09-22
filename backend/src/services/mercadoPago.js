@@ -56,6 +56,18 @@ export async function obterPagamento(paymentId) {
   return resposta.json()
 }
 
+/**
+ * Valida a assinatura enviada pelo Mercado Pago no header x-signature.
+ *
+ * Manifesto oficial (docs do MP): id:{data.id};request-id:{x-request-id};ts:{ts};
+ * assinado com HMAC-SHA256 usando o SEGREDO gerado no painel do Mercado Pago
+ * (Suas integrações > Webhooks > Configurar notificação > revelar chave),
+ * configurado em MP_WEBHOOK_SECRET.
+ *
+ * Sem o segredo configurado, a validação é ignorada com aviso — a segurança
+ * principal vem de consultar o pagamento na API do MP antes de aprovar
+ * (ver routes/pagamentos.js) e de conferir o valor pago.
+ */
 export function validarAssinaturaWebhook(req) {
   const xSignature = req.headers['x-signature']
   const xRequestId = req.headers['x-request-id']
@@ -65,37 +77,46 @@ export function validarAssinaturaWebhook(req) {
     return false
   }
 
-  const secret = process.env.MP_WEBHOOK_SECRET || process.env.MP_ACCESS_TOKEN
+  const secret = process.env.MP_WEBHOOK_SECRET
   if (!secret) {
-    logger.warn('MP_WEBHOOK_SECRET e MP_ACCESS_TOKEN não configurados — ignorando validação')
+    logger.warn(
+      'MP_WEBHOOK_SECRET não configurado — validação de assinatura ignorada. ' +
+        'Configure o segredo do painel do Mercado Pago antes de ir para produção.'
+    )
     return true
   }
 
-  const parts = {}
-  for (const part of xSignature.split(',')) {
-    const [key, value] = part.split('=')
-    parts[key.trim()] = value.trim()
+  const partes = {}
+  for (const parte of String(xSignature).split(',')) {
+    const [chave, ...valor] = parte.split('=')
+    if (chave && valor.length > 0) partes[chave.trim()] = valor.join('=').trim()
   }
-
-  const ts = parts.ts
-  const v1 = parts.v1
+  const { ts, v1 } = partes
 
   if (!ts || !v1) {
-    logger.warn('Webhook assinatura com formato inválido')
+    logger.warn('Webhook com assinatura em formato inválido')
     return false
   }
 
-  const body = JSON.stringify(req.body)
-  let manifest = `id:${xRequestId || ''};request-id:${xRequestId || ''};ts:${ts};body:${body};`
+  // O MP envia o id do pagamento no corpo (data.id) e também na query (data.id).
+  const dataId = req.body?.data?.id ?? req.query?.['data.id'] ?? req.query?.id ?? ''
+  const manifest =
+    [
+      dataId !== '' && dataId != null ? `id:${dataId}` : null,
+      xRequestId ? `request-id:${xRequestId}` : null,
+      `ts:${ts}`,
+    ]
+      .filter(Boolean)
+      .join(';') + ';'
 
-  const hmac = crypto.createHmac('sha256', secret)
-  hmac.update(manifest)
-  const computed = hmac.digest('hex')
+  const esperado = crypto.createHmac('sha256', secret).update(manifest).digest('hex')
+  const a = Buffer.from(esperado, 'utf8')
+  const b = Buffer.from(v1, 'utf8')
+  const confere = a.length === b.length && crypto.timingSafeEqual(a, b)
 
-  if (computed !== v1) {
-    logger.warn({ computed, expected: v1 }, 'Webhook assinatura inválida')
-    return false
+  if (!confere) {
+    // Nunca logar os valores do HMAC — apenas o fato da falha.
+    logger.warn({ requestId: xRequestId || null }, 'Assinatura do webhook inválida')
   }
-
-  return true
+  return confere
 }
