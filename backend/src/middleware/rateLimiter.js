@@ -23,3 +23,11 @@ export const limiterPagamento = rateLimit({
   legacyHeaders: false,
   message: { erro: 'Muitas requisições de pagamento. Tente novamente em 1 minuto.' },
 })
+
+export const limiterReenvio = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { erro: 'Muitos reenvios. Aguarde 1 minuto.' },
+})

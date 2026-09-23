@@ -31,10 +31,13 @@ function IconeGoogle({ className = "w-5 h-5" }) {
 }
 
 function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
-  const [modo, setModo] = useState('login') // login | registrar
+  const [modo, setModo] = useState('login') // login | registrar | verificar
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
+  const [codigo, setCodigo] = useState('')
+  const [envioPendente, setEnvioPendente] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState('')
@@ -46,6 +49,12 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     color: 'var(--cor-texto)',
     background: 'var(--cor-fundo-cartao)',
   }
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [cooldown])
 
   useEffect(() => {
     async function carregarSessao() {
@@ -90,6 +99,13 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
       const resposta = await api.login({ email, senha })
       concluirLogin(resposta)
     } catch (err) {
+      if (err.dados?.requerVerificacao) {
+        setErro('')
+        setCodigo('')
+        setModo('verificar')
+        setSucesso(err.dados.erro || 'Confirme o código enviado para o seu e-mail.')
+        return
+      }
       setErro(err.message)
     } finally {
       setCarregando(false)
@@ -107,7 +123,58 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     setCarregando(true)
     try {
       const resposta = await api.registrar({ nome, email, senha })
+      if (resposta.requerVerificacao) {
+        iniciarVerificacao(resposta)
+        return
+      }
       concluirLogin(resposta)
+    } catch (err) {
+      setErro(err.message)
+    } finally {
+      setCarregando(false)
+    }
+  }
+
+  function iniciarVerificacao(resposta) {
+    setCodigo('')
+    setModo('verificar')
+    setCooldown(60)
+    setEnvioPendente(resposta.emailEnviado === false)
+    setErro('')
+    setSucesso(
+      `Enviamos um código de verificação para ${resposta.email || email}. Ele expira em ${resposta.expiraEmMinutos || 10} minutos.`
+    )
+  }
+
+  async function handleVerificar(e) {
+    e.preventDefault()
+    if (!codigo.trim()) {
+      setErro('Digite o código recebido por e-mail.')
+      return
+    }
+    setErro('')
+    setSucesso('')
+    setCarregando(true)
+    try {
+      const resposta = await api.verificarCodigo({ email, codigo: codigo.trim() })
+      concluirLogin(resposta)
+    } catch (err) {
+      setErro(err.message)
+    } finally {
+      setCarregando(false)
+    }
+  }
+
+  async function handleReenviar() {
+    if (cooldown > 0 || carregando) return
+    setErro('')
+    setSucesso('')
+    setCarregando(true)
+    try {
+      const resposta = await api.reenviarVerificacao({ email })
+      setCooldown(60)
+      setEnvioPendente(false)
+      setSucesso(resposta.mensagem || 'Novo código enviado.')
     } catch (err) {
       setErro(err.message)
     } finally {
@@ -208,12 +275,14 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     <section className="py-[70px] flex justify-center px-6" style={{ background: 'var(--cor-fundo)' }}>
       <div className="w-full max-w-md">
         <h2 className="text-4xl font-[Georgia,serif] mb-2 text-center" style={{ color: 'var(--cor-texto)' }}>
-          {modo === 'login' ? 'Entrar' : 'Registrar'}
+          {modo === 'login' ? 'Entrar' : modo === 'registrar' ? 'Registrar' : 'Verificar e-mail'}
         </h2>
         <p className="text-center mb-8" style={{ color: 'var(--cor-texto-suave)' }}>
           {modo === 'login'
             ? 'Acesse sua conta Lume para continuar.'
-            : 'Crie sua conta para começar a comprar.'}
+            : modo === 'registrar'
+              ? 'Crie sua conta para começar a comprar.'
+              : `Digite o código que enviamos para ${email}.`}
         </p>
 
         {sucesso && (
@@ -225,7 +294,76 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
           </p>
         )}
 
-        {modo === 'login' ? (
+        {modo === 'verificar' ? (
+          <form className="flex flex-col gap-5" onSubmit={handleVerificar}>
+            {envioPendente && (
+              <p
+                className="text-sm py-2 px-4 rounded-lg"
+                style={{ background: 'var(--cor-fundo-cartao)', color: 'var(--cor-texto-suave)', border: '1px solid var(--cor-borda)' }}
+              >
+                O e-mail ainda não chegou? Confira a caixa de spam ou use “Reenviar código”. Em
+                desenvolvimento, o código aparece no console do backend.
+              </p>
+            )}
+
+            <div className="text-left">
+              <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
+                Código de verificação
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="000000"
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))}
+                className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors text-center tracking-[0.5em]"
+                style={estiloInput}
+              />
+            </div>
+
+            {erro && (
+              <p className="text-sm" style={{ color: 'var(--cor-perigo)' }}>
+                {erro}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={carregando || codigo.length !== 6}
+              className="mt-2 border-none px-[30px] py-3 rounded-full text-white cursor-pointer text-lg transition-all duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+              style={{ background: 'var(--cor-laranja)' }}
+            >
+              {carregando ? 'Verificando…' : 'Confirmar'}
+            </button>
+
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleReenviar}
+                disabled={cooldown > 0 || carregando}
+                className="bg-transparent border-none cursor-pointer text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ color: 'var(--cor-laranja)' }}
+              >
+                {cooldown > 0 ? `Reenviar em ${cooldown}s` : 'Reenviar código'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setModo('login')
+                  setErro('')
+                  setSucesso('')
+                  setCodigo('')
+                }}
+                className="bg-transparent border-none cursor-pointer text-sm hover:underline"
+                style={{ color: 'var(--cor-texto-suave)' }}
+              >
+                Voltar ao login
+              </button>
+            </div>
+          </form>
+        ) : modo === 'login' ? (
           <form className="flex flex-col gap-5" onSubmit={handleLogin}>
             <div className="text-left">
               <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
@@ -389,7 +527,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
           </form>
         )}
 
-        <div className="my-7 flex items-center gap-4">
+        <div className="my-7 flex items-center gap-4" style={modo === 'verificar' ? { display: 'none' } : undefined}>
           <span className="h-px flex-1" style={{ background: 'var(--cor-borda)' }} />
           <span className="text-sm whitespace-nowrap" style={{ color: 'var(--cor-texto-suave)' }}>
             Entrar com outras contas
@@ -405,14 +543,16 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
             background: 'var(--cor-fundo-cartao)',
             border: '1px solid var(--cor-borda)',
             color: 'var(--cor-texto)',
+            display: modo === 'verificar' ? 'none' : 'flex',
           }}
         >
           <IconeGoogle />
           <span className="text-base font-medium">Continuar com o Google</span>
         </button>
 
-        <p className="mt-6 text-center text-base" style={{ color: 'var(--cor-texto-suave)' }}>
-          {modo === 'login' ? (
+        {modo !== 'verificar' && (
+          <p className="mt-6 text-center text-base" style={{ color: 'var(--cor-texto-suave)' }}>
+            {modo === 'login' ? (
             <>
               Não tem uma conta?{' '}
               <button
@@ -441,9 +581,10 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
               >
                 Faça Login Agora
               </button>
-            </>
-          )}
-        </p>
+              </>
+            )}
+          </p>
+        )}
 
         <div className="mt-8 text-center">
           <button

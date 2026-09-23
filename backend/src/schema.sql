@@ -81,3 +81,34 @@ BEGIN
     ALTER TABLE usuarios ADD COLUMN admin BOOLEAN NOT NULL DEFAULT FALSE;
   END IF;
 END $$;
+
+-- Migração: verificação de e-mail por código
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'email_verificado'
+  ) THEN
+    ALTER TABLE usuarios ADD COLUMN email_verificado BOOLEAN NOT NULL DEFAULT FALSE;
+    -- Contas que já existiam antes da feature são consideradas verificadas
+    -- (evita tranchar admin/usuários atuais fora da conta).
+    UPDATE usuarios SET email_verificado = TRUE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'codigo_verificacao_hash'
+  ) THEN
+    ALTER TABLE usuarios ADD COLUMN codigo_verificacao_hash TEXT;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'codigo_expira_em'
+  ) THEN
+    ALTER TABLE usuarios ADD COLUMN codigo_expira_em TIMESTAMPTZ;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'codigo_tentativas'
+  ) THEN
+    ALTER TABLE usuarios ADD COLUMN codigo_tentativas INTEGER NOT NULL DEFAULT 0;
+  END IF;
+END $$;

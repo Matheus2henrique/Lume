@@ -53,6 +53,7 @@ async function requisicao(caminho, { metodo = 'GET', corpo, autenticado = false 
     const mensagem = dados?.erro || dados?.mensagem || 'Algo deu errado.'
     const erro = new Error(mensagem)
     erro.status = resposta.status
+    erro.dados = dados
     throw erro
   }
   return dados
@@ -61,6 +62,8 @@ async function requisicao(caminho, { metodo = 'GET', corpo, autenticado = false 
 export const api = {
   registrar: (dados) => requisicao('/auth/registrar', { metodo: 'POST', corpo: dados }),
   login: (dados) => requisicao('/auth/login', { metodo: 'POST', corpo: dados }),
+  verificarCodigo: (dados) => requisicao('/auth/verificar', { metodo: 'POST', corpo: dados }),
+  reenviarVerificacao: (dados) => requisicao('/auth/reenviar-verificacao', { metodo: 'POST', corpo: dados }),
   perfil: () => requisicao('/auth/perfil', { autenticado: true }),
 
   produtos: {

@@ -19,6 +19,13 @@ const env = cleanEnv(process.env, {
   // Ative quando houver um proxy reverso na frente (nginx/Railway/Render)
   // para o rate limit enxergar o IP real do cliente.
   TRUST_PROXY: bool({ default: false }),
+  // E-mail transacional via SMTP (verificação de conta).
+  // Sem EMAIL_SMTP_PASS o envio é simulado (código só logado no console).
+  EMAIL_SMTP_HOST: str({ default: 'smtp.gmail.com' }),
+  EMAIL_SMTP_PORT: port({ default: 465 }),
+  EMAIL_SMTP_USER: str({ default: '' }),
+  EMAIL_SMTP_PASS: str({ default: '' }),
+  EMAIL_REMETENTE: str({ default: 'Lume <nao-responda@lume.com>' }),
 })
 
 export default env
