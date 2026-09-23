@@ -24,6 +24,21 @@ export function obterUsuario() {
   }
 }
 
+/**
+ * Existe sessão VÁLIDA? Além de ter token, confere a data de expiração (exp)
+ * do JWT — token antigo/expirado não deve liberar a compra.
+ */
+export function sessaoValida() {
+  const token = obterToken()
+  if (!token) return false
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now()
+  } catch {
+    return false
+  }
+}
+
 async function requisicao(caminho, { metodo = 'GET', corpo, autenticado = false } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   if (autenticado) {

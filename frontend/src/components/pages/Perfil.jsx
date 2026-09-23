@@ -97,13 +97,14 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     setCarregando(true)
     try {
       const resposta = await api.login({ email, senha })
+      if (resposta?.requerVerificacao) {
+        iniciarVerificacao(resposta)
+        return
+      }
       concluirLogin(resposta)
     } catch (err) {
       if (err.dados?.requerVerificacao) {
-        setErro('')
-        setCodigo('')
-        setModo('verificar')
-        setSucesso(err.dados.erro || 'Confirme o código enviado para o seu e-mail.')
+        iniciarVerificacao(err.dados)
         return
       }
       setErro(err.message)
@@ -141,8 +142,12 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     setCooldown(60)
     setEnvioPendente(resposta.emailEnviado === false)
     setErro('')
+    const destino = resposta.email || email
+    const expira = resposta.expiraEmMinutos || 10
     setSucesso(
-      `Enviamos um código de verificação para ${resposta.email || email}. Ele expira em ${resposta.expiraEmMinutos || 10} minutos.`
+      resposta.novaConta
+        ? `Enviamos um código para ${destino}. Sua conta será criada assim que você confirmar o código (ele expira em ${expira} minutos).`
+        : `Enviamos um código de verificação para ${destino}. Ele expira em ${expira} minutos.`
     )
   }
 
@@ -279,7 +284,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
         </h2>
         <p className="text-center mb-8" style={{ color: 'var(--cor-texto-suave)' }}>
           {modo === 'login'
-            ? 'Acesse sua conta Lume para continuar.'
+            ? 'Acesse sua conta Lume. Se o e-mail ainda não tiver cadastro, enviaremos um código para criar a conta.'
             : modo === 'registrar'
               ? 'Crie sua conta para começar a comprar.'
               : `Digite o código que enviamos para ${email}.`}
@@ -288,7 +293,11 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
         {sucesso && (
           <p
             className="mb-6 text-center text-sm py-2 px-4 rounded-lg"
-            style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
+            style={{
+              background: 'var(--cor-fundo-cartao)',
+              color: 'var(--cor-laranja-claro)',
+              border: '1px solid var(--cor-borda)',
+            }}
           >
             {sucesso}
           </p>
@@ -308,16 +317,16 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
 
             <div className="text-left">
               <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
-                Código de verificação
+                Código de verificação :
               </label>
               <input
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 maxLength={6}
-                placeholder="000000"
+                placeholder="0000"
                 value={codigo}
-                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors text-center tracking-[0.5em]"
                 style={estiloInput}
               />
@@ -331,7 +340,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
 
             <button
               type="submit"
-              disabled={carregando || codigo.length !== 6}
+              disabled={carregando || codigo.length < 4 || codigo.length > 6}
               className="mt-2 border-none px-[30px] py-3 rounded-full text-white cursor-pointer text-lg transition-all duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
               style={{ background: 'var(--cor-laranja)' }}
             >

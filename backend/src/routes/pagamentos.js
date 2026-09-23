@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import pool from '../db.js'
 import { gatewayConfigurado, criarPreferencia, obterPagamento, validarAssinaturaWebhook } from '../services/mercadoPago.js'
-import { autenticarOpcional, validarCheckoutToken } from '../middleware/auth.js'
+import { autenticar, validarCheckoutToken } from '../middleware/auth.js'
 import { limiterPagamento } from '../middleware/rateLimiter.js'
 import logger from '../logger.js'
 
@@ -16,7 +16,8 @@ router.get('/status', (_req, res) => {
   res.json({ gateway: gatewayConfigurado() })
 })
 
-router.post('/preferencia', autenticarOpcional, limiterPagamento, async (req, res) => {
+// Pagamento exige sessão: só o dono (logado) consegue gerar a cobrança.
+router.post('/preferencia', autenticar, limiterPagamento, async (req, res) => {
   if (!gatewayConfigurado()) {
     return res.status(503).json({
       erro: 'Configure o MP_ACCESS_TOKEN no arquivo .env para ativar o pagamento pelo Mercado Pago.',

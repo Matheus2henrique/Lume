@@ -107,6 +107,15 @@ describe('POST /api/auth/verificar', () => {
     expect(res.status).toBe(400)
   })
 
+  it('deve rejeitar código fora do formato de 4 a 6 dígitos', async () => {
+    const res = await request(app)
+      .post('/api/auth/verificar')
+      .send({ email: 'teste@test.com', codigo: '12' })
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('4 a 6 dígitos')
+    expect(mockQuery).not.toHaveBeenCalled()
+  })
+
   it('deve retornar 400 para e-mail inexistente sem vazar', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [] })
     const res = await request(app)
@@ -194,6 +203,35 @@ describe('POST /api/auth/login', () => {
     expect(res.status).toBe(400)
   })
 
+  it('deve criar conta pendente e enviar código quando o e-mail não existe', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] }) // SELECT: não existe
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: false })] }) // INSERT
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'teste@test.com', senha: '123456' })
+    expect(res.status).toBe(201)
+    expect(res.body.requerVerificacao).toBe(true)
+    expect(res.body.novaConta).toBe(true)
+    expect(res.body.email).toBe('teste@test.com')
+    expect(res.body.token).toBeUndefined()
+    expect(mockEnviarEmail).toHaveBeenCalledTimes(1)
+    const insert = mockQuery.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO usuarios'))
+    expect(insert).toBeDefined()
+    expect(String(insert[0])).toContain('email_verificado, codigo_verificacao_hash')
+    expect(String(insert[0])).toContain('FALSE') // conta nasce não verificada
+    expect(insert[1][1]).toBe('teste@test.com')
+  })
+
+  it('deve exigir senha de 6 caracteres ao criar conta pela tela de Entrar', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] })
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'novo@test.com', senha: '123' })
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('6 caracteres')
+    expect(mockEnviarEmail).not.toHaveBeenCalled()
+  })
+
   it('deve bloquear login com 403 quando o e-mail não foi verificado', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: false })] })
     const res = await request(app)
@@ -202,6 +240,7 @@ describe('POST /api/auth/login', () => {
     expect(res.status).toBe(403)
     expect(res.body.requerVerificacao).toBe(true)
     expect(res.body.token).toBeUndefined()
+    expect(mockEnviarEmail).toHaveBeenCalledTimes(1) // reemite um código válido
   })
 
   it('deve logar quando o e-mail já foi verificado', async () => {

@@ -139,13 +139,14 @@ Fluxo completo:
 
 ```
 1. Frontend (Carrinho.jsx)
-   POST /api/pedidos  { cliente, pagamento, itens }
+   POST /api/pedidos  { cliente, pagamento, itens }   + Authorization (obrigatória)
+   → sem token válido o backend responde 401 e nada é criado
    → pedido criado como "pendente" (se gateway ativo), sem baixar estoque
 
 2. Frontend (Carrinho.jsx)
-   POST /api/pagamentos/preferencia  { pedidoId, titulo, cliente, checkoutToken? }
+   POST /api/pagamentos/preferencia  { pedidoId, titulo, cliente }   + Authorization
    → o backend lê o total SEMPRE do banco (nunca do corpo da requisição),
-     valida a permissão (dono logado, ou checkoutToken para convidado)
+     valida a permissão (apenas o dono logado pode pagar)
      e services/mercadoPago.js chama:
      POST https://api.mercadopago.com/checkout/preferences
    → devolve init_point (URL do checkout do MP)

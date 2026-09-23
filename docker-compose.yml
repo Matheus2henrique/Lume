@@ -1,0 +1,54 @@
+# Sobe banco + backend com um comando:
+#
+#   docker compose up --build
+#
+# Primeira vez (popula produtos/gêneros/admin):
+#   docker compose run --rm backend npm run seed
+#
+# Atenção: o banco usa a porta 5434 do host (a mesma do backend/.env).
+# Se estiver rodando outro container nessa porta (ex.: lume-db), pare antes:
+#   docker stop lume-db
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-Lume}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT_HOST:-5434}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-Lume}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Variáveis vêm do backend/.env (lido pelo compose no host)…
+    env_file:
+      - ./backend/.env
+    environment:
+      # …mas estas precisam mudar dentro da rede do compose:
+      DB_HOST: db          # não é localhost aqui
+      DB_PORT: 5432        # porta interna do container
+      # Local: development (sem travas). Para produção real:
+      #   NODE_ENV=production docker compose up --build
+      # (exige JWT_SECRET forte, CLIENTE_ORIGEM sem localhost e
+      #  DB_PASSWORD forte — o servidor recusa iniciar se faltar).
+      NODE_ENV: ${NODE_ENV:-development}
+      CLIENTE_ORIGEM: ${CLIENTE_ORIGEM:-http://localhost:5173}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:4000}
+    ports:
+      - "${PORT:-4000}:4000"
+
+volumes:
+  pgdata:

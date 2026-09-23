@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import pool from '../db.js'
-import { autenticar, autenticarOpcional, criarCheckoutToken } from '../middleware/auth.js'
+import { autenticar } from '../middleware/auth.js'
 import { gatewayConfigurado } from '../services/mercadoPago.js'
 import logger from '../logger.js'
 
@@ -8,7 +8,8 @@ const router = Router()
 
 const idDoItem = (item) => item?.produtoId ?? item?.produto?.id
 
-router.post('/', autenticarOpcional, async (req, res) => {
+// Só quem está logado pode finalizar a compra (401 sem token válido).
+router.post('/', autenticar, async (req, res) => {
   const { cliente, itens, pagamento } = req.body || {}
 
   if (!cliente || typeof cliente.nome !== 'string' || !cliente.nome.trim()) {
@@ -59,7 +60,7 @@ router.post('/', autenticarOpcional, async (req, res) => {
       total += Number(produto.preco) * item.quantidade
     }
 
-    const usuarioId = req.usuario?.id ?? null
+    const usuarioId = req.usuario.id
     let clienteId = null
     const { rows: existentes } = await client.query(
       'SELECT id FROM clientes WHERE email = $1',
@@ -144,8 +145,6 @@ router.post('/', autenticarOpcional, async (req, res) => {
       mensagem: gatewayAtivo
         ? 'Pedido criado. Finalize o pagamento no Mercado Pago.'
         : 'Pedido recebido com sucesso!',
-      // Convidado precisa deste token para gerar o pagamento em seguida.
-      ...(req.usuario ? {} : { checkoutToken: criarCheckoutToken(pedido.id) }),
     })
   } catch (err) {
     if (client) await client.query('ROLLBACK').catch(() => {})

@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
 import env from './env.js'
 import logger from './logger.js'
 import pool from './db.js'
@@ -27,16 +28,24 @@ app.use(
   })
 )
 
-// Cabeçalhos básicos de segurança.
-app.use((_req, res, next) => {
-  res.set({
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Cross-Origin-Resource-Policy': 'cross-origin',
+// Cabeçalhos de segurança completos: HSTS, CSP de API (nenhum recurso próprio),
+// X-Frame-Options DENY, nosniff, Referrer-Policy e CORP.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        defaultSrc: ["'none'"],
+        baseUri: ["'none'"],
+        formAction: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    frameguard: { action: 'deny' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
-  next()
-})
+)
 
 // Limite maior que o padrão (100kb) para aceitar imagens de produto em
 // base64 no cadastro do admin. Substituir por upload dedicado — ver

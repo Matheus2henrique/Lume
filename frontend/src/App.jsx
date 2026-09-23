@@ -285,6 +285,12 @@ function App() {
     setMostrarCarrinho(false)
   }
 
+  // Compra exige conta: fecha o carrinho e leva para a tela de login.
+  function handleEntrarDoCarrinho() {
+    setMostrarCarrinho(false)
+    navegar({ pagina: 'entrada', mostrarPerfil: true })
+  }
+
   async function handleFinalizar(dados) {
     const pedido = await api.criarPedido(dados)
     setCarrinho([])
@@ -396,6 +402,7 @@ function App() {
           onRemover={handleRemoverDoCarrinho}
           onAlterar={handleAlterarQuantidade}
           onFinalizar={handleFinalizar}
+          onEntrar={handleEntrarDoCarrinho}
         />
       )}
 

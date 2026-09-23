@@ -1,5 +1,7 @@
 # Lume — Loja de Impressão 3D (MVP)
 
+[![CI](https://github.com/Matheus2henrique/Lume/actions/workflows/ci.yml/badge.svg)](https://github.com/Matheus2henrique/Lume/actions/workflows/ci.yml)
+
 **Loja virtual (MVP) de peças impressas em 3D sob demanda.** Catálogo por universos (Romance, Fantasia e Suspense), página de detalhes do produto, carrinho, checkout com pagamento (simulado ou Mercado Pago), verificação de e-mail no cadastro, favoritos, área de perfil e painel administrativo.
 
 > Projeto em evolução — MVP funcional para validar a venda de modelos 3D personalizados sob demanda. O roteiro completo (com prioridades e esforço) está no **[PLANO_PRODUCAO.md](./PLANO_PRODUCAO.md)**.
@@ -27,7 +29,7 @@
 
 - 🏷️ **Catálogo por universos** — Romance, Fantasia e Suspense, com filtro e página de detalhes
 - 📄 **Página de detalhes** — preço, estoque, descrição, personalização com upload de arquivo e "Comprar agora"
-- 🛒 **Carrinho e checkout** — dados de entrega + pagamento (Pix ou cartão), **logado ou como convidado** (checkoutToken de 30 min)
+- 🛒 **Carrinho e checkout** — dados de entrega + pagamento (Pix ou cartão), **somente com conta logada** (sem login não é possível finalizar)
 - ✉️ **Verificação de e-mail** — código de 6 dígitos no cadastro (HMAC, 10 min, 5 tentativas); login travado até confirmar; sem SMTP configurado o código sai no console do backend (modo dev)
 - 💳 **Mercado Pago** — redirecionamento para o checkout real; o webhook valida a assinatura e só então o pedido vira `pago` e o estoque baixa
 - ❤️ **Favoritos** — persistidos no banco quando o usuário está logado
@@ -154,6 +156,17 @@ npm test             # 4 suítes / 32 testes
 > O frontend já está ligado à API (cadastro com verificação, login, favoritos e finalização de compra).
 > Em produção, defina `VITE_API_URL` no frontend apontando para a URL da API.
 
+## 🐳 Docker (igual em qualquer máquina)
+
+```console
+docker compose up --build                      # banco + backend (migrate roda na subida)
+docker compose run --rm backend npm run seed   # só na primeira vez
+```
+
+> - Backend em `http://localhost:4000`, banco na porta `5434` (a mesma do `backend/.env`).
+> - Se o container antigo `lume-db` estiver no ar, pare antes: `docker stop lume-db`.
+> - Em produção: `NODE_ENV=production docker compose up --build` — as travas do `env.js` exigem `JWT_SECRET` forte (≥32 chars), `CLIENTE_ORIGEM` sem localhost e `DB_PASSWORD` forte; sem isso o servidor **recusa iniciar**.
+
 ## 💳 Pagamento real com Mercado Pago
 
 Sem configuração, o checkout é **simulado**: cria o pedido, marca como `pago` e baixa o estoque na hora, **sem cobrar ninguém**.
@@ -196,10 +209,10 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 | `GET` | `/api/favoritos` | Lista favoritos do usuário | Token |
 | `POST` | `/api/favoritos/:produtoId` | Adiciona favorito | Token |
 | `DELETE` | `/api/favoritos/:produtoId` | Remove favorito | Token |
-| `POST` | `/api/pedidos` | Checkout (logado ou convidado com `checkoutToken`) | Opcional |
+| `POST` | `/api/pedidos` | Checkout (exige sessão — sem token → 401) | Obrigatória |
 | `GET` | `/api/pedidos` | Lista pedidos do usuário | Token |
 | `GET` | `/api/pagamentos/status` | Informa se o gateway está ativo | — |
-| `POST` | `/api/pagamentos/preferencia` | Cria o checkout no Mercado Pago | Opcional |
+| `POST` | `/api/pagamentos/preferencia` | Cria o checkout no Mercado Pago | Obrigatória |
 | `POST` | `/api/pagamentos/webhook` | Confirma o pagamento (assinatura validada) | — |
 | `GET` | `/api/pagamentos/webhook` | Validação/health do webhook do MP | — |
 | `POST` | `/api/newsletter` | Assina a newsletter | — |
@@ -208,10 +221,10 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 
 ```console
 cd backend
-npm test        # Jest — 4 suítes, 32 testes
+npm test        # Jest — 6 suítes, 47 testes
 ```
 
-Cobertura: cadastro/login e **verificação de e-mail**, health (banco), catálogo de produtos e a **assinatura do webhook** do Mercado Pago (manifesto oficial `id/request-id/ts`, timing-safe). O fluxo de checkout também foi validado de ponta a ponta com Postgres real — incluindo a **corrida de estoque** (8 checkouts simultâneos de 5 peças em um estoque de 20) e os portões de permissão (401/403).
+Cobertura: cadastro/login e **verificação de e-mail**, health (banco), catálogo de produtos e a **assinatura do webhook** do Mercado Pago (manifesto oficial `id/request-id/ts`, timing-safe), portões de compra (401 sem sessão) e as **travas de produção do `env.js`** (o servidor recusa subir com segredo fraco, CORS localhost ou senha de banco padrão). O fluxo de checkout também foi validado de ponta a ponta com Postgres real — incluindo a **corrida de estoque** (8 checkouts simultâneos de 5 peças em um estoque de 20).
 
 ## 🌐 Deploy (GitHub Pages)
 
@@ -223,10 +236,8 @@ npm run deploy    # build automático (predeploy) + push na branch gh-pages
 ```
 
 > - O script usa o **git do Windows** (sua credencial já é reconhecida) e faz `push --force` na `gh-pages`.
-> - **Sem `VITE_API_URL` o site publicado usa o catálogo mock** — as chamadas para `localhost:4000` falham e o fallback entra. Quando o backend estiver hospedado:
->   ```console
->   set VITE_API_URL=https://sua-api.com && npm run deploy
->   ```
+> - **Alternativa automática:** o workflow `.github/workflows/deploy.yml` publica a cada push no `main` (uma vez: Settings → Pages → Source = "GitHub Actions").
+> - **Sem `VITE_API_URL` o site publicado usa o catálogo mock** — as chamadas para `localhost:4000` falham e o fallback entra. Quando o backend estiver hospedado, defina a variável `VITE_API_URL` no build (variável do Actions ou `set VITE_API_URL=https://sua-api.com && npm run deploy`).
 
 ## 📜 Scripts
 
@@ -261,6 +272,28 @@ Consulte **[Normas.md](./Normas.md)** para:
 - Regras de segurança (senha, JWT, `.env`, dados de cartão, webhook)
 - Atenção a **maiúsculas** em nomes de banco/tabela e à porta real do seu PostgreSQL
 
+## ✅ Checklist de produção
+
+> 📄 **Passo a passo completo com links e onde pegar cada credencial:** **[CONFIGURACOES_EXTERNAS.md](./CONFIGURACOES_EXTERNAS.md)** (Mercado Pago, SMTP, hospedagem, GitHub Pages, Google, backup…).
+
+**Já pronto (23/09):**
+
+- [x] `JWT_SECRET` forte no `.env` + **travas**: com `NODE_ENV=production` o servidor **recusa iniciar** com segredo fraco/placeholder, CORS localhost ou senha de banco `postgres` (testado em `__tests__/env.test.js`)
+- [x] Headers de segurança completos via `helmet` (HSTS, CSP `default-src 'none'`, `X-Frame-Options: DENY`, nosniff, CORP, Referrer-Policy)
+- [x] **CI** no GitHub Actions: testes (47) + `npm audit` (bloqueia backend) + lint/build do frontend + build da imagem Docker — a cada push/PR
+- [x] **Deploy** do workflow na raiz (estava em `frontend/.github/`, onde o GitHub não lê) com `VITE_API_URL` via variável
+- [x] **Docker**: `backend/Dockerfile` (node:22-alpine, usuário sem privilégios, healthcheck) + `docker-compose.yml` (api + postgres)
+- [x] Compra só com sessão; verificação de e-mail por código de 4–6 dígitos
+
+**Falta você (precisa de credenciais/seu clique):**
+
+- [ ] **SMTP**: preencher `EMAIL_SMTP_USER` / `EMAIL_SMTP_PASS` em `backend/.env` (ex.: senha de app do Gmail) — sem isso os códigos só vão para o log
+- [ ] **Hospedar o backend** (Render/Railway/VPS + banco gerenciado): subir a imagem com `NODE_ENV=production`, `TRUST_PROXY=true` e `CLIENTE_ORIGEM`/`BACKEND_URL` com o domínio
+- [ ] **Mercado Pago real**: `MP_ACCESS_TOKEN` + `MP_WEBHOOK_SECRET` + um pagamento de ponta a ponta (hoje o pagamento é simulado)
+- [ ] **GitHub**: Settings → Pages → Source = "GitHub Actions" e variável `VITE_API_URL` (Settings → Secrets and variables → Actions → Variables)
+- [ ] `npm audit fix` no **Windows** (4 advisories em ferramentas de build do frontend) e Dependabot em Settings → Security
+- [ ] Recuperação de senha, backup + restore testado (ver [PLANO_PRODUCAO.md](./PLANO_PRODUCAO.md))
+
 ## 🗺️ Próximos passos
 
 > O plano completo (com prioridades e esforço) está em **[PLANO_PRODUCAO.md](./PLANO_PRODUCAO.md)**.
@@ -269,7 +302,7 @@ Consulte **[Normas.md](./Normas.md)** para:
 - [x] Autenticação e cadastro de usuários
 - [x] Verificação de e-mail por código no cadastro (SMTP ou modo dev)
 - [x] Favoritos persistidos por usuário
-- [x] Checkout com pagamento e baixa de estoque (logado ou convidado)
+- [x] Checkout com pagamento e baixa de estoque (exige conta logada)
 - [x] Estrutura do gateway Mercado Pago (preferência + webhook)
 - [x] Validar assinatura do webhook (`x-signature`) — requer `MP_WEBHOOK_SECRET`
 - [x] Consumir `/api/produtos` no frontend (catálogo ligado à API)

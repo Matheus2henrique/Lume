@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Card from '../ui/Card'
 import Reveal from '../ui/Reveal'
 import { formatarMoeda } from '../../utils/formatar'
@@ -15,6 +15,15 @@ import {
 function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onAdicionarAoCarrinho, noCarrinho, favoritos, onToggleFavorito, admin = false, onEditarProduto }) {
   const [quantidade, setQuantidade] = useState(1)
   const [arquivo, setArquivo] = useState(null)
+  // Muda a cada clique em "Comprar agora" → reinicia a contagem de 7 segundos.
+  const [avisoId, setAvisoId] = useState(0)
+
+  // O aviso "Item adicionado ao carrinho" fica 7 segundos e some.
+  useEffect(() => {
+    if (avisoId === 0) return undefined
+    const tempo = setTimeout(() => setAvisoId(0), 7000)
+    return () => clearTimeout(tempo)
+  }, [avisoId])
 
   const genero = nichos.find((g) => g.id === produto.genero)
   const relacionados = produtos
@@ -179,6 +188,7 @@ function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onA
                 onClick={() => {
                   if (esgotado) return
                   onAdicionarAoCarrinho(produto, quantidade)
+                  setAvisoId((id) => id + 1) // mostra o aviso por 7 segundos
                 }}
                 disabled={esgotado}
                 className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl text-white text-lg font-medium cursor-pointer transition-all duration-300 hover:scale-[1.02] border-none disabled:opacity-50 disabled:cursor-not-allowed"
@@ -189,10 +199,10 @@ function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onA
               </button>
             </div>
 
-            {noCarrinho && (
+            {noCarrinho && avisoId > 0 && (
               <p
                 className="mt-3 text-sm py-2 px-4 text-center rounded-lg"
-                style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-laranja)' }}
+                style={{ background: 'var(--cor-fundo-cartao)', color: 'var(--cor-laranja-claro)' }}
               >
                 Item adicionado ao carrinho com sucesso!
               </p>

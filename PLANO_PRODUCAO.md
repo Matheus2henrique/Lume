@@ -2,8 +2,8 @@
 
 Do MVP funcional para um projeto pronto para **vender de verdade**.
 
-> **Situação em 22/09/2026:** backend corrigido e validado (ver
-> [O que já foi feito](#-o-que-já-foi-feito-nesta-rodada)).
+> **Situação em 23/09/2026:** backend corrigido, validado e com as travas de
+> produção (ver [O que já foi feito](#-o-que-já-foi-feito-nesta-rodada)).
 > Esforço estimado até produção: **3 a 4 semanas** de trabalho focado (1 pessoa).
 
 **Legenda de esforço:** S = menos de 1 dia · M = 1 a 3 dias · L = 1 semana
@@ -28,6 +28,12 @@ Do MVP funcional para um projeto pronto para **vender de verdade**.
 | `/api/health` mentia (sempre ok) | ✅ checa o banco, devolve 503 se cair |
 | Rate limit com IP errado atrás de proxy | ✅ `TRUST_PROXY` (ativar em produção) |
 | Upload de imagem dava erro 413 (>100kb) | ✅ limite para 10mb (temporário) |
+| Compra sem login (guest) e código de verificação fraco | ✅ checkout exige sessão; código de 4–6 dígitos |
+| `JWT_SECRET` era placeholder em `.env` | ✅ segredo de 64 caracteres gerado + **travas**: o servidor **recusa iniciar** em produção com segredo fraco, CORS localhost ou senha `postgres` (com teste) |
+| Nenhum workflow do GitHub Actions rodava | ✅ **CI** (`.github/workflows/ci.yml`): testes + audit + lint/build + build Docker a cada push/PR |
+| Deploy do frontend na pasta errada (`frontend/.github/`) | ✅ movido para `.github/workflows/deploy.yml` + `VITE_API_URL` via variável do repositório (item 0.3) |
+| Só 4 headers manuais de segurança | ✅ **helmet@8** (HSTS, CSP `default-src 'none'`, frame DENY, CORP, Referrer-Policy) — validado com `curl -I` |
+| Sem empacotamento reproduzível | ✅ `backend/Dockerfile` + `.dockerignore` + `docker-compose.yml` (api + postgres) — imagem buildada e compose validado |
 | Sem encerramento gracioso / sem cabeçalhos de segurança | ✅ SIGTERM + `nosniff`/`X-Frame-Options` etc. |
 | Deep link quebrava no GitHub Pages | ✅ `404.html` + restauração de rota |
 | Docs desatualizadas (Normas.md, README) | ✅ atualizadas |
@@ -42,8 +48,8 @@ Do MVP funcional para um projeto pronto para **vender de verdade**.
 | # | Item | Por quê | Esforço |
 |---|---|---|---|
 | 0.1 | **Mercado Pago de produção**: criar aplicação, preencher `MP_ACCESS_TOKEN`, gerar o segredo do webhook (Suas integrações → Webhooks → Configurar notificação) em `MP_WEBHOOK_SECRET` e validar **um pagamento real de ponta a ponta** (ngrok/domínio → webhook → pedido `pago` → estoque baixado) | Sem segredo, a validação é ignorada com aviso; sem token real, nada cobra | M |
-| 0.2 | **Hospedar o backend + banco gerenciado** (Render/Railway/VPS + Neon/Supabase/RDS): `TRUST_PROXY=true`, `JWT_SECRET` novo e forte, `CLIENTE_ORIGEM`/`BACKEND_URL` com o domínio, SSL no Postgres (`ssl` no pool — precisa de ajuste em `db.js` para o provedor) | Hoje só roda na sua máquina | M |
-| 0.3 | **Deploy automático do frontend**: mover `frontend/.github/workflows/deploy.yml` para `.github/workflows/` na **raiz do repositório** (hoje o GitHub nunca lê) e definir `VITE_API_URL` no build — sem ela o site publicado aponta para `localhost` e cai no mock silenciosamente | Site publicado está "casca vazia" | S |
+| 0.2 | **Hospedar o backend + banco gerenciado** (Render/Railway/VPS + Neon/Supabase/RDS): `TRUST_PROXY=true`, `CLIENTE_ORIGEM`/`BACKEND_URL` com o domínio, SSL no Postgres (`ssl` no pool — precisa de ajuste em `db.js` para o provedor). ~~`JWT_SECRET` novo e forte~~ ✅ feito + travas no `env.js` bloqueiam produção mal configurada; **falta só a hospedagem** (Dockerfile/compose prontos) | Hoje só roda na sua máquina | ~~M~~ **S** |
+| 0.3 | ~~**Deploy automático do frontend**: mover `frontend/.github/workflows/deploy.yml` para `.github/workflows/` na raiz do repositório e definir `VITE_API_URL` no build~~ ✅ **feito em 23/09** — workflow na raiz, `VITE_API_URL` lida de `${{ vars.VITE_API_URL }}`. **Ação sua (1 clique):** Settings → Pages → Source = "GitHub Actions" + definir a variável | Site publicado está "casca vazia" | S |
 | 0.4 | **Tela de status do pedido**: `back_urls` do MP voltam para a home; criar rota `/pedido/:id` que consulta `GET /api/pedidos/:id` e mostra `pendente/pago` (com polling). Cliente hoje paga e nunca fica sabendo se deu certo | Primeira impressão pós-compra | M |
 | 0.5 | **Painel de pedidos para o dono**: `GET /api/pedidos` (admin vê todos) + tela no Admin com status, itens, valor e mudança manual de status | Loja não pode operar às cegas | M |
 | 0.6 | **Backup antes do primeiro dia** + teste de restore (`pg_dump.exe` agendado no Agendador de Tarefas do Windows) | Sem restore testado, backup não existe | S |
@@ -72,15 +78,15 @@ Do MVP funcional para um projeto pronto para **vender de verdade**.
 
 | # | Item | Por quê | Esforço |
 |---|---|---|---|
-| 2.1 | **CI na raiz**: GitHub Actions rodando `lint + test + build` em cada PR (hoje nenhum workflow roda) | Regressão não chega ao main | S |
-| 2.2 | **`npm audit`/Dependabot** no CI | Dependência vulnerável = brecha | S |
+| 2.1 | ~~**CI na raiz**: GitHub Actions rodando `lint + test + build` em cada PR~~ ✅ **feito** — `.github/workflows/ci.yml` (backend: 47 testes + audit; frontend: lint + build; docker: build da imagem) | Regressão não chega ao main | S |
+| 2.2 | ~~**`npm audit`/Dependabot** no CI~~ ✅ **feito** (audit bloqueia backend; frontend informativo — 4 advisories em ferramentas de build, corrigir com `npm audit fix` no Windows). Dependabot: ativar em Settings → Security | Dependência vulnerável = brecha | S |
 | 2.3 | **Rate limit em Redis** (hoje em memória) quando houver mais de 1 instância | Escala horizontal | M |
-| 2.4 | **Helmet** (pacote) + HSTS quando com HTTPS + checagem de `Content-Length` no body | Profundura dos cabeçalhos | S |
+| 2.4 | ~~**Helmet** (pacote) + HSTS~~ ✅ **feito** — `helmet@8` com CSP de API, frame DENY, HSTS (ativo assim que houver HTTPS), CORP e Referrer-Policy | Profundura dos cabeçalhos | S |
 | 2.5 | **Imagens em CDN** (sair do base64/TEXT) + `ETag`/cache em `/api/produtos` | Performance e custo de banco | M |
 | 2.6 | **Paginação/busca/filtro** em `/api/produtos` | Catálogo cresce | M |
 | 2.7 | **Fila/worker de webhooks**: responder 200 rápido e processar fora do request (evita timeout do MP em carga) | Confiabilidade do pagamento | M |
 | 2.8 | **Logs sensíveis**: revisar para não logar e-mail/PAGANODE em texto (pino com redact) | LGPD | S |
-| 2.9 | **Docker**: Dockerfile + `docker-compose` (api + postgres) para subir igual em qualquer máquina | Onboarding e deploy | S |
+| 2.9 | ~~**Docker**: Dockerfile + `docker-compose` (api + postgres)~~ ✅ **feito** — `backend/Dockerfile` (node:22-alpine, não-root, healthcheck, roda migrate na subida) + `docker-compose.yml` (`docker compose up --build`) | Onboarding e deploy | S |
 
 ---
 
@@ -103,7 +109,7 @@ Checklist da chave:
 - [ ] Backup automatizado + **restore testado**
 - [ ] Recuperação de senha funcionando
 - [ ] LGPD básica (política, consentimento, exclusão de dados)
-- [ ] CI rodando lint + testes em todo PR
+- [x] CI rodando lint + testes em todo PR (23/09)
 - [ ] Sentry (ou equivalente) recebendo erros
 - [ ] Upload de personalização entregando o arquivo ao dono da loja
 

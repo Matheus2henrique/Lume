@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { api } from '../../api'
+import { api, sessaoValida } from '../../api'
 import { formatarMoeda } from '../../utils/formatar'
 
 const estiloInput = {
@@ -8,7 +8,7 @@ const estiloInput = {
   background: 'var(--cor-fundo-cartao)',
 }
 
-function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) {
+function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, onEntrar }) {
   const [etapa, setEtapa] = useState('itens') // itens | dados | pagando | sucesso
   const [cliente, setCliente] = useState({ nome: '', email: '', telefone: '', endereco: '' })
   const [metodo, setMetodo] = useState('cartao')
@@ -26,6 +26,9 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
   const total = itens.reduce((soma, item) => soma + item.produto.preco * item.quantidade, 0)
   const totalItens = itens.reduce((soma, item) => soma + item.quantidade, 0)
 
+  // Compra só é permitida com conta logada (sessão existente e não expirada).
+  const logado = sessaoValida()
+
   function validarDados() {
     if (!cliente.nome.trim() || !cliente.email.trim()) {
       setErro('Informe nome e e-mail para continuar.')
@@ -36,6 +39,11 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
 
   async function handleFinalizar(e) {
     e.preventDefault()
+    if (!logado) {
+      setEtapa('itens')
+      setErro('Faça login na sua conta para finalizar a compra.')
+      return
+    }
     if (!validarDados()) return
     setErro('')
     setCarregando(true)
@@ -387,12 +395,20 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar }) 
                   {formatarMoeda(total)}
                 </span>
               </div>
+              {!logado && (
+                <p
+                  className="text-xs leading-relaxed rounded-lg px-3 py-2 text-center"
+                  style={{ background: 'var(--cor-fundo-cartao)', color: 'var(--cor-laranja-claro)', border: '1px solid var(--cor-borda)' }}
+                >
+                  Você precisa estar logado em uma conta para finalizar a compra.
+                </p>
+              )}
               <button
-                onClick={() => setEtapa('dados')}
+                onClick={() => (logado ? setEtapa('dados') : onEntrar?.())}
                 className="w-full py-4 rounded-full text-white text-base font-medium cursor-pointer transition-all duration-300 hover:scale-[1.02] border-none"
                 style={{ background: 'var(--cor-primaria)', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
               >
-                Finalizar compra
+                {logado ? 'Finalizar compra' : 'Entrar para finalizar'}
               </button>
               <button
                 onClick={onFechar}
