@@ -14,7 +14,9 @@ import {
 
 function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onAdicionarAoCarrinho, noCarrinho, favoritos, onToggleFavorito, admin = false, onEditarProduto }) {
   const [quantidade, setQuantidade] = useState(1)
+  // Personalização: { nome, tipo, dados } — dados é uma data URL (base64).
   const [arquivo, setArquivo] = useState(null)
+  const [erroArquivo, setErroArquivo] = useState('')
   // Muda a cada clique em "Comprar agora" → reinicia a contagem de 7 segundos.
   const [avisoId, setAvisoId] = useState(0)
 
@@ -43,7 +45,29 @@ function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onA
 
   function handleArquivo(e) {
     const file = e.target.files?.[0]
-    if (file) setArquivo(file)
+    if (!file) return
+
+    const MAXIMO = 5 * 1024 * 1024 // 5 MB — mesmo limite do backend
+    if (file.size > MAXIMO) {
+      setArquivo(null)
+      setErroArquivo('Arquivo maior que 5 MB. Envie um arquivo menor.')
+      return
+    }
+
+    const leitor = new FileReader()
+    leitor.onload = () => {
+      setErroArquivo('')
+      setArquivo({
+        nome: file.name,
+        tipo: file.type || 'application/octet-stream',
+        dados: String(leitor.result),
+      })
+    }
+    leitor.onerror = () => {
+      setArquivo(null)
+      setErroArquivo('Não foi possível ler o arquivo. Tente novamente.')
+    }
+    leitor.readAsDataURL(file)
   }
 
   return (
@@ -171,13 +195,26 @@ function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onA
                   className="mt-3 inline-block px-4 py-2 rounded-lg text-white text-sm font-medium cursor-pointer"
                   style={{ background: 'var(--cor-primaria)' }}
                 >
-                  Escolher arquivo
+                  {arquivo ? 'Trocar arquivo' : 'Escolher arquivo'}
                   <input type="file" className="hidden" onChange={handleArquivo} accept=".png,.jpg,.jpeg,.svg,.pdf,.stl" />
                 </label>
                 {arquivo && (
                   <p className="mt-3 text-xs flex items-center gap-2" style={{ color: 'var(--cor-primaria)' }}>
-                    <Check className="w-4 h-4" />
-                    {arquivo.name} ({(arquivo.size / 1024).toFixed(0)} KB)
+                    <Check className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{arquivo.nome}</span>
+                    <button
+                      type="button"
+                      onClick={() => setArquivo(null)}
+                      className="bg-transparent border-none cursor-pointer text-xs underline shrink-0"
+                      style={{ color: 'var(--cor-perigo)' }}
+                    >
+                      Remover
+                    </button>
+                  </p>
+                )}
+                {erroArquivo && (
+                  <p className="mt-3 text-xs" style={{ color: 'var(--cor-perigo)' }}>
+                    {erroArquivo}
                   </p>
                 )}
               </div>
@@ -187,7 +224,7 @@ function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onA
               <button
                 onClick={() => {
                   if (esgotado) return
-                  onAdicionarAoCarrinho(produto, quantidade)
+                  onAdicionarAoCarrinho(produto, quantidade, arquivo)
                   setAvisoId((id) => id + 1) // mostra o aviso por 7 segundos
                 }}
                 disabled={esgotado}

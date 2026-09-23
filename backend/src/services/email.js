@@ -46,3 +46,16 @@ export function templateCodigoVerificacao({ nome, codigo, expiraMinutos }) {
     </div>`
   return { texto, html }
 }
+
+export function templateRedefinicaoSenha({ nome, codigo, expiraMinutos }) {
+  const saudacao = nome ? `Olá, ${nome}!` : 'Olá!'
+  const texto = `${saudacao}\n\nUse o código abaixo para redefinir sua senha da Lume: ${codigo}\n\nEle expira em ${expiraMinutos} minutos. Se você não pediu a troca da senha, ignore este e-mail — sua senha continua a mesma.`
+  const html = `
+    <div style="font-family:Georgia,serif;color:#1a1a1a;max-width:480px;margin:auto;padding:24px">
+      <p style="font-size:16px">${saudacao}</p>
+      <p style="font-size:15px">Use o código abaixo para redefinir sua senha:</p>
+      <p style="font-size:32px;letter-spacing:8px;font-weight:bold;text-align:center;background:#f6f4f1;padding:16px;border-radius:12px">${codigo}</p>
+      <p style="font-size:13px;color:#666">Este código expira em ${expiraMinutos} minutos.<br/>Se você não pediu a troca da senha, ignore este e-mail — sua senha continua a mesma.</p>
+    </div>`
+  return { texto, html }
+}

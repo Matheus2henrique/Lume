@@ -8,7 +8,7 @@ const estiloInput = {
   background: 'var(--cor-fundo-cartao)',
 }
 
-function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, onEntrar }) {
+function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, onEntrar, onVerPedido, onRemoverPersonalizacao }) {
   const [etapa, setEtapa] = useState('itens') // itens | dados | pagando | sucesso
   const [cliente, setCliente] = useState({ nome: '', email: '', telefone: '', endereco: '' })
   const [metodo, setMetodo] = useState('cartao')
@@ -53,7 +53,13 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, on
       const criado = await onFinalizar({
         cliente,
         pagamento: { metodo },
-        itens: itens.map((item) => ({ produtoId: item.produto.id, quantidade: item.quantidade })),
+        itens: itens.map((item) => ({
+          produtoId: item.produto.id,
+          quantidade: item.quantidade,
+          // Personalização (arquivo em base64) vai junto no pedido:
+          // é assim que a loja recebe o arquivo do cliente.
+          ...(item.personalizacao ? { personalizacao: item.personalizacao } : {}),
+        })),
       })
 
       if (criado.precisaPagamento) {
@@ -160,9 +166,16 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, on
               Produzimos sob demanda e enviamos para todo o Brasil.
             </p>
             <button
-              onClick={onFechar}
+              onClick={() => onVerPedido?.(pedido?.id)}
               className="mt-2 px-6 py-3 rounded-full text-white text-sm font-medium cursor-pointer transition-transform duration-300 hover:scale-105 border-none"
               style={{ background: 'var(--cor-primaria)' }}
+            >
+              Ver meu pedido
+            </button>
+            <button
+              onClick={onFechar}
+              className="px-6 py-3 rounded-full text-sm font-medium cursor-pointer transition-transform duration-300 hover:scale-105"
+              style={{ background: 'transparent', color: 'var(--cor-texto)', border: '1px solid var(--cor-borda)' }}
             >
               Continuar comprando
             </button>
@@ -327,7 +340,17 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, on
                       className="w-20 h-20 rounded-xl overflow-hidden shrink-0"
                       style={{ background: 'var(--cor-fundo-cartao)' }}
                     >
-                      <img src={p.imagem} alt={p.nome} className="w-full h-full object-cover" />
+                      {p.imagem ? (
+                        <img src={p.imagem} alt={p.nome} className="w-full h-full object-cover" />
+                      ) : (
+                        <div
+                          className="w-full h-full flex items-center justify-center text-xl"
+                          style={{ color: 'var(--cor-texto-suave)' }}
+                          aria-hidden="true"
+                        >
+                          🎁
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -377,6 +400,25 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, on
                           {formatarMoeda(p.preco * item.quantidade)}
                         </p>
                       </div>
+
+                      {item.personalizacao && (
+                        <p
+                          className="mt-2 text-xs flex items-center gap-2 rounded-lg px-2 py-1"
+                          style={{ background: 'var(--cor-fundo-cartao)', color: 'var(--cor-primaria)' }}
+                        >
+                          <span className="truncate">
+                            📎 {item.personalizacao.nome}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => onRemoverPersonalizacao?.(p.id)}
+                            className="bg-transparent border-none cursor-pointer text-xs underline shrink-0"
+                            style={{ color: 'var(--cor-perigo)' }}
+                          >
+                            remover
+                          </button>
+                        </p>
+                      )}
                     </div>
                   </div>
                 )

@@ -31,7 +31,7 @@ function IconeGoogle({ className = "w-5 h-5" }) {
 }
 
 function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
-  const [modo, setModo] = useState('login') // login | registrar | verificar
+  const [modo, setModo] = useState('login') // login | registrar | verificar | recuperar | redefinir
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -43,6 +43,9 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
   const [sucesso, setSucesso] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [usuario, setUsuario] = useState(null)
+
+  // Modos com formulário próprio (sem troca para registro/login nem Google).
+  const modoComCodigo = modo === 'verificar' || modo === 'recuperar' || modo === 'redefinir'
 
   const estiloInput = {
     borderColor: 'var(--cor-borda)',
@@ -195,6 +198,79 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     onAdminLogout?.()
   }
 
+  // Passo 1 de "esqueci minha senha": pede o código por e-mail.
+  // A resposta do backend é sempre genérica (não revela se a conta existe).
+  async function handleEsqueciSenha(e) {
+    e.preventDefault()
+    if (!email.trim()) {
+      setErro('Informe o e-mail da sua conta.')
+      return
+    }
+    setErro('')
+    setSucesso('')
+    setCarregando(true)
+    try {
+      const resposta = await api.esqueciSenha({ email: email.trim() })
+      setCodigo('')
+      setSenha('')
+      setModo('redefinir')
+      setCooldown(60)
+      setSucesso(resposta.mensagem || 'Se existir uma conta, enviamos um código para o seu e-mail.')
+    } catch (err) {
+      setErro(err.message)
+    } finally {
+      setCarregando(false)
+    }
+  }
+
+  // Reenvia o código de redefinição (mesmo endpoint do passo 1).
+  async function handleReenviarReset() {
+    if (cooldown > 0 || carregando) return
+    setErro('')
+    setSucesso('')
+    setCarregando(true)
+    try {
+      const resposta = await api.esqueciSenha({ email: email.trim() })
+      setCooldown(60)
+      setSucesso(resposta.mensagem || 'Novo código enviado.')
+    } catch (err) {
+      setErro(err.message)
+    } finally {
+      setCarregando(false)
+    }
+  }
+
+  // Passo 2: valida o código e grava a nova senha.
+  async function handleRedefinir(e) {
+    e.preventDefault()
+    if (!codigo.trim()) {
+      setErro('Digite o código recebido por e-mail.')
+      return
+    }
+    if (String(senha).length < 6) {
+      setErro('A nova senha deve ter pelo menos 6 caracteres.')
+      return
+    }
+    setErro('')
+    setSucesso('')
+    setCarregando(true)
+    try {
+      const resposta = await api.redefinirSenha({
+        email: email.trim(),
+        codigo: codigo.trim(),
+        senha,
+      })
+      setModo('login')
+      setCodigo('')
+      setSenha('')
+      setSucesso(resposta.mensagem || 'Senha alterada com sucesso. Faça login com a nova senha.')
+    } catch (err) {
+      setErro(err.message)
+    } finally {
+      setCarregando(false)
+    }
+  }
+
   async function handleGoogleLogin() {
     try {
       const accounts = await carregarGoogleIdentity()
@@ -280,14 +356,26 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     <section className="py-[70px] flex justify-center px-6" style={{ background: 'var(--cor-fundo)' }}>
       <div className="w-full max-w-md">
         <h2 className="text-4xl font-[Georgia,serif] mb-2 text-center" style={{ color: 'var(--cor-texto)' }}>
-          {modo === 'login' ? 'Entrar' : modo === 'registrar' ? 'Registrar' : 'Verificar e-mail'}
+          {modo === 'login'
+            ? 'Entrar'
+            : modo === 'registrar'
+              ? 'Registrar'
+              : modo === 'recuperar'
+                ? 'Esqueci minha senha'
+                : modo === 'redefinir'
+                  ? 'Nova senha'
+                  : 'Verificar e-mail'}
         </h2>
         <p className="text-center mb-8" style={{ color: 'var(--cor-texto-suave)' }}>
           {modo === 'login'
             ? 'Acesse sua conta Lume. Se o e-mail ainda não tiver cadastro, enviaremos um código para criar a conta.'
             : modo === 'registrar'
               ? 'Crie sua conta para começar a comprar.'
-              : `Digite o código que enviamos para ${email}.`}
+              : modo === 'recuperar'
+                ? 'Informe o e-mail da sua conta e enviaremos um código para criar uma nova senha.'
+                : modo === 'redefinir'
+                  ? `Digite o código que enviamos para ${email} e escolha uma nova senha.`
+                  : `Digite o código que enviamos para ${email}.`}
         </p>
 
         {sucesso && (
@@ -372,6 +460,148 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
               </button>
             </div>
           </form>
+        ) : modo === 'recuperar' ? (
+          <form className="flex flex-col gap-5" onSubmit={handleEsqueciSenha}>
+            <div className="text-left">
+              <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
+                Endereço de e-mail
+              </label>
+              <input
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors"
+                style={estiloInput}
+              />
+            </div>
+
+            {erro && (
+              <p className="text-sm" style={{ color: 'var(--cor-perigo)' }}>
+                {erro}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={carregando}
+              className="mt-2 border-none px-[30px] py-3 rounded-full text-white cursor-pointer text-lg transition-all duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+              style={{ background: 'var(--cor-laranja)' }}
+            >
+              {carregando ? 'Enviando…' : 'Enviar código'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setModo('login')
+                setErro('')
+                setSucesso('')
+              }}
+              className="bg-transparent border-none cursor-pointer text-sm hover:underline"
+              style={{ color: 'var(--cor-texto-suave)' }}
+            >
+              Voltar ao login
+            </button>
+          </form>
+        ) : modo === 'redefinir' ? (
+          <form className="flex flex-col gap-5" onSubmit={handleRedefinir}>
+            <div className="text-left">
+              <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
+                Código recebido por e-mail
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="0000"
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors text-center tracking-[0.5em]"
+                style={estiloInput}
+              />
+            </div>
+
+            <div className="text-left">
+              <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
+                Nova senha
+              </label>
+              <div className="relative">
+                <input
+                  type={mostrarSenha ? 'text' : 'password'}
+                  placeholder="Crie uma senha (mínimo 6 caracteres)"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  className="w-full border rounded-lg px-4 py-3 pr-11 text-base outline-none transition-colors"
+                  style={estiloInput}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 border-none bg-transparent cursor-pointer p-1"
+                  style={{ color: 'var(--cor-texto-suave)' }}
+                  tabIndex={-1}
+                  aria-label={mostrarSenha ? 'Esconder senha' : 'Mostrar senha'}
+                >
+                  {mostrarSenha ? (
+                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.45 18.45 0 0 1-2.16 3.19" />
+                      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {erro && (
+              <p className="text-sm" style={{ color: 'var(--cor-perigo)' }}>
+                {erro}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={carregando || codigo.length < 4}
+              className="mt-2 border-none px-[30px] py-3 rounded-full text-white cursor-pointer text-lg transition-all duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+              style={{ background: 'var(--cor-laranja)' }}
+            >
+              {carregando ? 'Salvando…' : 'Redefinir senha'}
+            </button>
+
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleReenviarReset}
+                disabled={cooldown > 0 || carregando}
+                className="bg-transparent border-none cursor-pointer text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ color: 'var(--cor-laranja)' }}
+              >
+                {cooldown > 0 ? `Reenviar em ${cooldown}s` : 'Reenviar código'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setModo('login')
+                  setErro('')
+                  setSucesso('')
+                  setCodigo('')
+                  setSenha('')
+                }}
+                className="bg-transparent border-none cursor-pointer text-sm hover:underline"
+                style={{ color: 'var(--cor-texto-suave)' }}
+              >
+                Voltar ao login
+              </button>
+            </div>
+          </form>
         ) : modo === 'login' ? (
           <form className="flex flex-col gap-5" onSubmit={handleLogin}>
             <div className="text-left">
@@ -437,7 +667,16 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
                 <input type="checkbox" className="accent-[var(--cor-primaria)] w-4 h-4" />
                 Lembrar de mim
               </label>
-              <button type="button" className="bg-transparent border-none cursor-pointer text-sm hover:underline" style={{ color: 'var(--cor-laranja)' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setModo('recuperar')
+                  setErro('')
+                  setSucesso('')
+                }}
+                className="bg-transparent border-none cursor-pointer text-sm hover:underline"
+                style={{ color: 'var(--cor-laranja)' }}
+              >
                 Esqueci minha senha
               </button>
             </div>
@@ -536,7 +775,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
           </form>
         )}
 
-        <div className="my-7 flex items-center gap-4" style={modo === 'verificar' ? { display: 'none' } : undefined}>
+        <div className="my-7 flex items-center gap-4" style={modoComCodigo ? { display: 'none' } : undefined}>
           <span className="h-px flex-1" style={{ background: 'var(--cor-borda)' }} />
           <span className="text-sm whitespace-nowrap" style={{ color: 'var(--cor-texto-suave)' }}>
             Entrar com outras contas
@@ -552,14 +791,14 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
             background: 'var(--cor-fundo-cartao)',
             border: '1px solid var(--cor-borda)',
             color: 'var(--cor-texto)',
-            display: modo === 'verificar' ? 'none' : 'flex',
+            display: modoComCodigo ? 'none' : 'flex',
           }}
         >
           <IconeGoogle />
           <span className="text-base font-medium">Continuar com o Google</span>
         </button>
 
-        {modo !== 'verificar' && (
+        {(modo === 'login' || modo === 'registrar') && (
           <p className="mt-6 text-center text-base" style={{ color: 'var(--cor-texto-suave)' }}>
             {modo === 'login' ? (
             <>

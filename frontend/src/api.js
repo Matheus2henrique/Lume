@@ -79,6 +79,8 @@ export const api = {
   login: (dados) => requisicao('/auth/login', { metodo: 'POST', corpo: dados }),
   verificarCodigo: (dados) => requisicao('/auth/verificar', { metodo: 'POST', corpo: dados }),
   reenviarVerificacao: (dados) => requisicao('/auth/reenviar-verificacao', { metodo: 'POST', corpo: dados }),
+  esqueciSenha: (dados) => requisicao('/auth/esqueci-senha', { metodo: 'POST', corpo: dados }),
+  redefinirSenha: (dados) => requisicao('/auth/redefinir-senha', { metodo: 'POST', corpo: dados }),
   perfil: () => requisicao('/auth/perfil', { autenticado: true }),
 
   produtos: {
@@ -103,6 +105,13 @@ export const api = {
   },
 
   criarPedido: (dados) => requisicao('/pedidos', { metodo: 'POST', corpo: dados, autenticado: true }),
+  pedidos: {
+    buscar: (id) => requisicao(`/pedidos/${id}`, { autenticado: true }),
+    listar: () => requisicao('/pedidos', { autenticado: true }),
+    listarTodos: () => requisicao('/pedidos?todos=1', { autenticado: true }),
+    alterarStatus: (id, status) =>
+      requisicao(`/pedidos/${id}/status`, { metodo: 'PATCH', corpo: { status }, autenticado: true }),
+  },
   criarPreferencia: (dados) => requisicao('/pagamentos/preferencia', { metodo: 'POST', corpo: dados, autenticado: true }),
   statusPagamento: () => requisicao('/pagamentos/status'),
   newsletter: (email) => requisicao('/newsletter', { metodo: 'POST', corpo: { email } }),

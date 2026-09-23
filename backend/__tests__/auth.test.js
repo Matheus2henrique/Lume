@@ -12,6 +12,7 @@ const mockEnviarEmail = jest.fn()
 jest.unstable_mockModule('../src/services/email.js', () => ({
   enviarEmail: mockEnviarEmail,
   templateCodigoVerificacao: jest.fn(() => ({ texto: 'codigo', html: '<p>codigo</p>' })),
+  templateRedefinicaoSenha: jest.fn(() => ({ texto: 'reset', html: '<p>reset</p>' })),
 }))
 
 const { default: app } = await import('../src/server.js')
@@ -259,6 +260,163 @@ describe('POST /api/auth/login', () => {
       .post('/api/auth/login')
       .send({ email: 'teste@test.com', senha: 'errada' })
     expect(res.status).toBe(401)
+  })
+})
+
+describe('POST /api/auth/esqueci-senha', () => {
+  it('deve rejeitar e-mail inválido', async () => {
+    const res = await request(app).post('/api/auth/esqueci-senha').send({ email: 'errado' })
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('e-mail')
+    expect(mockQuery).not.toHaveBeenCalled()
+  })
+
+  it('deve responder genérico sem enviar quando a conta não existe', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] })
+    const res = await request(app)
+      .post('/api/auth/esqueci-senha')
+      .send({ email: 'naoexiste@test.com' })
+    expect(res.status).toBe(200)
+    expect(res.body.mensagem).toContain('Se existir')
+    expect(mockEnviarEmail).not.toHaveBeenCalled()
+  })
+
+  it('deve emitir e enviar o código quando a conta existe e está verificada', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true })] })
+    mockQuery.mockResolvedValueOnce({ rows: [] }) // UPDATE do código
+    const res = await request(app)
+      .post('/api/auth/esqueci-senha')
+      .send({ email: 'teste@test.com' })
+    expect(res.status).toBe(200)
+    expect(res.body.mensagem).toContain('Se existir')
+    const update = mockQuery.mock.calls.find(([sql]) => String(sql).includes('reset_hash'))
+    expect(update).toBeDefined()
+    expect(mockEnviarEmail).toHaveBeenCalledTimes(1)
+  })
+
+  it('deve não enviar quando o e-mail ainda não foi verificado', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: false })] })
+    const res = await request(app)
+      .post('/api/auth/esqueci-senha')
+      .send({ email: 'teste@test.com' })
+    expect(res.status).toBe(200)
+    expect(mockEnviarEmail).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /api/auth/redefinir-senha', () => {
+  const NOVA_SENHA = 'senha-nova-123'
+
+  it('deve rejeitar dados faltando', async () => {
+    const res = await request(app).post('/api/auth/redefinir-senha').send({ email: 'teste@test.com' })
+    expect(res.status).toBe(400)
+  })
+
+  it('deve rejeitar código fora do formato de 4 a 6 dígitos', async () => {
+    const res = await request(app)
+      .post('/api/auth/redefinir-senha')
+      .send({ email: 'teste@test.com', codigo: '12', senha: NOVA_SENHA })
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('4 a 6 dígitos')
+    expect(mockQuery).not.toHaveBeenCalled()
+  })
+
+  it('deve rejeitar senha curta', async () => {
+    const res = await request(app)
+      .post('/api/auth/redefinir-senha')
+      .send({ email: 'teste@test.com', codigo: '123456', senha: '123' })
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('6 caracteres')
+  })
+
+  it('deve rejeitar quando nenhum código foi emitido', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [base({ reset_hash: null })] })
+    const res = await request(app)
+      .post('/api/auth/redefinir-senha')
+      .send({ email: 'teste@test.com', codigo: '123456', senha: NOVA_SENHA })
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('inválido')
+  })
+
+  it('deve rejeitar código expirado', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        base({
+          reset_hash: hashCodigo('123456'),
+          reset_expira_em: new Date(Date.now() - 1000),
+          reset_tentativas: 0,
+        }),
+      ],
+    })
+    const res = await request(app)
+      .post('/api/auth/redefinir-senha')
+      .send({ email: 'teste@test.com', codigo: '123456', senha: NOVA_SENHA })
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('expirado')
+  })
+
+  it('deve rejeitar código incorreto e contar a tentativa', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        base({
+          reset_hash: hashCodigo('123456'),
+          reset_expira_em: new Date(Date.now() + 10 * 60 * 1000),
+          reset_tentativas: 0,
+        }),
+      ],
+    })
+    mockQuery.mockResolvedValueOnce({ rows: [] }) // UPDATE da tentativa
+    const res = await request(app)
+      .post('/api/auth/redefinir-senha')
+      .send({ email: 'teste@test.com', codigo: '654321', senha: NOVA_SENHA })
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('incorreto')
+    const incremento = mockQuery.mock.calls.find(([sql]) =>
+      String(sql).includes('reset_tentativas + 1')
+    )
+    expect(incremento).toBeDefined()
+  })
+
+  it('deve bloquear após 5 tentativas', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        base({
+          reset_hash: hashCodigo('123456'),
+          reset_expira_em: new Date(Date.now() + 10 * 60 * 1000),
+          reset_tentativas: 5,
+        }),
+      ],
+    })
+    const res = await request(app)
+      .post('/api/auth/redefinir-senha')
+      .send({ email: 'teste@test.com', codigo: '123456', senha: NOVA_SENHA })
+    expect(res.status).toBe(429)
+    expect(res.body.erro).toContain('novo código')
+  })
+
+  it('deve trocar a senha com o código correto e limpar o reset', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        base({
+          reset_hash: hashCodigo('123456'),
+          reset_expira_em: new Date(Date.now() + 10 * 60 * 1000),
+          reset_tentativas: 0,
+        }),
+      ],
+    })
+    mockQuery.mockResolvedValueOnce({ rows: [] }) // UPDATE da senha
+    const res = await request(app)
+      .post('/api/auth/redefinir-senha')
+      .send({ email: 'teste@test.com', codigo: '123456', senha: NOVA_SENHA })
+    expect(res.status).toBe(200)
+    expect(res.body.mensagem).toContain('Senha alterada')
+
+    const update = mockQuery.mock.calls.find(([sql]) => String(sql).includes('senha_hash = $1'))
+    expect(update).toBeDefined()
+    // Grava o HASH da senha, nunca o texto puro.
+    expect(update[1][0]).not.toBe(NOVA_SENHA)
+    expect(String(update[0])).toContain('reset_hash = NULL') // código não reutilizável
+    expect(res.body.token).toBeUndefined() // volta pro login do jeito normal
   })
 })
 

@@ -1,10 +1,18 @@
 import crypto from 'crypto'
+import env from '../env.js'
 import logger from '../logger.js'
 
 const MP_BASE = 'https://api.mercadopago.com'
 
 export function gatewayConfigurado() {
   return Boolean(process.env.MP_ACCESS_TOKEN)
+}
+
+// Para onde o Mercado Pago devolve o cliente: a tela de status do pedido
+// (/Lume/pedido/:id), que acompanha a confirmação do pagamento.
+function urlStatusPedido(pedidoId) {
+  const origem = (env.CLIENTE_ORIGEM || 'http://localhost:5173').split(',')[0].trim().replace(/\/+$/, '')
+  return `${origem}/Lume/pedido/${pedidoId}`
 }
 
 export async function criarPreferencia({ pedidoId, total, titulo, cliente }) {
@@ -29,9 +37,9 @@ export async function criarPreferencia({ pedidoId, total, titulo, cliente }) {
       },
       external_reference: String(pedidoId),
       back_urls: {
-        success: process.env.CLIENTE_ORIGEM || 'http://localhost:5173',
-        pending: process.env.CLIENTE_ORIGEM || 'http://localhost:5173',
-        failure: process.env.CLIENTE_ORIGEM || 'http://localhost:5173',
+        success: urlStatusPedido(pedidoId),
+        pending: urlStatusPedido(pedidoId),
+        failure: urlStatusPedido(pedidoId),
       },
       auto_return: 'approved',
       notification_url: `${process.env.BACKEND_URL}/api/pagamentos/webhook`,

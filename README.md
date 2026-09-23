@@ -29,12 +29,15 @@
 
 - 🏷️ **Catálogo por universos** — Romance, Fantasia e Suspense, com filtro e página de detalhes
 - 📄 **Página de detalhes** — preço, estoque, descrição, personalização com upload de arquivo e "Comprar agora"
-- 🛒 **Carrinho e checkout** — dados de entrega + pagamento (Pix ou cartão), **somente com conta logada** (sem login não é possível finalizar)
+- 🛒 **Carrinho e checkout** — dados de entrega + pagamento (Pix ou cartão), **somente com conta logada** (sem login não é possível finalizar) e **persistente** (não perde ao recarregar a página)
+- 📎 **Personalização entregue** — o arquivo enviado na peça (até 5 MB) vai junto no pedido e o admin **baixa pelo painel**
+- 📦 **Acompanhar pedido** — rota `/pedido/:id` com status ao vivo (é para lá que o Mercado Pago devolve o cliente)
 - ✉️ **Verificação de e-mail** — código de 6 dígitos no cadastro (HMAC, 10 min, 5 tentativas); login travado até confirmar; sem SMTP configurado o código sai no console do backend (modo dev)
+- 🔑 **Recuperação de senha** — "Esqueci minha senha" envia código por e-mail e troca a senha (HMAC, 10 min, 5 tentativas)
 - 💳 **Mercado Pago** — redirecionamento para o checkout real; o webhook valida a assinatura e só então o pedido vira `pago` e o estoque baixa
 - ❤️ **Favoritos** — persistidos no banco quando o usuário está logado
 - 👤 **Perfil** — cadastro, login, verificação de e-mail e consulta dos dados (`/api/auth/perfil`)
-- 🛡️ **Painel admin** — CRUD de produtos e universos pela API (somente admin)
+- 🛡️ **Painel admin** — CRUD de produtos e universos + **aba Pedidos** (cliente, itens, endereço, download da personalização e mudança manual de status)
 - 📰 **Newsletter** — assinatura direto no site
 - 🔑 **Segurança** — JWT + bcrypt, rate limit nos endpoints sensíveis, cabeçalhos HTTP, `trust proxy` configurável e graceful shutdown — **dados de cartão nunca passam pelo seu servidor**
 - 🎨 **Design responsivo** — layout adaptável, rolagem suave e URLs amigáveis
@@ -71,11 +74,15 @@ Lume/
 │       ├── index.css               # Estilos globais (Tailwind)
 │       ├── api.js                  # Cliente HTTP (fetch + token + checkoutToken)
 │       ├── data/produtos.js        # Catálogo mock (fallback quando a API cai)
+│       ├── utils/
+│       │   ├── formatar.js         # Moeda + normalização de produto
+│       │   └── carrinho.js         # Persistência do carrinho (localStorage)
 │       └── components/
 │           ├── layout/             # Header, Footer
 │           ├── pages/              # Entrada, Genero, ProdutoDetalhe, Carrinho,
-│           │                       # Perfil (login/cadastro/verificação),
-│           │                       # Favoritos, Admin
+│           │                       # Perfil (login/cadastro/verificação/recuperação
+│           │                       # de senha), PedidoStatus (/pedido/:id),
+│           │                       # Favoritos, Admin (produtos + pedidos)
 │           └── ui/                 # Card, Icones, Reveal,
 │                                   # ProdutoFormModal, NichoFormModal
 ├── backend/                        # API Express + PostgreSQL
@@ -150,7 +157,7 @@ npm run seed:admin   # cria/eleva o admin (senha via ADMIN_SENHA ou gerada)
 
 ```console
 npm run dev          # http://localhost:4000
-npm test             # 4 suítes / 32 testes
+npm test             # 6 suítes / 78 testes
 ```
 
 > O frontend já está ligado à API (cadastro com verificação, login, favoritos e finalização de compra).
@@ -194,6 +201,8 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 | `POST` | `/api/auth/registrar` | Cria conta e envia o código de verificação | — |
 | `POST` | `/api/auth/verificar` | Confirma o código de 6 dígitos (10 min, 5 tentativas) | — |
 | `POST` | `/api/auth/reenviar-verificacao` | Reenvia o código com cooldown | — |
+| `POST` | `/api/auth/esqueci-senha` | Envia o código de redefinição de senha (resposta genérica) | — |
+| `POST` | `/api/auth/redefinir-senha` | Troca a senha validando o código (10 min, 5 tentativas) | — |
 | `POST` | `/api/auth/login` | Entra (exige e-mail verificado) e devolve token JWT | — |
 | `GET` | `/api/auth/perfil` | Consulta o usuário logado no banco | Token |
 | `GET` | `/api/produtos` | Lista o catálogo | — |
@@ -209,8 +218,10 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 | `GET` | `/api/favoritos` | Lista favoritos do usuário | Token |
 | `POST` | `/api/favoritos/:produtoId` | Adiciona favorito | Token |
 | `DELETE` | `/api/favoritos/:produtoId` | Remove favorito | Token |
-| `POST` | `/api/pedidos` | Checkout (exige sessão — sem token → 401) | Obrigatória |
-| `GET` | `/api/pedidos` | Lista pedidos do usuário | Token |
+| `POST` | `/api/pedidos` | Checkout (exige sessão — sem token → 401; aceita `personalizacao` por item) | Obrigatória |
+| `GET` | `/api/pedidos` | Lista pedidos do usuário (`?todos=1` = todos, somente admin) | Token |
+| `GET` | `/api/pedidos/:id` | Status de um pedido (dono ou admin) — alimenta a rota `/pedido/:id` | Token |
+| `PATCH` | `/api/pedidos/:id/status` | Atualiza status manual (baixa/devolve estoque com lock) | Admin |
 | `GET` | `/api/pagamentos/status` | Informa se o gateway está ativo | — |
 | `POST` | `/api/pagamentos/preferencia` | Cria o checkout no Mercado Pago | Obrigatória |
 | `POST` | `/api/pagamentos/webhook` | Confirma o pagamento (assinatura validada) | — |
@@ -221,10 +232,10 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 
 ```console
 cd backend
-npm test        # Jest — 6 suítes, 47 testes
+npm test        # Jest — 6 suítes, 78 testes
 ```
 
-Cobertura: cadastro/login e **verificação de e-mail**, health (banco), catálogo de produtos e a **assinatura do webhook** do Mercado Pago (manifesto oficial `id/request-id/ts`, timing-safe), portões de compra (401 sem sessão) e as **travas de produção do `env.js`** (o servidor recusa subir com segredo fraco, CORS localhost ou senha de banco padrão). O fluxo de checkout também foi validado de ponta a ponta com Postgres real — incluindo a **corrida de estoque** (8 checkouts simultâneos de 5 peças em um estoque de 20).
+Cobertura: cadastro/login e **verificação de e-mail**, **recuperação de senha** (código por e-mail com expiração/tentativas), health (banco), catálogo de produtos, **assinatura do webhook** do Mercado Pago (manifesto oficial `id/request-id/ts`, timing-safe), portões de compra (401 sem sessão), **consulta de pedido** (`GET /api/pedidos/:id` com dono/admin), **painel admin de pedidos** (`PATCH /:status` com baixa/devolução de estoque e lock), **personalização no pedido** (validação de data URL) e as **travas de produção do `env.js`** (o servidor recusa subir com segredo fraco, CORS localhost ou senha de banco padrão). O fluxo de checkout também foi validado de ponta a ponta com Postgres real — incluindo a **corrida de estoque** (8 checkouts simultâneos de 5 peças em um estoque de 20).
 
 ## 🌐 Deploy (GitHub Pages)
 
@@ -261,7 +272,7 @@ npm run deploy    # build automático (predeploy) + push na branch gh-pages
 | `npm run seed` | Popula produtos e universos (só se as tabelas estiverem vazias) |
 | `npm run seed:admin` | Cria/eleva o admin inicial (senha via `ADMIN_SENHA` ou gerada) |
 | `npm run seed:generos` | Popula apenas os universos |
-| `npm test` | Roda a suíte Jest (4 suítes / 32 testes) |
+| `npm test` | Roda a suíte Jest (6 suítes / 78 testes) |
 
 ## 📐 Normas e boas práticas
 
@@ -280,10 +291,11 @@ Consulte **[Normas.md](./Normas.md)** para:
 
 - [x] `JWT_SECRET` forte no `.env` + **travas**: com `NODE_ENV=production` o servidor **recusa iniciar** com segredo fraco/placeholder, CORS localhost ou senha de banco `postgres` (testado em `__tests__/env.test.js`)
 - [x] Headers de segurança completos via `helmet` (HSTS, CSP `default-src 'none'`, `X-Frame-Options: DENY`, nosniff, CORP, Referrer-Policy)
-- [x] **CI** no GitHub Actions: testes (47) + `npm audit` (bloqueia backend) + lint/build do frontend + build da imagem Docker — a cada push/PR
+- [x] **CI** no GitHub Actions: testes (78) + `npm audit` (bloqueia backend) + lint/build do frontend + build da imagem Docker — a cada push/PR
 - [x] **Deploy** do workflow na raiz (estava em `frontend/.github/`, onde o GitHub não lê) com `VITE_API_URL` via variável
 - [x] **Docker**: `backend/Dockerfile` (node:22-alpine, usuário sem privilégios, healthcheck) + `docker-compose.yml` (api + postgres)
 - [x] Compra só com sessão; verificação de e-mail por código de 4–6 dígitos
+- [x] **MVP completo (23/09)**: carrinho persistido, personalização entregue no pedido, rota `/pedido/:id` com status ao vivo, aba Pedidos no painel admin e recuperação de senha por código
 
 **Falta você (precisa de credenciais/seu clique):**
 
@@ -292,7 +304,7 @@ Consulte **[Normas.md](./Normas.md)** para:
 - [ ] **Mercado Pago real**: `MP_ACCESS_TOKEN` + `MP_WEBHOOK_SECRET` + um pagamento de ponta a ponta (hoje o pagamento é simulado)
 - [ ] **GitHub**: Settings → Pages → Source = "GitHub Actions" e variável `VITE_API_URL` (Settings → Secrets and variables → Actions → Variables)
 - [ ] `npm audit fix` no **Windows** (4 advisories em ferramentas de build do frontend) e Dependabot em Settings → Security
-- [ ] Recuperação de senha, backup + restore testado (ver [PLANO_PRODUCAO.md](./PLANO_PRODUCAO.md))
+- [ ] Backup + restore testado (ver [PLANO_PRODUCAO.md](./PLANO_PRODUCAO.md)) — recuperação de senha já está pronta
 
 ## 🗺️ Próximos passos
 
@@ -308,10 +320,12 @@ Consulte **[Normas.md](./Normas.md)** para:
 - [x] Consumir `/api/produtos` no frontend (catálogo ligado à API)
 - [x] Testes automatizados com Jest (`npm test`)
 - [x] Deploy do frontend no GitHub Pages (`npm run deploy`)
+- [x] Tela de pedido pago/histórico para cliente e dono da loja (`/pedido/:id` + aba Pedidos no admin)
+- [x] Upload de personalização entregue no pedido (o admin baixa o arquivo pelo painel)
+- [x] Carrinho persistido no navegador (localStorage)
+- [x] Recuperação de senha por código ("Esqueci minha senha")
 - [ ] Ativar gateway com credenciais reais do Mercado Pago
 - [ ] Hospedar o backend e publicar `VITE_API_URL` no build do frontend
-- [ ] Tela de pedido pago/histórico para cliente e dono da loja
-- [ ] Upload de modelos customizados pelos usuários
 - [ ] Login com Google no backend
 
 ## 📄 Licença

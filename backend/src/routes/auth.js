@@ -5,7 +5,7 @@ import crypto from 'node:crypto'
 import pool from '../db.js'
 import { autenticar } from '../middleware/auth.js'
 import { limiterAuth, limiterReenvio } from '../middleware/rateLimiter.js'
-import { enviarEmail, templateCodigoVerificacao } from '../services/email.js'
+import { enviarEmail, templateCodigoVerificacao, templateRedefinicaoSenha } from '../services/email.js'
 import logger from '../logger.js'
 
 const router = Router()
@@ -279,6 +279,116 @@ router.post('/login', limiterAuth, async (req, res) => {
   } catch (err) {
     logger.error({ err }, 'Erro ao fazer login')
     res.status(500).json({ erro: 'Não foi possível entrar.' })
+  }
+})
+
+// Esqueci minha senha: envia um código de redefinição por e-mail.
+// Resposta sempre genérica — não revela se a conta existe.
+router.post('/esqueci-senha', limiterReenvio, async (req, res) => {
+  const { email } = req.body || {}
+
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ erro: 'Informe um e-mail válido.' })
+  }
+
+  try {
+    const { rows } = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email])
+    const usuario = rows[0]
+
+    // Só quem já confirmou o e-mail pode trocar a senha
+    // (quem não confirmou continua no fluxo de verificação normal).
+    if (usuario && usuario.email_verificado) {
+      const codigo = gerarCodigo()
+      const expiraEm = new Date(Date.now() + EXPIRA_MINUTOS * 60 * 1000)
+      await pool.query(
+        `UPDATE usuarios
+         SET reset_hash = $1,
+             reset_expira_em = $2,
+             reset_tentativas = 0
+         WHERE id = $3`,
+        [hashCodigo(codigo), expiraEm, usuario.id]
+      )
+
+      const { texto, html } = templateRedefinicaoSenha({
+        nome: usuario.nome,
+        codigo,
+        expiraMinutos: EXPIRA_MINUTOS,
+      })
+      try {
+        const envio = await enviarEmail({
+          para: usuario.email,
+          assunto: 'Redefinição de senha — Lume',
+          texto,
+          html,
+        })
+        if (envio.simulado) {
+          // Modo dev (sem SMTP): loga o código para testar o fluxo local.
+          logger.warn({ userId: usuario.id }, `Código de redefinição (dev): ${codigo}`)
+        }
+      } catch (err) {
+        logger.error({ err, userId: usuario.id }, 'Falha ao enviar e-mail de redefinição')
+      }
+      logger.info({ userId: usuario.id }, 'Código de redefinição de senha emitido')
+    }
+
+    res.json({
+      mensagem: 'Se existir uma conta com este e-mail, enviamos um código para redefinir a senha.',
+      expiraEmMinutos: EXPIRA_MINUTOS,
+    })
+  } catch (err) {
+    logger.error({ err }, 'Erro ao solicitar redefinição de senha')
+    res.status(500).json({ erro: 'Não foi possível processar a solicitação.' })
+  }
+})
+
+// Troca a senha validando o código enviado em /esqueci-senha.
+router.post('/redefinir-senha', limiterAuth, async (req, res) => {
+  const { email, codigo, senha } = req.body || {}
+
+  if (!email || !codigo || !senha) {
+    return res.status(400).json({ erro: 'Informe o e-mail, o código e a nova senha.' })
+  }
+  if (!/^\d{4,6}$/.test(String(codigo))) {
+    return res.status(400).json({ erro: 'O código deve ter de 4 a 6 dígitos.' })
+  }
+  if (String(senha).length < 6) {
+    return res.status(400).json({ erro: 'A senha deve ter pelo menos 6 caracteres.' })
+  }
+
+  try {
+    const { rows } = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email])
+    const usuario = rows[0]
+    if (!usuario || !usuario.reset_hash) {
+      return res.status(400).json({ erro: 'Código inválido ou expirado. Solicite um novo.' })
+    }
+    if (usuario.reset_tentativas >= MAX_TENTATIVAS) {
+      return res.status(429).json({ erro: 'Muitas tentativas. Solicite um novo código.' })
+    }
+    if (!usuario.reset_expira_em || new Date() > new Date(usuario.reset_expira_em)) {
+      return res.status(400).json({ erro: 'Código expirado. Solicite um novo código.' })
+    }
+    if (hashCodigo(codigo) !== usuario.reset_hash) {
+      await pool.query('UPDATE usuarios SET reset_tentativas = reset_tentativas + 1 WHERE id = $1', [
+        usuario.id,
+      ])
+      return res.status(400).json({ erro: 'Código incorreto.' })
+    }
+
+    const senhaHash = bcrypt.hashSync(String(senha), 10)
+    await pool.query(
+      `UPDATE usuarios
+       SET senha_hash = $1,
+           reset_hash = NULL,
+           reset_expira_em = NULL,
+           reset_tentativas = 0
+       WHERE id = $2`,
+      [senhaHash, usuario.id]
+    )
+    logger.info({ userId: usuario.id }, 'Senha redefinida com sucesso')
+    res.json({ mensagem: 'Senha alterada com sucesso. Faça login com a nova senha.' })
+  } catch (err) {
+    logger.error({ err }, 'Erro ao redefinir senha')
+    res.status(500).json({ erro: 'Não foi possível redefinir a senha.' })
   }
 })
 

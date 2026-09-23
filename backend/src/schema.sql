@@ -112,3 +112,25 @@ BEGIN
     ALTER TABLE usuarios ADD COLUMN codigo_tentativas INTEGER NOT NULL DEFAULT 0;
   END IF;
 END $$;
+
+-- Migração: recuperação de senha por código (esqueci minha senha)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'reset_hash'
+  ) THEN
+    ALTER TABLE usuarios ADD COLUMN reset_hash TEXT;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'reset_expira_em'
+  ) THEN
+    ALTER TABLE usuarios ADD COLUMN reset_expira_em TIMESTAMPTZ;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'reset_tentativas'
+  ) THEN
+    ALTER TABLE usuarios ADD COLUMN reset_tentativas INTEGER NOT NULL DEFAULT 0;
+  END IF;
+END $$;

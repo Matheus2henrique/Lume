@@ -7,18 +7,21 @@ import ProdutoDetalhe from './components/pages/ProdutoDetalhe'
 import Perfil from './components/pages/Perfil'
 import Favoritos from './components/pages/Favoritos'
 import CarrinhoDrawer from './components/pages/Carrinho'
+import PedidoStatus from './components/pages/PedidoStatus'
 import Admin from './components/pages/Admin'
 import ProdutoFormModal from './components/ui/ProdutoFormModal'
 import { generos as generosPadrao, produtos as produtosPadrao } from './data/produtos'
 import { api, obterToken, obterUsuario } from './api'
 import { normalizarProduto } from './utils/formatar'
+import { carregarCarrinho, salvarCarrinho } from './utils/carrinho'
 
 const BASE = '/Lume'
 
-function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, mostrarFavoritos, mostrarAdmin }) {
+function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, mostrarFavoritos, mostrarAdmin, pedidoId }) {
   if (mostrarAdmin) return `${BASE}/admin`
   if (mostrarPerfil) return `${BASE}/login`
   if (mostrarFavoritos) return `${BASE}/favoritos`
+  if (pagina === 'pedido' && pedidoId) return `${BASE}/pedido/${pedidoId}`
   if (pagina === 'detalhe' && produtoSelecionado && generoId)
     return `${BASE}/${generoId}/produto/${produtoSelecionado.id}`
   if (pagina === 'genero' && generoId) return `${BASE}/${generoId}`
@@ -31,6 +34,11 @@ function URLparaEstado(pathname, produtosLista) {
   if (partes[0] === 'admin') return { pagina: 'entrada', mostrarAdmin: true }
   if (partes[0] === 'login') return { pagina: 'entrada', mostrarPerfil: true }
   if (partes[0] === 'favoritos') return { pagina: 'entrada', mostrarFavoritos: true }
+  if (partes[0] === 'pedido') {
+    const pedidoId = Number(partes[1])
+    if (Number.isInteger(pedidoId) && pedidoId > 0) return { pagina: 'pedido', pedidoId }
+    return { pagina: 'entrada', generoId: null }
+  }
   if (partes[0] === 'produto') {
     const produto = produtosLista.find((p) => p.id === Number(partes[1]))
     if (produto) return { pagina: 'detalhe', generoId: produto.genero, produtoSelecionado: produto }
@@ -59,7 +67,9 @@ function App() {
   const [mostrarFavoritos, setMostrarFavoritos] = useState(false)
   const [mostrarAdmin, setMostrarAdmin] = useState(false)
   const [favoritos, setFavoritos] = useState([])
-  const [carrinho, setCarrinho] = useState([])
+  // Carrinho persiste no navegador: recarregar a página não perde a compra.
+  const [carrinho, setCarrinho] = useState(() => carregarCarrinho())
+  const [pedidoId, setPedidoId] = useState(null)
   const [mostrarCarrinho, setMostrarCarrinho] = useState(false)
   const [produtoEditando, setProdutoEditando] = useState(null)
   const [mostrarFormProduto, setMostrarFormProduto] = useState(false)
@@ -81,6 +91,11 @@ function App() {
     setTimeout(() => setSucesso(''), 3000)
   }
 
+  // Persiste o carrinho a cada mudança (salvarCarrinho ignora falha de cota).
+  useEffect(() => {
+    salvarCarrinho(carrinho)
+  }, [carrinho])
+
   function navegar(estado) {
     const proximo = { ...estado }
     setGeneroId(proximo.generoId ?? null)
@@ -89,6 +104,7 @@ function App() {
     setMostrarPerfil(Boolean(proximo.mostrarPerfil))
     setMostrarFavoritos(Boolean(proximo.mostrarFavoritos))
     setMostrarAdmin(Boolean(proximo.mostrarAdmin))
+    setPedidoId(proximo.pedidoId ?? null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
     window.history.pushState(null, '', rotaParaURL(proximo))
   }
@@ -102,6 +118,7 @@ function App() {
       setMostrarPerfil(Boolean(estado.mostrarPerfil))
       setMostrarFavoritos(Boolean(estado.mostrarFavoritos))
       setMostrarAdmin(Boolean(estado.mostrarAdmin))
+      setPedidoId(estado.pedidoId ?? null)
     }
     sincronizar()
     window.addEventListener('popstate', sincronizar)
@@ -250,23 +267,34 @@ function App() {
     }
   }
 
-  function handleAdicionarAoCarrinho(produto, quantidade = 1) {
+  function handleAdicionarAoCarrinho(produto, quantidade = 1, personalizacao = null) {
     setCarrinho((atual) => {
       const existente = atual.find((item) => item.produto.id === produto.id)
       if (existente) {
         return atual.map((item) =>
           item.produto.id === produto.id
-            ? { ...item, quantidade: item.quantidade + quantidade }
+            ? {
+                ...item,
+                quantidade: item.quantidade + quantidade,
+                // Arquivo novo substitui o anterior; sem arquivo novo, mantém o que já tinha.
+                personalizacao: personalizacao ?? item.personalizacao ?? null,
+              }
             : item
         )
       }
-      return [...atual, { produto, quantidade }]
+      return [...atual, { produto, quantidade, personalizacao: personalizacao ?? null }]
     })
     setMostrarCarrinho(true)
   }
 
   function handleRemoverDoCarrinho(id) {
     setCarrinho((atual) => atual.filter((item) => item.produto.id !== id))
+  }
+
+  function handleRemoverPersonalizacao(id) {
+    setCarrinho((atual) =>
+      atual.map((item) => (item.produto.id === id ? { ...item, personalizacao: null } : item))
+    )
   }
 
   function handleAlterarQuantidade(id, delta) {
@@ -309,6 +337,14 @@ function App() {
   }
 
   const totalCarrinho = carrinho.reduce((soma, item) => soma + item.quantidade, 0)
+
+  // Carrinho "fino": cada item aponta para o produto do catálogo ATUAL —
+  // recupera imagem/preço/estoque frescos sem gravar estado dentro de efeito.
+  // Produto removido da loja mantém o snapshot salvo (o backend revalida no checkout).
+  const carrinhoSincronizado = carrinho.map((item) => {
+    const real = produtos.find((p) => p.id === item.produto.id)
+    return real ? { ...item, produto: real } : item
+  })
 
   return (
     <div className="w-full min-h-screen flex flex-col pt-[64px] md:pt-[90px]" style={{ background: 'var(--cor-fundo)' }}>
@@ -356,6 +392,12 @@ function App() {
           onAdminLogin={handleAdminLogin}
           onAdminLogout={handleAdminLogout}
         />
+      ) : pagina === 'pedido' && pedidoId ? (
+        <PedidoStatus
+          pedidoId={pedidoId}
+          onVoltar={handleVoltarHome}
+          onEntrar={handleMostrarPerfil}
+        />
       ) : pagina === 'detalhe' && produtoSelecionado ? (
         <ProdutoDetalhe
           produto={produtoSelecionado}
@@ -397,12 +439,17 @@ function App() {
 
       {mostrarCarrinho && (
         <CarrinhoDrawer
-          itens={carrinho}
+          itens={carrinhoSincronizado}
           onFechar={handleFecharCarrinho}
           onRemover={handleRemoverDoCarrinho}
           onAlterar={handleAlterarQuantidade}
+          onRemoverPersonalizacao={handleRemoverPersonalizacao}
           onFinalizar={handleFinalizar}
           onEntrar={handleEntrarDoCarrinho}
+          onVerPedido={(id) => {
+            setMostrarCarrinho(false)
+            navegar({ pagina: 'pedido', pedidoId: id })
+          }}
         />
       )}
 
