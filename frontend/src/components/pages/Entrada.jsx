@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import Card from '../ui/Card'
 import Reveal from '../ui/Reveal'
+import NichoFormModal from '../ui/NichoFormModal'
 import { api } from '../../api'
 
-function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto }) {
+function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto, onSalvarNichos, onExcluirNichos }) {
   const [newsletterEmail, setNewsletterEmail] = useState('')
   const [newsletterEnviado, setNewsletterEnviado] = useState(false)
   const [newsletterErro, setNewsletterErro] = useState('')
+  const [nichoEditando, setNichoEditando] = useState(null)
   const destaque = [1, 11, 15, 9]
     .map((id) => produtos.find((p) => p.id === id))
     .filter(Boolean)
@@ -116,6 +118,17 @@ function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, fa
         <p className="mt-4 text-center" style={{ color: 'var(--cor-texto-suave)' }}>
           Toque em um gênero e entre em uma página com a cara dele.
         </p>
+        {admin && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => setNichoEditando('novo')}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-full border-none cursor-pointer text-sm font-medium transition-transform hover:scale-105"
+              style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)' }}
+            >
+              <span className="text-lg leading-none">+</span> Novo nicho
+            </button>
+          </div>
+        )}
 
         <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
           {nichos.map((genero) => (
@@ -124,6 +137,19 @@ function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, fa
               onClick={() => onSelecionarGenero(genero.id)}
               className="group relative h-[340px] overflow-hidden rounded-[24px] cursor-pointer border-none text-left shadow-[0_10px_30px_rgba(0,0,0,0.15)]"
             >
+              {admin && (
+                <span
+                  onClick={(e) => { e.stopPropagation(); setNichoEditando(genero) }}
+                  className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-110"
+                  style={{ background: 'rgba(0,0,0,0.6)', color: 'var(--cor-texto)' }}
+                  title="Editar nicho"
+                >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </span>
+              )}
               <img
                 src={genero.imagem}
                 alt={genero.nome}
@@ -397,6 +423,20 @@ function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, fa
         </div>
       </div>
 
+      {nichoEditando !== null && (
+        <NichoFormModal
+          nicho={nichoEditando === 'novo' ? null : nichoEditando}
+          onSalvar={(dados) => {
+            onSalvarNichos(dados)
+            setNichoEditando(null)
+          }}
+          onFechar={() => setNichoEditando(null)}
+          onExcluir={(id) => {
+            onExcluirNichos(id)
+            setNichoEditando(null)
+          }}
+        />
+      )}
     </section>
   )
 }

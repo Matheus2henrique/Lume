@@ -288,6 +288,10 @@ function App() {
   async function handleFinalizar(dados) {
     const pedido = await api.criarPedido(dados)
     setCarrinho([])
+    api.produtos
+      .listar()
+      .then((lista) => setProdutos(lista))
+      .catch(() => {})
     return pedido
   }
 
@@ -314,7 +318,7 @@ function App() {
       />
 
       {sucesso && (
-        <div className="fixed top-[100px] left-1/2 -translate-x-1/2 z-[100] py-3 px-6 rounded-lg text-sm font-medium shadow-lg" style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)', border: '1px solid var(--cor-primaria)' }}>
+        <div className="fixed top-[100px] left-1/2 -translate-x-1/2 z-[100] py-3 px-6 rounded-lg text-sm font-medium shadow-lg" style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)', border: '1px solid var(--cor-laranja)' }}>
           {sucesso}
         </div>
       )}
@@ -380,6 +384,8 @@ function App() {
           onToggleFavorito={toggleFavorito}
           admin={admin}
           onEditarProduto={handleEditarProduto}
+          onSalvarNichos={handleSalvarNichos}
+          onExcluirNichos={handleExcluirNichos}
         />
       )}
 

@@ -14,6 +14,7 @@
   --fundo-decorativo: linear-gradient(to right, rgba(19, 35, 60, 0.95), rgba(10, 10, 10, 0.8));
   --cor-laranja: #925b2c;
   --cor-laranja-claro: #E8A93B;
+  --cor-badge-primaria: #925b2c;
 }
 
 .filtro-botoes {

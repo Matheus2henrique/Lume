@@ -35,6 +35,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
+  const [mostrarSenha, setMostrarSenha] = useState(false)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState('')
   const [carregando, setCarregando] = useState(false)
@@ -159,7 +160,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
             Olá, {usuario.nome || 'leitor(a)'}!
           </h2>
           <p className="text-center mb-8" style={{ color: 'var(--cor-texto-suave)' }}>
-            Sua conta Lume (dados vindos do banco de dados).
+            Seja Bem-Vindo!
           </p>
 
           <div className="rounded-2xl p-6 flex flex-col gap-4" style={{ background: 'var(--cor-fundo-cartao)', border: '1px solid var(--cor-borda)' }}>
@@ -171,13 +172,6 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
               <p className="text-xs mb-1" style={{ color: 'var(--cor-texto-suave)' }}>E-mail</p>
               <p className="font-medium" style={{ color: 'var(--cor-texto)' }}>{usuario.email}</p>
             </div>
-            <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--cor-texto-suave)' }}>Provedor</p>
-              <p className="font-medium" style={{ color: 'var(--cor-texto)' }}>{usuario.provedor}</p>
-            </div>
-            <p className="text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
-              Conta consultada em <strong>/api/auth/perfil</strong> no banco de dados.
-            </p>
           </div>
 
           <div className="mt-8 flex flex-col gap-3">
@@ -193,7 +187,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
             <button
               onClick={handleSair}
               className="border-none px-[30px] py-3 rounded-full bg-transparent cursor-pointer text-base transition-all duration-300 hover:underline"
-              style={{ color: 'var(--cor-texto-suave)', border: '1px solid var(--cor-borda)' }}
+              style={{ color: 'var(--cor-texto)', border: '1px solid var(--cor-laranja)' , background: 'var(--cor-laranja)' }}
             >
               Sair da conta
             </button>
@@ -203,7 +197,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
               style={{ color: 'var(--cor-texto)' }}
             >
               Voltar
-            </button>
+</button>
           </div>
         </div>
       </section>
@@ -251,14 +245,38 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
               <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
                 Senha
               </label>
-              <input
-                type="password"
-                placeholder="Sua senha"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors"
-                style={estiloInput}
-              />
+              <div className="relative">
+                <input
+                  type={mostrarSenha ? 'text' : 'password'}
+                  placeholder="Sua senha"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  className="w-full border rounded-lg px-4 py-3 pr-11 text-base outline-none transition-colors"
+                  style={estiloInput}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 border-none bg-transparent cursor-pointer p-1"
+                  style={{ color: 'var(--cor-texto-suave)' }}
+                  tabIndex={-1}
+                  aria-label={mostrarSenha ? 'Esconder senha' : 'Mostrar senha'}
+                >
+                  {mostrarSenha ? (
+                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
             {erro && (
@@ -320,14 +338,38 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
               <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
                 Senha*
               </label>
-              <input
-                type="password"
-                placeholder="Crie uma senha (mínimo 6 caracteres)"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors"
-                style={estiloInput}
-              />
+              <div className="relative">
+                <input
+                  type={mostrarSenha ? 'text' : 'password'}
+                  placeholder="Crie uma senha (mínimo 6 caracteres)"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  className="w-full border rounded-lg px-4 py-3 pr-11 text-base outline-none transition-colors"
+                  style={estiloInput}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 border-none bg-transparent cursor-pointer p-1"
+                  style={{ color: 'var(--cor-texto-suave)' }}
+                  tabIndex={-1}
+                  aria-label={mostrarSenha ? 'Esconder senha' : 'Mostrar senha'}
+                >
+                  {mostrarSenha ? (
+                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
             {erro && (
@@ -340,7 +382,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
               type="submit"
               disabled={carregando}
               className="mt-2 border-none px-[30px] py-3 rounded-full text-white cursor-pointer text-lg transition-all duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
-              style={{ background: 'var(--cor-primaria)' }}
+              style={{ background: 'var(--cor-laranja)' }}
             >
               {carregando ? 'Criando…' : 'Criar conta'}
             </button>
@@ -395,7 +437,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
                   setErro('')
                 }}
                 className="bg-transparent border-none cursor-pointer font-semibold hover:underline"
-                style={{ color: 'var(--cor-primaria)' }}
+                style={{ color: 'var(--cor-laranja)' }}
               >
                 Faça Login Agora
               </button>

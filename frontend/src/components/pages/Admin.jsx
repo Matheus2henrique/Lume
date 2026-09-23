@@ -1,39 +1,14 @@
 import { useState } from 'react'
 import { formatarMoeda } from '../../utils/formatar'
 import ProdutoFormModal from '../ui/ProdutoFormModal'
+import NichoFormModal from '../ui/NichoFormModal'
 
 function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, onSalvarProduto, onExcluirProduto }) {
   const [filtroNichos, setFiltroNichos] = useState('todos')
   const [mostrarForm, setMostrarForm] = useState(false)
   const [produtoEditando, setProdutoEditando] = useState(null)
   const [confirmarExcluir, setConfirmarExcluir] = useState(null)
-  const [novoNichosNome, setNovoNichosNome] = useState('')
-  const [mostrarFormNichos, setMostrarFormNichos] = useState(false)
-  const [editandoNichos, setEditandoNichos] = useState(null)
-  const [nichosEditNome, setNichosEditNome] = useState('')
-
-  function handleCriarNichos(e) {
-    e.preventDefault()
-    if (!novoNichosNome.trim()) return
-    const id = novoNichosNome
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')
-    if (nichos.some((n) => n.id === id)) return
-    onSalvarNichos({ id, nome: novoNichosNome.trim(), tagline: '', descricao: '', imagem: '' })
-    setNovoNichosNome('')
-    setMostrarFormNichos(false)
-  }
-
-  function handleSalvarNichosEditado(e) {
-    e.preventDefault()
-    if (!nichosEditNome.trim() || !editandoNichos) return
-    onSalvarNichos({ ...editandoNichos, nome: nichosEditNome.trim() })
-    setEditandoNichos(null)
-    setNichosEditNome('')
-  }
+  const [nichoEditando, setNichoEditando] = useState(null)
 
   const produtosFiltrados = filtroNichos === 'todos' ? produtos : produtos.filter((p) => p.genero === filtroNichos)
 
@@ -69,7 +44,7 @@ function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, on
                   Nichos
                 </h2>
                 <button
-                  onClick={() => setMostrarFormNichos(true)}
+                  onClick={() => setNichoEditando('novo')}
                   className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer border-none text-white text-xl font-bold transition-transform hover:scale-110"
                   style={{ background: 'var(--cor-laranja)' }}
                   title="Criar novo nicho"
@@ -87,8 +62,14 @@ function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, on
                     color: filtroNichos === 'todos' ? '#fff' : 'var(--cor-texto-suave)',
                   }}
                 >
-                  Todos ({produtos.length})
+                  Todos ({nichos.length})
                 </button>
+                <div
+                  className="text-left px-3 py-2 rounded-lg text-sm"
+                  style={{ color: 'var(--cor-texto-suave)' }}
+                >
+                  Produtos ({produtos.length})
+                </div>
                 {nichos.map((n) => {
                   const count = produtos.filter((p) => p.genero === n.id).length
                   return (
@@ -104,7 +85,7 @@ function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, on
                         {n.nome} ({count})
                       </button>
                       <button
-                        onClick={() => { setEditandoNichos(n); setNichosEditNome(n.nome) }}
+                        onClick={() => setNichoEditando(n)}
                         className="w-7 h-7 rounded flex items-center justify-center border-none cursor-pointer bg-transparent transition-colors hover:bg-[rgba(255,255,255,0.1)]"
                         style={{ color: 'var(--cor-texto-suave)' }}
                         title="Editar nicho"
@@ -130,83 +111,6 @@ function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, on
                 })}
               </div>
             </div>
-
-            {mostrarFormNichos && (
-              <div
-                className="rounded-2xl p-5 mb-6"
-                style={{ background: 'var(--cor-fundo-cartao)', border: '1px solid var(--cor-laranja)' }}
-              >
-                <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--cor-texto)' }}>
-                  Novo Nicho
-                </h3>
-                <form onSubmit={handleCriarNichos} className="flex flex-col gap-3">
-                  <input
-                    type="text"
-                    placeholder="Nome do nicho"
-                    value={novoNichosNome}
-                    onChange={(e) => setNovoNichosNome(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2 text-sm outline-none"
-                    style={{ borderColor: 'var(--cor-borda)', color: 'var(--cor-texto)', background: 'var(--cor-fundo)' }}
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      className="flex-1 py-2 rounded-lg border-none cursor-pointer text-sm text-white font-medium"
-                      style={{ background: 'var(--cor-laranja)' }}
-                    >
-                      Criar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setMostrarFormNichos(false); setNovoNichosNome('') }}
-                      className="flex-1 py-2 rounded-lg border-none cursor-pointer text-sm bg-transparent"
-                      style={{ color: 'var(--cor-texto-suave)', border: '1px solid var(--cor-borda)' }}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {editandoNichos && (
-              <div
-                className="rounded-2xl p-5 mb-6"
-                style={{ background: 'var(--cor-fundo-cartao)', border: '1px solid var(--cor-laranja)' }}
-              >
-                <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--cor-texto)' }}>
-                  Editar Nicho
-                </h3>
-                <form onSubmit={handleSalvarNichosEditado} className="flex flex-col gap-3">
-                  <input
-                    type="text"
-                    value={nichosEditNome}
-                    onChange={(e) => setNichosEditNome(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2 text-sm outline-none"
-                    style={{ borderColor: 'var(--cor-borda)', color: 'var(--cor-texto)', background: 'var(--cor-fundo)' }}
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      className="flex-1 py-2 rounded-lg border-none cursor-pointer text-sm text-white font-medium"
-                      style={{ background: 'var(--cor-laranja)' }}
-                    >
-                      Salvar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setEditandoNichos(null); setNichosEditNome('') }}
-                      className="flex-1 py-2 rounded-lg border-none cursor-pointer text-sm bg-transparent"
-                      style={{ color: 'var(--cor-texto-suave)', border: '1px solid var(--cor-borda)' }}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
           </div>
 
           <div className="flex-1 min-w-0">
@@ -263,7 +167,7 @@ function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, on
                         <button
                           onClick={() => { setProdutoEditando(produto); setMostrarForm(true) }}
                           className="flex-1 py-2 rounded-lg border-none cursor-pointer text-xs font-medium text-white transition-opacity hover:opacity-80"
-                          style={{ background: 'var(--cor-primaria)' }}
+                          style={{ background: 'var(--cor-laranja)' }}
                         >
                           Editar
                         </button>
@@ -347,6 +251,21 @@ function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, on
             </div>
           </div>
         </div>
+      )}
+
+      {nichoEditando !== null && (
+        <NichoFormModal
+          nicho={nichoEditando === 'novo' ? null : nichoEditando}
+          onSalvar={(dados) => {
+            onSalvarNichos(dados)
+            setNichoEditando(null)
+          }}
+          onFechar={() => setNichoEditando(null)}
+          onExcluir={(id) => {
+            onExcluirNichos(id)
+            setNichoEditando(null)
+          }}
+        />
       )}
     </section>
   )
