@@ -1,8 +1,8 @@
 # Lume — Loja de Impressão 3D (MVP)
 
-**Loja virtual (MVP) de peças impressas em 3D sob demanda.** Catálogo por universos (Romance, Fantasia e Suspense), página de detalhes do produto, carrinho, checkout com pagamento (simulado ou Mercado Pago), favoritos e área de perfil com autenticação.
+**Loja virtual (MVP) de peças impressas em 3D sob demanda.** Catálogo por universos (Romance, Fantasia e Suspense), página de detalhes do produto, carrinho, checkout com pagamento (simulado ou Mercado Pago), verificação de e-mail no cadastro, favoritos, área de perfil e painel administrativo.
 
-> Projeto em desenvolvimento — MVP funcional para validar a venda de modelos 3D personalizados produzidos sob demanda.
+> Projeto em evolução — MVP funcional para validar a venda de modelos 3D personalizados sob demanda. O roteiro completo (com prioridades e esforço) está no **[PLANO_PRODUCAO.md](./PLANO_PRODUCAO.md)**.
 
 ---
 
@@ -14,6 +14,8 @@
 - [Como rodar o projeto](#-como-rodar-o-projeto)
 - [Pagamento real com Mercado Pago](#-pagamento-real-com-mercado-pago)
 - [Endpoints da API](#-endpoints-da-api)
+- [Testes](#-testes)
+- [Deploy (GitHub Pages)](#-deploy-github-pages)
 - [Scripts](#-scripts)
 - [Normas e boas práticas](#-normas-e-boas-práticas)
 - [Próximos passos](#-próximos-passos)
@@ -25,13 +27,15 @@
 
 - 🏷️ **Catálogo por universos** — Romance, Fantasia e Suspense, com filtro e página de detalhes
 - 📄 **Página de detalhes** — preço, estoque, descrição, personalização com upload de arquivo e "Comprar agora"
-- 🛒 **Carrinho** — adicionar, remover e alterar quantidade
-- 💳 **Checkout** — dados de entrega + pagamento (cartão ou Pix), com redirecionamento ao **Mercado Pago** quando o gateway está ativo
+- 🛒 **Carrinho e checkout** — dados de entrega + pagamento (Pix ou cartão), **logado ou como convidado** (checkoutToken de 30 min)
+- ✉️ **Verificação de e-mail** — código de 6 dígitos no cadastro (HMAC, 10 min, 5 tentativas); login travado até confirmar; sem SMTP configurado o código sai no console do backend (modo dev)
+- 💳 **Mercado Pago** — redirecionamento para o checkout real; o webhook valida a assinatura e só então o pedido vira `pago` e o estoque baixa
 - ❤️ **Favoritos** — persistidos no banco quando o usuário está logado
-- 👤 **Perfil** — criar conta, entrar e consultar os dados no banco (`/api/auth/perfil`)
-- 🔑 **Autenticação** — JWT + bcrypt no backend (senha nunca armazenada em texto puro)
-- 🔄 **Navegação fluida** — rolagem suave e URLs amigáveis
-- 🎨 **Design responsivo** — layout adaptável a diferentes tamanhos de tela
+- 👤 **Perfil** — cadastro, login, verificação de e-mail e consulta dos dados (`/api/auth/perfil`)
+- 🛡️ **Painel admin** — CRUD de produtos e universos pela API (somente admin)
+- 📰 **Newsletter** — assinatura direto no site
+- 🔑 **Segurança** — JWT + bcrypt, rate limit nos endpoints sensíveis, cabeçalhos HTTP, `trust proxy` configurável e graceful shutdown — **dados de cartão nunca passam pelo seu servidor**
+- 🎨 **Design responsivo** — layout adaptável, rolagem suave e URLs amigáveis
 
 ## 🧰 Tecnologias
 
@@ -45,63 +49,68 @@
 | [PostgreSQL](https://www.postgresql.org) | 15/16/17 | Banco de dados (driver `pg`) |
 | [JWT](https://jwt.io) + bcrypt | — | Autenticação de usuários |
 | [Mercado Pago](https://www.mercadopago.com.br/developers) | API v1 | Pagamento (checkout + webhook) |
+| [Nodemailer](https://nodemailer.com) | — | Envio do código de verificação por e-mail (SMTP) |
+| [Jest](https://jestjs.io) | — | Testes automatizados do backend |
+| GitHub Pages | — | Hospedagem do frontend |
 
 ## 📁 Estrutura do projeto
 
 ```
-MVP-grafica/
-├── frontend/                    # Aplicação React + Vite
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── eslint.config.js
+Lume/
+├── frontend/                       # React + Vite → GitHub Pages
+│   ├── index.html                  # lang pt-BR + deep link (SPA no GH Pages)
+│   ├── public/
+│   │   └── 404.html                # fallback de rotas no GH Pages
+│   ├── package.json                # scripts dev/build/lint/deploy
+│   ├── vite.config.js              # base /Lume/
 │   └── src/
-│       ├── main.jsx             # Entry point
-│       ├── App.jsx              # Componente raiz e navegação
-│       ├── index.css            # Estilos globais (Tailwind)
-│       ├── api.js               # Cliente HTTP do backend (fetch + token)
-│       ├── data/produtos.js     # Dados dos produtos (mock)
+│       ├── main.jsx                # Entry point
+│       ├── App.jsx                 # Componente raiz e navegação
+│       ├── index.css               # Estilos globais (Tailwind)
+│       ├── api.js                  # Cliente HTTP (fetch + token + checkoutToken)
+│       ├── data/produtos.js        # Catálogo mock (fallback quando a API cai)
 │       └── components/
-│           ├── Header.jsx       # Topo + menu
-│           ├── Entrada.jsx      # Home
-│           ├── Genero.jsx       # Catálogo de um universo
-│           ├── Card.jsx         # Card de produto
-│           ├── ProdutoDetalhe.jsx
-│           ├── Carrinho.jsx     # Carrinho + checkout
-│           ├── Perfil.jsx       # Login / registro / dados da conta
-│           ├── Favoritos.jsx
-│           ├── Footer.jsx
-│           └── Icones.jsx
-├── backend/                     # API Express + PostgreSQL
-│   ├── package.json
-│   ├── .env                     # ← CONEXÃO COM SEU BANCO + TOKEN DO MERCADO PAGO
-│   ├── .env.example             # Modelo de configuração
+│           ├── layout/             # Header, Footer
+│           ├── pages/              # Entrada, Genero, ProdutoDetalhe, Carrinho,
+│           │                       # Perfil (login/cadastro/verificação),
+│           │                       # Favoritos, Admin
+│           └── ui/                 # Card, Icones, Reveal,
+│                                   # ProdutoFormModal, NichoFormModal
+├── backend/                        # API Express + PostgreSQL
+│   ├── .env                        # ← NÃO versionado (copie do .env.example)
+│   ├── .env.example                # Modelo (banco, Mercado Pago, e-mail)
+│   ├── __tests__/                  # Jest: auth, health, produtos, mercadoPago
 │   └── src/
-│       ├── server.js            # Servidor Express
-│       ├── db.js                # Pool do PostgreSQL
-│       ├── schema.sql           # Criação das tabelas
-│       ├── migrate.js           # Aplica o schema (npm run migrate)
-│       ├── seed.js              # Popula produtos (npm run seed)
-│       ├── middleware/auth.js   # Proteção por token JWT
+│       ├── server.js               # App, segurança, /api/health, graceful shutdown
+│       ├── db.js                   # Pool do PostgreSQL
+│       ├── env.js                  # Validação das variáveis de ambiente
+│       ├── logger.js               # Log de requisições/erros
+│       ├── schema.sql              # Criação das tabelas
+│       ├── migrate.js              # Aplica o schema (npm run migrate)
+│       ├── seed.js                 # Produtos (npm run seed)
+│       ├── seed-generos.js         # Universos (npm run seed)
+│       ├── seed-admin.js           # Admin inicial (npm run seed:admin)
+│       ├── middleware/
+│       │   ├── auth.js             # JWT + checkoutToken (convidado) + admin
+│       │   └── rateLimiter.js      # Rate limit (auth, pagamento, e-mail)
 │       ├── services/
-│       │   └── mercadoPago.js   # Integração com a API do Mercado Pago
-│       ├── data/produtos.js     # Dados iniciais dos produtos
-│       └── routes/
-│           ├── auth.js          # registrar, login, perfil
-│           ├── produtos.js      # catálogo
-│           ├── favoritos.js     # favoritos por usuário
-│           ├── pedidos.js       # checkout com pagamento + estoque
-│           └── pagamentos.js    # preferência + webhook do Mercado Pago
-└── package-lock.json
+│       │   ├── mercadoPago.js      # Preferência + assinatura do webhook
+│       │   └── email.js            # Código de verificação (SMTP ou modo dev)
+│       ├── data/produtos.js        # Dados iniciais dos produtos
+│       └── routes/                 # auth, produtos, generos, favoritos,
+│                                   # pedidos, pagamentos, newsletter
+├── Normas.md                       # Regras, banco e pagamento (passo a passo)
+├── PLANO_PRODUCAO.md               # Plano MVP → produção (fases e prioridades)
+└── README.md
 ```
 
 ## 🚀 Como rodar o projeto
 
 ### Pré-requisitos
 
-- [Node.js](https://nodejs.org) **20.x ou superior** (recomendado)
-- npm (incluído com o Node.js)
-- [PostgreSQL](https://www.postgresql.org/download/) instalado e rodando (porta padrão `5432`)
+- [Node.js](https://nodejs.org) **20.x ou superior** (recomendado) e npm
+- [PostgreSQL](https://www.postgresql.org/download/) instalado e **rodando** (porta padrão `5432`)
+- Comandos para **cmd/PowerShell** (Windows)
 
 ### 1. Frontend (React + Vite)
 
@@ -113,7 +122,7 @@ npm run dev        # http://localhost:5173
 
 ### 2. Backend (Express + PostgreSQL)
 
-**a) Configure o banco** — edite `backend/.env` com os dados do seu PostgreSQL:
+**a) Configure o banco** — copie `backend/.env.example` para `backend/.env` e edite:
 
 ```env
 DB_HOST=localhost
@@ -123,22 +132,26 @@ DB_PASSWORD=SUA_SENHA
 DB_NAME=lume
 ```
 
-**b) Instale as dependências, crie as tabelas e popule os produtos:**
+> O `.env.example` traz também as chaves do Mercado Pago (`MP_ACCESS_TOKEN`, `BACKEND_URL`, `MP_WEBHOOK_SECRET`) e do e-mail (`EMAIL_SMTP_*`). Use `lume` minúsculo no `DB_NAME` (servidores Linux são sensíveis a maiúsculas). Sem `EMAIL_SMTP_PASS`, o código de verificação é impresso no console do backend.
+
+**b) Instale as dependências, crie as tabelas e popule:**
 
 ```console
 cd backend
 npm install
-npm run migrate   # cria as tabelas (usuarios, clientes, produtos, pedidos, favoritos)
-npm run seed      # insere os 18 produtos e os gêneros
+npm run migrate      # cria as tabelas (usuarios, produtos, pedidos, favoritos...)
+npm run seed         # insere os 18 produtos e os universos
+npm run seed:admin   # cria/eleva o admin (senha via ADMIN_SENHA ou gerada)
 ```
 
-**c) Inicie o servidor:**
+**c) Inicie o servidor e rode os testes:**
 
 ```console
-npm run dev       # http://localhost:4000
+npm run dev          # http://localhost:4000
+npm test             # 4 suítes / 32 testes
 ```
 
-> O frontend já está ligado à API (login, cadastro, favoritos e finalização de compra).
+> O frontend já está ligado à API (cadastro com verificação, login, favoritos e finalização de compra).
 > Em produção, defina `VITE_API_URL` no frontend apontando para a URL da API.
 
 ## 💳 Pagamento real com Mercado Pago
@@ -151,30 +164,69 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 2. No `backend/.env`, preencha:
    ```env
    MP_ACCESS_TOKEN=APP_USR-xxxxxxxxxxxxxxxx
-   BACKEND_URL=http://localhost:4000   # URL pública (ex.: túnel ngrok em testes)
+   BACKEND_URL=http://localhost:4000            # URL pública (ex.: túnel ngrok em testes)
+   MP_WEBHOOK_SECRET=xxxxxxxxxxxx               # segredo do painel → valida o x-signature
    ```
 3. Ao finalizar a compra, o cliente é redirecionado para o checkout do Mercado Pago (Pix, cartão ou boleto)
-4. O webhook `POST /api/pagamentos/webhook` confirma o pagamento; só então o pedido vira `pago` e o estoque é baixado
+4. O webhook `POST /api/pagamentos/webhook` valida a assinatura (`id/request-id/ts` em HMAC-SHA256), **confere o valor pago com o total do banco** e só então o pedido vira `pago` e o estoque é baixado
+5. Pedidos `pending` (Pix aguardando) **não** são cancelados; só `rejected/canceled/expired` devolvem o estoque
 
-> Com o gateway ativo, os dados do cartão **não** passam pelo seu servidor — o Mercado Pago processa o pagamento diretamente.
+> Com o gateway ativo, os dados do cartão **não** passam pelo seu servidor — o Mercado Pago processa o pagamento diretamente. O pedido guarda apenas o método e o status.
 
 ## 🔌 Endpoints da API
 
 | Método | Rota | Descrição | Autenticação |
 |---|---|---|---|
-| `POST` | `/api/auth/registrar` | Cria conta (nome, email, senha) | — |
-| `POST` | `/api/auth/login` | Entra e devolve token JWT | — |
+| `GET` | `/api/health` | Health do serviço (checa o banco; 503 se indisponível) | — |
+| `POST` | `/api/auth/registrar` | Cria conta e envia o código de verificação | — |
+| `POST` | `/api/auth/verificar` | Confirma o código de 6 dígitos (10 min, 5 tentativas) | — |
+| `POST` | `/api/auth/reenviar-verificacao` | Reenvia o código com cooldown | — |
+| `POST` | `/api/auth/login` | Entra (exige e-mail verificado) e devolve token JWT | — |
 | `GET` | `/api/auth/perfil` | Consulta o usuário logado no banco | Token |
 | `GET` | `/api/produtos` | Lista o catálogo | — |
 | `GET` | `/api/produtos/:id` | Detalhe de um produto | — |
+| `POST` | `/api/produtos` | Cria produto | Admin |
+| `PUT` | `/api/produtos/:id` | Atualiza produto | Admin |
+| `DELETE` | `/api/produtos/:id` | Remove produto | Admin |
+| `GET` | `/api/generos` | Lista os universos | — |
+| `GET` | `/api/generos/:id` | Detalhe do universo | — |
+| `POST` | `/api/generos` | Cria universo | Admin |
+| `PUT` | `/api/generos/:id` | Atualiza universo | Admin |
+| `DELETE` | `/api/generos/:id` | Remove universo | Admin |
 | `GET` | `/api/favoritos` | Lista favoritos do usuário | Token |
 | `POST` | `/api/favoritos/:produtoId` | Adiciona favorito | Token |
 | `DELETE` | `/api/favoritos/:produtoId` | Remove favorito | Token |
-| `POST` | `/api/pedidos` | Checkout (pagamento + baixa de estoque) | — |
+| `POST` | `/api/pedidos` | Checkout (logado ou convidado com `checkoutToken`) | Opcional |
 | `GET` | `/api/pedidos` | Lista pedidos do usuário | Token |
 | `GET` | `/api/pagamentos/status` | Informa se o gateway está ativo | — |
-| `POST` | `/api/pagamentos/preferencia` | Cria o checkout no Mercado Pago | — |
-| `POST` | `/api/pagamentos/webhook` | Confirma o pagamento (webhook do MP) | — |
+| `POST` | `/api/pagamentos/preferencia` | Cria o checkout no Mercado Pago | Opcional |
+| `POST` | `/api/pagamentos/webhook` | Confirma o pagamento (assinatura validada) | — |
+| `GET` | `/api/pagamentos/webhook` | Validação/health do webhook do MP | — |
+| `POST` | `/api/newsletter` | Assina a newsletter | — |
+
+## 🧪 Testes
+
+```console
+cd backend
+npm test        # Jest — 4 suítes, 32 testes
+```
+
+Cobertura: cadastro/login e **verificação de e-mail**, health (banco), catálogo de produtos e a **assinatura do webhook** do Mercado Pago (manifesto oficial `id/request-id/ts`, timing-safe). O fluxo de checkout também foi validado de ponta a ponta com Postgres real — incluindo a **corrida de estoque** (8 checkouts simultâneos de 5 peças em um estoque de 20) e os portões de permissão (401/403).
+
+## 🌐 Deploy (GitHub Pages)
+
+**Site publicado:** https://matheus2henrique.github.io/Lume/
+
+```console
+cd frontend
+npm run deploy    # build automático (predeploy) + push na branch gh-pages
+```
+
+> - O script usa o **git do Windows** (sua credencial já é reconhecida) e faz `push --force` na `gh-pages`.
+> - **Sem `VITE_API_URL` o site publicado usa o catálogo mock** — as chamadas para `localhost:4000` falham e o fallback entra. Quando o backend estiver hospedado:
+>   ```console
+>   set VITE_API_URL=https://sua-api.com && npm run deploy
+>   ```
 
 ## 📜 Scripts
 
@@ -186,6 +238,7 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 | `npm run build` | Gera a versão de produção em `dist/` |
 | `npm run preview` | Pré-visualiza a build de produção |
 | `npm run lint` | Executa o ESLint |
+| `npm run deploy` | Build + publica na branch `gh-pages` (GitHub Pages) |
 
 ### Backend (`backend/`)
 
@@ -194,16 +247,19 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 | `npm run dev` | Inicia o servidor com hot reload (porta `4000`) |
 | `npm run start` | Inicia o servidor em produção |
 | `npm run migrate` | Aplica o schema no PostgreSQL |
-| `npm run seed` | Popula produtos e gêneros (só se as tabelas estiverem vazias) |
+| `npm run seed` | Popula produtos e universos (só se as tabelas estiverem vazias) |
 | `npm run seed:admin` | Cria/eleva o admin inicial (senha via `ADMIN_SENHA` ou gerada) |
+| `npm run seed:generos` | Popula apenas os universos |
+| `npm test` | Roda a suíte Jest (4 suítes / 32 testes) |
 
 ## 📐 Normas e boas práticas
 
 Consulte **[Normas.md](./Normas.md)** para:
 
 - Como **criar** e **configurar** a API do **Mercado Pago** (token, credenciais de teste, webhook, ngrok)
-- Como o **banco de dados** está estruturado (tabelas, migração, seed, backup)
+- Como o **banco de dados** está estruturado (tabelas, migração, seed, backup — no Windows, use o **Agendador de Tarefas**)
 - Regras de segurança (senha, JWT, `.env`, dados de cartão, webhook)
+- Atenção a **maiúsculas** em nomes de banco/tabela e à porta real do seu PostgreSQL
 
 ## 🗺️ Próximos passos
 
@@ -211,12 +267,16 @@ Consulte **[Normas.md](./Normas.md)** para:
 
 - [x] Integração com backend e banco de dados (PostgreSQL)
 - [x] Autenticação e cadastro de usuários
+- [x] Verificação de e-mail por código no cadastro (SMTP ou modo dev)
 - [x] Favoritos persistidos por usuário
-- [x] Checkout com pagamento e baixa de estoque
+- [x] Checkout com pagamento e baixa de estoque (logado ou convidado)
 - [x] Estrutura do gateway Mercado Pago (preferência + webhook)
 - [x] Validar assinatura do webhook (`x-signature`) — requer `MP_WEBHOOK_SECRET`
 - [x] Consumir `/api/produtos` no frontend (catálogo ligado à API)
+- [x] Testes automatizados com Jest (`npm test`)
+- [x] Deploy do frontend no GitHub Pages (`npm run deploy`)
 - [ ] Ativar gateway com credenciais reais do Mercado Pago
+- [ ] Hospedar o backend e publicar `VITE_API_URL` no build do frontend
 - [ ] Tela de pedido pago/histórico para cliente e dono da loja
 - [ ] Upload de modelos customizados pelos usuários
 - [ ] Login com Google no backend
@@ -224,4 +284,3 @@ Consulte **[Normas.md](./Normas.md)** para:
 ## 📄 Licença
 
 Este projeto é privado e de uso exclusivo da **Lume**. Todos os direitos reservados.
-
