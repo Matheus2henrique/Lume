@@ -357,6 +357,7 @@ function App() {
         onMostrarCarrinho={() => setMostrarCarrinho(true)}
         totalFavoritos={favoritos.length}
         onMostrarFavoritos={handleMostrarFavoritos}
+        nichos={nichos}
       />
 
       {sucesso && (
@@ -458,6 +459,7 @@ function App() {
           onHome={handleVoltarHome}
           onSelecionarGenero={handleSelecionarGenero}
           onIrParaDestaques={handleIrParaDestaques}
+          nichos={nichos}
         />
       )}
 

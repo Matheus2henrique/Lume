@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { generos } from '../../data/produtos'
+import { generos as generosPadrao } from '../../data/produtos'
 
-function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCarrinho = 0, onMostrarCarrinho, totalFavoritos = 0, onMostrarFavoritos }) {
+function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCarrinho = 0, onMostrarCarrinho, totalFavoritos = 0, onMostrarFavoritos, nichos }) {
   const [menuAberto, setMenuAberto] = useState(false)
   const [buscando, setBuscando] = useState(false)
   const [busca, setBusca] = useState('')
   const buscaRef = useRef(null)
+  const generos = nichos?.length ? nichos : generosPadrao
 
   const sugestoes = useMemo(() => {
     const alvo = busca
@@ -19,7 +20,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
     return generos.filter(
       (g) => normalizar(g.nome).includes(alvo) || g.id.includes(alvo)
     )
-  }, [busca])
+  }, [busca, generos])
 
   useEffect(() => {
     if (!buscando) return

@@ -110,6 +110,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
         iniciarVerificacao(err.dados)
         return
       }
+      if (tratarContaExpirada(err)) return
       setErro(err.message)
     } finally {
       setCarregando(false)
@@ -118,8 +119,8 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
 
   async function handleRegistrar(e) {
     e.preventDefault()
-    if (!email.trim() || !senha.trim()) {
-      setErro('Preencha o e-mail e a senha para criar sua conta.')
+    if (!nome.trim() || !email.trim() || !senha.trim()) {
+      setErro('Preencha nome, e-mail e senha para criar sua conta.')
       return
     }
     setErro('')
@@ -133,6 +134,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
       }
       concluirLogin(resposta)
     } catch (err) {
+      if (tratarContaExpirada(err)) return
       setErro(err.message)
     } finally {
       setCarregando(false)
@@ -154,6 +156,22 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     )
   }
 
+  // Conta pendente removida pelo backend (410): avisa e volta pra home.
+  function tratarContaExpirada(err) {
+    if (err.status !== 410 && !err.dados?.contaExpirada) return false
+    setErro('')
+    setSucesso(
+      'O prazo de verificação expirou e a conta foi removida. Você será redirecionado para a página inicial…'
+    )
+    setModo('login')
+    setNome('')
+    setEmail('')
+    setSenha('')
+    setCodigo('')
+    setTimeout(() => onVoltar(), 3000)
+    return true
+  }
+
   async function handleVerificar(e) {
     e.preventDefault()
     if (!codigo.trim()) {
@@ -167,6 +185,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
       const resposta = await api.verificarCodigo({ email, codigo: codigo.trim() })
       concluirLogin(resposta)
     } catch (err) {
+      if (tratarContaExpirada(err)) return
       setErro(err.message)
     } finally {
       setCarregando(false)
@@ -184,6 +203,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
       setEnvioPendente(false)
       setSucesso(resposta.mensagem || 'Novo código enviado.')
     } catch (err) {
+      if (tratarContaExpirada(err)) return
       setErro(err.message)
     } finally {
       setCarregando(false)
@@ -694,11 +714,12 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
           <form className="flex flex-col gap-5" onSubmit={handleRegistrar}>
             <div className="text-left">
               <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
-                Nome
+                Nome*
               </label>
               <input
                 type="text"
                 placeholder="Seu nome"
+                required
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors"
@@ -713,6 +734,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
               <input
                 type="email"
                 placeholder="seu@email.com"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors"
@@ -728,6 +750,8 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
                 <input
                   type={mostrarSenha ? 'text' : 'password'}
                   placeholder="Crie uma senha (mínimo 6 caracteres)"
+                  required
+                  minLength={6}
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   className="w-full border rounded-lg px-4 py-3 pr-11 text-base outline-none transition-colors"
@@ -766,7 +790,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
 
             <button
               type="submit"
-              disabled={carregando}
+              disabled={carregando || !nome.trim() || !email.trim() || !senha.trim()}
               className="mt-2 border-none px-[30px] py-3 rounded-full text-white cursor-pointer text-lg transition-all duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
               style={{ background: 'var(--cor-laranja)' }}
             >

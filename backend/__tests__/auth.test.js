@@ -149,15 +149,20 @@ describe('POST /api/auth/verificar', () => {
     expect(incremento).toBeDefined()
   })
 
-  it('deve rejeitar código expirado', async () => {
+  it('deve remover a conta pendente e responder 410 quando o código expirou', async () => {
     mockQuery.mockResolvedValueOnce({
       rows: [base({ codigo_expira_em: new Date(Date.now() - 1000) })],
     })
+    mockQuery.mockResolvedValueOnce({ rowCount: 1, rows: [] }) // DELETE da conta
     const res = await request(app)
       .post('/api/auth/verificar')
       .send({ email: 'teste@test.com', codigo: '123456' })
-    expect(res.status).toBe(400)
-    expect(res.body.erro).toContain('expirado')
+    expect(res.status).toBe(410)
+    expect(res.body.contaExpirada).toBe(true)
+    expect(res.body.erro).toContain('expirou')
+    const remocao = mockQuery.mock.calls.find(([sql]) => String(sql).includes('DELETE FROM usuarios'))
+    expect(remocao).toBeDefined()
+    expect(String(remocao[0])).toContain('email_verificado = FALSE')
   })
 
   it('deve bloquear após 5 tentativas', async () => {
@@ -187,6 +192,21 @@ describe('POST /api/auth/reenviar-verificacao', () => {
       .post('/api/auth/reenviar-verificacao')
       .send({ email: 'teste@test.com' })
     expect(res.status).toBe(200)
+    expect(mockEnviarEmail).not.toHaveBeenCalled()
+  })
+
+  it('deve remover a conta pendente ao reenviar depois do prazo (resposta segue genérica)', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [base({ email_verificado: false, codigo_expira_em: new Date(Date.now() - 1000) })],
+    })
+    mockQuery.mockResolvedValueOnce({ rowCount: 1, rows: [] }) // DELETE
+    const res = await request(app)
+      .post('/api/auth/reenviar-verificacao')
+      .send({ email: 'teste@test.com' })
+    expect(res.status).toBe(200)
+    expect(res.body.mensagem).toContain('Se existir')
+    const remocao = mockQuery.mock.calls.find(([sql]) => String(sql).includes('DELETE FROM usuarios'))
+    expect(remocao).toBeDefined()
     expect(mockEnviarEmail).not.toHaveBeenCalled()
   })
 
@@ -242,6 +262,22 @@ describe('POST /api/auth/login', () => {
     expect(res.body.requerVerificacao).toBe(true)
     expect(res.body.token).toBeUndefined()
     expect(mockEnviarEmail).toHaveBeenCalledTimes(1) // reemite um código válido
+  })
+
+  it('deve remover conta pendente e responder 410 no login quando o prazo expirou', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [base({ email_verificado: false, codigo_expira_em: new Date(Date.now() - 1000) })],
+    })
+    mockQuery.mockResolvedValueOnce({ rowCount: 1, rows: [] }) // DELETE
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'teste@test.com', senha: '123456' })
+    expect(res.status).toBe(410)
+    expect(res.body.contaExpirada).toBe(true)
+    expect(res.body.token).toBeUndefined()
+    const remocao = mockQuery.mock.calls.find(([sql]) => String(sql).includes('DELETE FROM usuarios'))
+    expect(remocao).toBeDefined()
+    expect(mockEnviarEmail).not.toHaveBeenCalled()
   })
 
   it('deve logar quando o e-mail já foi verificado', async () => {

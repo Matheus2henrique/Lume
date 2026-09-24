@@ -1,15 +1,16 @@
 import { useState } from 'react'
-import { generos } from '../../data/produtos'
+import { generos as generosPadrao } from '../../data/produtos'
 import { Check, Instagram, WhatsApp } from '../ui/Icones'
 import { api } from '../../api'
 
 const LINK_INSTAGRAM = 'https://www.instagram.com/3d_.lume/'
 const LINK_WHATSAPP = '#' // TODO: colocar o link do WhatsApp quando for enviado
 
-function Footer({ onHome, onSelecionarGenero, onIrParaDestaques }) {
+function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, nichos }) {
   const [email, setEmail] = useState('')
   const [inscrito, setInscrito] = useState(false)
   const [erro, setErro] = useState('')
+  const generos = nichos?.length ? nichos : generosPadrao
 
   async function handleNewsletter(e) {
     e.preventDefault()

@@ -6,6 +6,7 @@ import pool from '../db.js'
 import { autenticar } from '../middleware/auth.js'
 import { limiterAuth, limiterReenvio } from '../middleware/rateLimiter.js'
 import { enviarEmail, templateCodigoVerificacao, templateRedefinicaoSenha } from '../services/email.js'
+import { removerContaPendente } from '../services/limpeza.js'
 import logger from '../logger.js'
 
 const router = Router()
@@ -27,6 +28,13 @@ function publico(usuario) {
     provedor: usuario.provedor,
     admin: Boolean(usuario.admin),
     emailVerificado: Boolean(usuario.email_verificado),
+  }
+}
+
+function contaExpirada() {
+  return {
+    erro: 'O prazo de verificação expirou e a conta foi removida. Cadastre-se novamente.',
+    contaExpirada: true,
   }
 }
 
@@ -159,7 +167,10 @@ router.post('/verificar', limiterAuth, async (req, res) => {
       return res.status(429).json({ erro: 'Muitas tentativas. Solicite um novo código.' })
     }
     if (!usuario.codigo_expira_em || new Date() > new Date(usuario.codigo_expira_em)) {
-      return res.status(400).json({ erro: 'Código expirado. Solicite um novo código.' })
+      // Prazo estourado: apaga a conta pendente e avisa o front (410 Gone).
+      await removerContaPendente(usuario.id)
+      logger.info({ userId: usuario.id }, 'Conta pendente removida (código expirado)')
+      return res.status(410).json(contaExpirada())
     }
     if (hashCodigo(codigo) !== usuario.codigo_verificacao_hash) {
       await pool.query('UPDATE usuarios SET codigo_tentativas = codigo_tentativas + 1 WHERE id = $1', [
@@ -197,7 +208,15 @@ router.post('/reenviar-verificacao', limiterReenvio, async (req, res) => {
     const { rows } = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email])
     const usuario = rows[0]
     if (usuario && !usuario.email_verificado) {
-      await emitirCodigoVerificacao(usuario)
+      const expirado =
+        !usuario.codigo_expira_em || new Date() > new Date(usuario.codigo_expira_em)
+      if (expirado) {
+        // Reenvio depois do prazo: conta pendente vencida sai do banco.
+        await removerContaPendente(usuario.id)
+        logger.info({ userId: usuario.id }, 'Conta pendente removida ao reenviar (prazo expirado)')
+      } else {
+        await emitirCodigoVerificacao(usuario)
+      }
     }
     // Resposta genérica: não revela se a conta existe ou já foi verificada.
     res.json({
@@ -260,6 +279,15 @@ router.post('/login', limiterAuth, async (req, res) => {
     }
 
     if (!usuario.email_verificado) {
+      // Prazo dos 10 min estourado: conta some do banco e o front manda pra home.
+      const expirado =
+        !usuario.codigo_expira_em || new Date() > new Date(usuario.codigo_expira_em)
+      if (expirado && !contaNova) {
+        await removerContaPendente(usuario.id)
+        logger.info({ userId: usuario.id }, 'Conta pendente removida no login (prazo expirado)')
+        return res.status(410).json(contaExpirada())
+      }
+
       // Conta pendente: garante um código válido no e-mail antes de liberar.
       const envio = contaNova && codigoNovo
         ? await enviarCodigoEmail(usuario, codigoNovo)

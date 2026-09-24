@@ -12,6 +12,7 @@ import generosRouter from './routes/generos.js'
 import favoritosRouter from './routes/favoritos.js'
 import pagamentosRouter from './routes/pagamentos.js'
 import newsletterRouter from './routes/newsletter.js'
+import { limparContasPendentesExpiradas } from './services/limpeza.js'
 
 const app = express()
 
@@ -84,9 +85,16 @@ if (process.env.NODE_ENV !== 'test') {
     logger.info(`Lume backend rodando em http://localhost:${env.PORT}`)
   })
 
+  // Contas pendentes que estouraram os 10 min sem confirmação saem do banco.
+  // Roda na subida e depois a cada minuto (unref não segura o processo).
+  limparContasPendentesExpiradas()
+  const timerLimpeza = setInterval(limparContasPendentesExpiradas, 60_000)
+  timerLimpeza.unref()
+
   // Encerramento gracioso: fecha o servidor e devolve as conexões do pool.
   const encerrar = (sinal) => {
     logger.info({ sinal }, 'Encerrando o Lume backend…')
+    clearInterval(timerLimpeza)
     servidor.close(() => {
       pool.end().finally(() => process.exit(0))
     })

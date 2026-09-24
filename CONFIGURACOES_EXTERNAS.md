@@ -79,6 +79,28 @@
 
 > A porta padrão do projeto é `465` (SSL). Se usar `587`, mude `EMAIL_SMTP_PORT=587` no `.env`.
 
+### Erro `self-signed certificate in certificate chain` (antivíus/proxy SSL)
+
+Algumas máquinas (ex.: **Avast** com *Web/Mail Shield* ou *Inspeção SSL*) interceptam a conexão TLS e apresentam um certificado próprio — o Node rejeita e o e-mail não sai.
+
+**Resolução (sem desativar a validação de certificado):**
+
+1. Exporte o root do antivíus para `backend/.certs/` (arquivo `.pem`).
+   - No PowerShell (Avast):
+     ```powershell
+     $c = Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -match 'Avast Web/Mail Shield Root' } | Select-Object -First 1
+     $pem = "-----BEGIN CERTIFICATE-----`n" + [System.Convert]::ToBase64String($c.Export('Cert'), 'InsertLineBreaks') + "`n-----END CERTIFICATE-----`n"
+     New-Item -ItemType Directory -Force backend\.certs | Out-Null
+     Set-Content backend\.certs\avast-root.pem $pem -Encoding ascii
+     ```
+2. No `backend/.env`:
+   ```env
+   EMAIL_SMTP_EXTRA_CA=.certs/avast-root.pem
+   ```
+3. Reinicie o backend.
+
+A validação TLS **continua ativa** (a CA extra é *somada* às CAs padrão). Em produção/servidor sem interceptação, deixe `EMAIL_SMTP_EXTRA_CA` vazio. O diretório `.certs/` está no `.gitignore`.
+
 **Como conferir:** reinicie o backend, tente criar uma conta com um e-mail novo → o aviso *“SMTP não configurado — e-mail NÃO enviado”* **some do log** e a mensagem chega na caixa de entrada (confira o spam na primeira vez).
 
 ---

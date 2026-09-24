@@ -4,6 +4,14 @@ import Reveal from '../ui/Reveal'
 import NichoFormModal from '../ui/NichoFormModal'
 import { api } from '../../api'
 
+// Colunas do grid no desktop (lg): equilibra as fileiras com máx. 5 por fila.
+// 5→5 | 6→3 (3+3) | 7→4 (4+3) | 8→4 (4+4) | 11→4 (4+4+3) | 12→4 (4+4+4)
+function colunasDesktop(total) {
+  if (total <= 5) return Math.max(total, 1)
+  const fileiras = Math.ceil(total / 5)
+  return Math.ceil(total / fileiras)
+}
+
 function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto, onSalvarNichos, onExcluirNichos }) {
   const [newsletterEmail, setNewsletterEmail] = useState('')
   const [newsletterEnviado, setNewsletterEnviado] = useState(false)
@@ -130,7 +138,10 @@ function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, fa
           </div>
         )}
 
-        <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
+        <div
+          className="mt-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-[repeat(var(--cols),minmax(0,1fr))] gap-8"
+          style={{ ['--cols']: String(colunasDesktop(nichos.length)) }}
+        >
           {nichos.map((genero) => (
             <button
               key={genero.id}

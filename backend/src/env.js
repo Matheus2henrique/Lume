@@ -27,6 +27,10 @@ const env = cleanEnv(process.env, {
   EMAIL_SMTP_USER: str({ default: '' }),
   EMAIL_SMTP_PASS: str({ default: '' }),
   EMAIL_REMETENTE: str({ default: 'Lume <nao-responda@lume.com>' }),
+  // Opcional: caminho (.relativo ao backend/ ou absoluto) de um PEM com CA
+  // extra confiável localmente (ex.: antivírus que intercepta TLS).
+  // Em produção normalmente fica vazio — validação de certificado continua ativa.
+  EMAIL_SMTP_EXTRA_CA: str({ default: '' }),
 })
 
 // ---------------------------------------------------------------------------
