@@ -1,12 +1,23 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8"/>
     <link rel="icon" type="image/jpeg" href="/Lume/logo.jpeg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lume</title>
-    <script type="module" crossorigin src="/Lume/assets/index-dxqhrcGG.js"></script>
-    <link rel="stylesheet" crossorigin href="/Lume/assets/index-BkIWZ0lg.css">
+    <script>
+      // Recupera deep link salvo pelo 404.html do GitHub Pages
+      // (ex.: ao abrir direto /Lume/fantasia/produto/12).
+      try {
+        var redirect = sessionStorage.getItem('lume_redirect')
+        if (redirect) {
+          sessionStorage.removeItem('lume_redirect')
+          history.replaceState(null, '', redirect)
+        }
+      } catch (e) {}
+    </script>
+    <script type="module" crossorigin src="/Lume/assets/index-D3O6JiLO.js"></script>
+    <link rel="stylesheet" crossorigin href="/Lume/assets/index-jf-1MEYz.css">
   </head>
   <body>
     <div id="root"></div>
