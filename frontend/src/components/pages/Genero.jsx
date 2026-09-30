@@ -65,6 +65,14 @@ function Genero({ genero, produtos, onSelecionarProduto, favoritos, onToggleFavo
           </>
         )}
         <div className="relative z-10" style={genero.id === 'dinossauros' ? { maxWidth: '540px' } : undefined}>
+          {genero.id === 'dinossauros' && (
+            <img
+              src="https://png.pngtree.com/png-vector/20250209/ourmid/pngtree-realistic-dinosaurs-isolated-png-image_15430210.png"
+              alt="dinossauro pequeno"
+              aria-hidden="true"
+              className="md:hidden mx-auto -mt-2 mb-1 w-24 select-none pointer-events-none drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]"
+            />
+          )}
           <h1 className="text-5xl md:text-6xl font-[Georgia,serif]" style={{ color: 'var(--cor-texto)' }}>
             Universo <span style={{ color: 'var(--cor-laranja-claro)' }}>{genero.nome}</span>
           </h1>

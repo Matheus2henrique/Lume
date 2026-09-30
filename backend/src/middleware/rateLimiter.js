@@ -146,7 +146,19 @@ export const limiterReenvio = comLimite(
     max: 3,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { erro: 'Muitos reenvios. Aguarde 1 minuto.' },
+    message: { erro: 'Muitos reenvios. Tente novamente em 1 minuto.' },
   }),
   'limiterReenvio'
+)
+
+// Cotação de frete: cada chamada gasta cota na API do Melhor Envio.
+export const limiterFrete = comLimite(
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { erro: 'Muitas cotações de frete. Tente novamente em 1 minuto.' },
+  }),
+  'limiterFrete'
 )

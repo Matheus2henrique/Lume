@@ -254,6 +254,46 @@ BEGIN
 END $$;
 
 -- ============================================================
+-- Melhor Envio — Fase 1: cotação de frete (MELHOR_ENVIO.md)
+--
+--  • produtos: peso (kg) e dimensões (cm) que a API exige para cotar;
+--  • clientes/pedidos: CEP estruturado do destinatário;
+--  • pedidos.frete: opção escolhida (transportadora, valor, prazo).
+--    O VALOR é recalculado no servidor no checkout — o JSON gravado é
+--    prova do que foi cobrado, nunca a fonte de verdade do total.
+-- ============================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'produtos' AND column_name = 'peso'
+  ) THEN
+    ALTER TABLE produtos ADD COLUMN peso NUMERIC(7,3);      -- kg
+    ALTER TABLE produtos ADD COLUMN altura NUMERIC(7,2);    -- cm
+    ALTER TABLE produtos ADD COLUMN largura NUMERIC(7,2);   -- cm
+    ALTER TABLE produtos ADD COLUMN comprimento NUMERIC(7,2); -- cm
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'clientes' AND column_name = 'cep'
+  ) THEN
+    ALTER TABLE clientes ADD COLUMN cep TEXT NOT NULL DEFAULT '';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'pedidos' AND column_name = 'frete'
+  ) THEN
+    ALTER TABLE pedidos ADD COLUMN frete JSONB;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'pedidos' AND column_name = 'rastreio'
+  ) THEN
+    ALTER TABLE pedidos ADD COLUMN rastreio TEXT;
+  END IF;
+END $$;
+
+-- ============================================================
 -- Reserva de estoque (PLANO 1.6)
 --
 -- A peça sai do estoque na CRIAÇÃO do pedido (qualquer status) e só volta

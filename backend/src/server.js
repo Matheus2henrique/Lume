@@ -13,6 +13,7 @@ import produtosRouter from './routes/produtos.js'
 import generosRouter from './routes/generos.js'
 import favoritosRouter from './routes/favoritos.js'
 import pagamentosRouter from './routes/pagamentos.js'
+import freteRouter from './routes/frete.js'
 import newsletterRouter from './routes/newsletter.js'
 import { limparContasPendentesExpiradas, expirarPedidosNaoPagos } from './services/limpeza.js'
 
@@ -92,6 +93,7 @@ app.use('/api/produtos', produtosRouter)
 app.use('/api/generos', generosRouter)
 app.use('/api/favoritos', favoritosRouter)
 app.use('/api/pagamentos', pagamentosRouter)
+app.use('/api/frete', freteRouter)
 app.use('/api/newsletter', newsletterRouter)
 
 // Índice das rotas, descoberto do próprio Express (fonte única: src/rotas.js).

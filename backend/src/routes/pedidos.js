@@ -4,6 +4,7 @@ import pool from '../db.js'
 import { autenticar, autenticarAdmin } from '../middleware/auth.js'
 import { gatewayConfigurado } from '../services/mercadoPago.js'
 import { somarPorProduto, conferir, travarProdutos, aplicar, devolverEstoque } from '../services/estoque.js'
+import { freteAtivo, normalizarCep, montarProdutosCotacao, revalidarFrete, erroParaResposta } from '../services/melhorEnvio.js'
 import logger from '../logger.js'
 
 const router = Router()
@@ -41,10 +42,12 @@ const JANELA_IDEMPOTENCIA_SEGUNDOS = 60
 
 /**
  * Assinatura do checkout: usuário + contato + itens (ordem normalizada) +
- * tamanho da personalização. Dois POSTs idênticos em sequência curta geram
- * o mesmo hash — é o que permite devolver o pedido original.
+ * tamanho da personalização + frete escolhido. Dois POSTs idênticos em
+ * sequência curta geram o mesmo hash — é o que permite devolver o pedido
+ * já criado. O frete entra porque mudar de transportadora muda o total:
+ * é outro checkout, outro pedido.
  */
-function hashIdempotencia(usuarioId, email, itens) {
+function hashIdempotencia(usuarioId, email, itens, frete) {
   const itensNormalizados = itens
     .map((item) => {
       const pessoal = item?.personalizacao
@@ -58,15 +61,50 @@ function hashIdempotencia(usuarioId, email, itens) {
     .sort()
     .join('|')
 
+  const freteParte = frete ? `|frete:${frete.cep}:${frete.servicoId}` : ''
+
   return crypto
     .createHash('sha256')
-    .update(`${usuarioId}|${String(email).toLowerCase().trim()}|${itensNormalizados}`)
+    .update(`${usuarioId}|${String(email).toLowerCase().trim()}|${itensNormalizados}${freteParte}`)
     .digest('hex')
+}
+
+/**
+ * Revalida o frete escolhido NO SERVIDOR antes de abrir a transação.
+ * Duas razões: (1) o valor do browser nunca entra no total (anti-fraude);
+ * (2) a chamada à API acontece fora da transação para não segurar lock de
+ * linha enquanto esperamos a rede. Só o valor confirmado aqui é cobrado.
+ */
+async function confirmarFrete({ frete, itens }) {
+  const cep = normalizarCep(frete?.cep)
+  if (!cep) {
+    const erro = new Error('CEP de entrega inválido. Informe 8 dígitos.')
+    erro.status = 400
+    throw erro
+  }
+  const servicoId = Number(frete?.servicoId)
+  if (!Number.isInteger(servicoId) || servicoId <= 0) {
+    const erro = new Error('Opção de frete inválida. Recalcule o frete.')
+    erro.status = 400
+    throw erro
+  }
+
+  const ids = [...new Set(itens.map((item) => Number(idDoItem(item))))]
+  const { rows: produtos } = await pool.query('SELECT * FROM produtos WHERE id = ANY($1)', ids)
+  const porId = new Map(produtos.map((p) => [p.id, p]))
+  const products = montarProdutosCotacao(itens, porId)
+  if (products.length === 0) {
+    const erro = new Error('Produto do carrinho não encontrado.')
+    erro.status = 400
+    throw erro
+  }
+
+  return revalidarFrete({ servicoId, cep, products })
 }
 
 // Só quem está logado pode finalizar a compra (401 sem token válido).
 router.post('/', autenticar, async (req, res) => {
-  const { cliente, itens, pagamento } = req.body || {}
+  const { cliente, itens, pagamento, frete } = req.body || {}
 
   if (!cliente || typeof cliente.nome !== 'string' || !cliente.nome.trim()) {
     return res.status(400).json({ erro: 'Informe o nome do cliente.' })
@@ -90,6 +128,29 @@ router.post('/', autenticar, async (req, res) => {
   }
 
   const gatewayAtivo = gatewayConfigurado() && Boolean(pagamento)
+
+  // Frete (Melhor Envio): com token configurado o checkout EXIGE a opção
+  // escolhida e confere o valor na API aqui mesmo, antes do BEGIN — o total
+  // é o da resposta do servidor, nunca o que veio do browser. Sem token o
+  // site segue sem frete, exatamente como hoje.
+  let freteSalvo = null
+  if (freteAtivo()) {
+    if (!frete || typeof frete !== 'object') {
+      return res.status(400).json({ erro: 'Selecione o frete de entrega antes de finalizar.' })
+    }
+    try {
+      freteSalvo = await confirmarFrete({ frete, itens })
+    } catch (err) {
+      if (err.timeout) logger.warn({ usuarioId: req.usuario.id }, 'Melhor Envio: timeout na revalidação do frete')
+      else if (Number.isInteger(err.status) && err.status < 500) {
+        logger.warn({ usuarioId: req.usuario.id, status: err.status }, 'Revalidação do frete recusada')
+      } else {
+        logger.error({ err }, 'Erro ao revalidar frete no checkout')
+      }
+      const { status, erro } = erroParaResposta(err)
+      return res.status(status).json({ erro })
+    }
+  }
 
   let client = null
   try {

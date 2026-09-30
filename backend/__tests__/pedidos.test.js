@@ -120,7 +120,7 @@ describe('POST /api/pedidos', () => {
     client.query.mockImplementation(() => Promise.resolve(fila.shift() || { rows: [] }))
     mockConnect.mockResolvedValue(client)
 
-    process.env.MP_ACCESS_TOKEN = 'TEST-1234567890'
+    process.env.MP_ACCESS_TOKEN = 'gateway-de-teste'
     let res
     try {
       res = await request(app)

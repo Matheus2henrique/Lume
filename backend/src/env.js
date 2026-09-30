@@ -24,6 +24,17 @@ const env = cleanEnv(process.env, {
   MP_ACCESS_TOKEN: str({ default: '' }),
   // Segredo do painel do Mercado Pago para validar a assinatura dos webhooks.
   MP_WEBHOOK_SECRET: str({ default: '' }),
+  // MELHOR ENVIO (cotação de frete). Sem ME_TOKEN o cálculo fica desativado
+  // e o site segue exatamente como hoje (sem frete), igual ao MP vazio.
+  ME_TOKEN: str({ default: '' }),
+  // sandbox | production (produção = https://melhorenvio.com.br)
+  ME_AMBIENTE: str({ default: 'sandbox' }),
+  // CEP da loja (remetente) — obrigatório junto com o token para cotar.
+  ME_CEP_ORIGEM: str({ default: '' }),
+  // Transportadoras a cotar (ex.: "1,2,18"). Vazio = todas as disponíveis.
+  ME_SERVICOS: str({ default: '' }),
+  // Contato do app no header User-Agent (exigência da API do Melhor Envio).
+  ME_CONTATO: str({ default: '' }),
   // Ative quando houver um proxy reverso na frente (nginx/Railway/Render)
   // para o rate limit enxergar o IP real do cliente.
   TRUST_PROXY: bool({ default: false }),
@@ -76,6 +87,13 @@ if (env.NODE_ENV === 'production') {
         'esse webhook; use a URL pública (https://seu-dominio.com)'
     )
   }
+  // Frete ligado sem origem: toda cotação falharia em produção.
+  if (env.ME_TOKEN && !env.ME_CEP_ORIGEM) {
+    problemas.push('ME_CEP_ORIGEM ausente com ME_TOKEN preenchido — informe o CEP da loja (só dígitos)')
+  }
+  if (env.ME_AMBIENTE !== 'sandbox' && env.ME_AMBIENTE !== 'production') {
+    problemas.push('ME_AMBIENTE inválido — use "sandbox" ou "production"')
+  }
 
   if (problemas.length > 0) {
     console.error('\n❌ O servidor RECUSOU iniciar: configuração de produção inválida.')
@@ -93,6 +111,9 @@ if (env.NODE_ENV === 'production') {
   }
   if (!env.MP_ACCESS_TOKEN) {
     console.warn('⚠️  MP_ACCESS_TOKEN vazio: pagamento segue SIMULADO (nenhum valor é cobrado).')
+  }
+  if (!env.ME_TOKEN) {
+    console.warn('⚠️  ME_TOKEN vazio: cálculo de frete DESATIVADO (o carrinho não oferece frete).')
   }
   if (!env.TRUST_PROXY) {
     console.warn('⚠️  TRUST_PROXY=false: atrás de nginx/Railway/Render o rate limit não enxerga o IP real.')
