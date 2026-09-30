@@ -6,8 +6,25 @@ on:
   pull_request:
 
 jobs:
+  segredos:
+    name: Gitleaks - varredura de segredos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baixar gitleaks (versao fixada)
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks version
+      - name: Varredura dos arquivos versionados
+        # Varre a arvore de trabalho (arquivos commitados), nao o historico:
+        # uma credencial ja revogada no passado nao pode quebrar o CI.
+        run: /tmp/gitleaks dir . --redact --no-banner --verbose
+
   backend:
-    name: Backend · testes + audit
+    name: Backend - testes + audit
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -19,15 +36,63 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - name: Instalar dependências
+      - name: Instalar dependencias
         run: npm ci
       - name: Testes
         run: npm test
-      - name: Audit de dependências (bloqueia com vulnerabilidade high/critical)
+      - name: Audit de dependencias (bloqueia com vulnerabilidade high/critical)
         run: npm audit --audit-level=high
 
+  integracao:
+    name: Backend - integracao com PostgreSQL real
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lume_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d lume_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      NODE_ENV: development
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: lume_ci
+      JWT_SECRET: segredo-de-integracao-somente-para-o-ci-1234567890
+      CLIENTE_ORIGEM: http://localhost:5173
+      BACKEND_URL: http://localhost:4000
+      ADMIN_EMAIL: admin@lume.com
+      ADMIN_SENHA: "SenhaForte-Integracao-2026"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Migrar schema
+        run: npm run migrate
+      - name: Popular catalogo e admin
+        run: npm run seed && npm run seed:admin
+      - name: Smoke test (servidor sobe, admin loga, banco integro)
+        run: node scripts/smoke.mjs
+
   frontend:
-    name: Frontend · lint + build
+    name: Frontend - lint + build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -39,24 +104,24 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Instalar dependências
+      - name: Instalar dependencias
         run: npm ci
       - name: Lint
         run: npm run lint
       - name: Build
         run: npm run build
         env:
-          # Defina VITE_API_URL em Settings → Secrets and variables → Actions
-          # → Variables (ex.: https://sua-api.com/api). Vazio = catálogo mock.
+          # Defina VITE_API_URL em Settings > Secrets and variables > Actions
+          # > Variables (ex.: https://sua-api.com/api). Vazio = catalogo mock.
           VITE_API_URL: ${{ vars.VITE_API_URL }}
-      # Ainda há 4 advisories em ferramentas de build (postcss/browserslist/nanoid).
-      # Corrigir com `npm audit fix` no Windows e então remover continue-on-error.
+      # Ainda ha advisories em ferramentas de build (postcss/browserslist/nanoid).
+      # Corrigir com `npm audit fix` no Windows e entao remover continue-on-error.
       - name: Audit (informativo por enquanto)
         run: npm audit --audit-level=high
         continue-on-error: true
 
   docker:
-    name: Docker · build da imagem
+    name: Docker - build da imagem
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -4,8 +4,43 @@ import logger from '../logger.js'
 
 const MP_BASE = 'https://api.mercadopago.com'
 
+// Sem timeout, uma chamada pendurada segura o worker e a conexão do pool.
+// MP_TIMEOUT_MS existe para testes/ajuste fino em produção.
+export const TIMEOUT_MP_MS =
+  Number(process.env.MP_TIMEOUT_MS) > 0 ? Number(process.env.MP_TIMEOUT_MS) : 10_000
+
 export function gatewayConfigurado() {
   return Boolean(process.env.MP_ACCESS_TOKEN)
+}
+
+/** Chamada única ao Mercado Pago: bearer, timeout e erro legível. */
+async function chamarMp(caminho, { metodo = 'GET', corpo } = {}) {
+  let resposta
+  try {
+    resposta = await fetch(`${MP_BASE}${caminho}`, {
+      method: metodo,
+      headers: {
+        Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
+        ...(corpo ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: corpo ? JSON.stringify(corpo) : undefined,
+      signal: AbortSignal.timeout(TIMEOUT_MP_MS),
+    })
+  } catch (err) {
+    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+      const timeout = new Error(`Mercado Pago: tempo esgotado após ${TIMEOUT_MP_MS} ms (${caminho})`)
+      timeout.cause = err
+      timeout.timeout = true
+      throw timeout
+    }
+    throw err
+  }
+
+  if (!resposta.ok) {
+    const texto = await resposta.text().catch(() => '')
+    throw new Error(`Mercado Pago: ${resposta.status} ${texto}`.trim())
+  }
+  return resposta.json()
 }
 
 // Para onde o Mercado Pago devolve o cliente: a tela de status do pedido
@@ -16,13 +51,9 @@ function urlStatusPedido(pedidoId) {
 }
 
 export async function criarPreferencia({ pedidoId, total, titulo, cliente }) {
-  const resposta = await fetch(`${MP_BASE}/checkout/preferences`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
-    },
-    body: JSON.stringify({
+  return chamarMp('/checkout/preferences', {
+    metodo: 'POST',
+    corpo: {
       items: [
         {
           title: titulo || 'Pedido Lume',
@@ -43,25 +74,21 @@ export async function criarPreferencia({ pedidoId, total, titulo, cliente }) {
       },
       auto_return: 'approved',
       notification_url: `${process.env.BACKEND_URL}/api/pagamentos/webhook`,
-    }),
+    },
   })
-
-  if (!resposta.ok) {
-    const texto = await resposta.text()
-    throw new Error(`Mercado Pago: ${resposta.status} ${texto}`)
-  }
-
-  return resposta.json()
 }
 
 export async function obterPagamento(paymentId) {
-  const resposta = await fetch(`${MP_BASE}/v1/payments/${paymentId}`, {
-    headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
-  })
-  if (!resposta.ok) {
-    throw new Error(`Mercado Pago: ${resposta.status}`)
-  }
-  return resposta.json()
+  return chamarMp(`/v1/payments/${paymentId}`)
+}
+
+/**
+ * Consulta uma preferência já criada. Usada para reutilizar o mesmo
+ * init_point em vez de gerar uma preferência nova a cada clique
+ * (ver routes/pagamentos.js).
+ */
+export async function obterPreferencia(preferenciaId) {
+  return chamarMp(`/checkout/preferences/${preferenciaId}`)
 }
 
 /**
@@ -72,10 +99,30 @@ export async function obterPagamento(paymentId) {
  * (Suas integrações > Webhooks > Configurar notificação > revelar chave),
  * configurado em MP_WEBHOOK_SECRET.
  *
- * Sem o segredo configurado, a validação é ignorada com aviso — a segurança
- * principal vem de consultar o pagamento na API do MP antes de aprovar
- * (ver routes/pagamentos.js) e de conferir o valor pago.
+ * Regras:
+ *  • produção com pagamento ativo exige o segredo (também bloqueado em env.js);
+ *    sem ele o webhook é RECUSADO, nunca aceito às cegas;
+ *  • o timestamp da assinatura precisa estar dentro da janela de tolerância,
+ *    para impedir replay de uma notificação antiga capturada;
+ *  • a segurança adicional vem de consultar o pagamento na API do MP antes de
+ *    aprovar e de conferir o valor pago (ver routes/pagamentos.js).
  */
+export const TOLERANCIA_TS_MS = 10 * 60 * 1000
+
+// O MP envia ts em milissegundos; documentação antiga e exemplos de teste
+// aparecem em segundos. Detecta a unidade para não rejeitar por engano.
+function tsEmMillisegundos(ts) {
+  const valor = Number(ts)
+  if (!Number.isFinite(valor) || valor <= 0) return null
+  return valor < 1e12 ? valor * 1000 : valor
+}
+
+export function timestampFresco(ts, agora = Date.now()) {
+  const ms = tsEmMillisegundos(ts)
+  if (ms === null) return false
+  return Math.abs(agora - ms) <= TOLERANCIA_TS_MS
+}
+
 export function validarAssinaturaWebhook(req) {
   const xSignature = req.headers['x-signature']
   const xRequestId = req.headers['x-request-id']
@@ -87,9 +134,15 @@ export function validarAssinaturaWebhook(req) {
 
   const secret = process.env.MP_WEBHOOK_SECRET
   if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      logger.error(
+        'MP_WEBHOOK_SECRET não configurado — webhook REJEITADO em produção. ' +
+          'Gere o segredo no painel do Mercado Pago (Suas integrações > Webhooks).'
+      )
+      return false
+    }
     logger.warn(
-      'MP_WEBHOOK_SECRET não configurado — validação de assinatura ignorada. ' +
-        'Configure o segredo do painel do Mercado Pago antes de ir para produção.'
+      'MP_WEBHOOK_SECRET não configurado — validação de assinatura ignorada (somente desenvolvimento).'
     )
     return true
   }
@@ -103,6 +156,11 @@ export function validarAssinaturaWebhook(req) {
 
   if (!ts || !v1) {
     logger.warn('Webhook com assinatura em formato inválido')
+    return false
+  }
+
+  if (!timestampFresco(ts)) {
+    logger.warn({ requestId: xRequestId || null }, 'Assinatura do webhook fora da janela de tolerância (replay)')
     return false
   }
 

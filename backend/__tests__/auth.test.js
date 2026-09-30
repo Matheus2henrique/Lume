@@ -2,6 +2,7 @@ import { jest } from '@jest/globals'
 import request from 'supertest'
 import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 
 const mockQuery = jest.fn()
 jest.unstable_mockModule('../src/db.js', () => ({
@@ -11,17 +12,27 @@ jest.unstable_mockModule('../src/db.js', () => ({
 const mockEnviarEmail = jest.fn()
 jest.unstable_mockModule('../src/services/email.js', () => ({
   enviarEmail: mockEnviarEmail,
+  logarCodigoSimulado: jest.fn(() => true),
   templateCodigoVerificacao: jest.fn(() => ({ texto: 'codigo', html: '<p>codigo</p>' })),
   templateRedefinicaoSenha: jest.fn(() => ({ texto: 'reset', html: '<p>reset</p>' })),
 }))
 
 const { default: app } = await import('../src/server.js')
-const { limiterAuth, limiterReenvio } = await import('../src/middleware/rateLimiter.js')
+const { limiterAuth, limiterReenvio, limiterLogin, resetarFalhasDeConta } = await import(
+  '../src/middleware/rateLimiter.js'
+)
 
 const HASH_SENHA = bcrypt.hashSync('123456', 10)
 
 function hashCodigo(codigo) {
   return crypto.createHmac('sha256', process.env.JWT_SECRET).update(String(codigo)).digest('hex')
+}
+
+// Token emitido ANTES de um logout/redefinição (versão de sessão 0).
+function tokenDoUsuario() {
+  return jwt.sign({ id: 1, email: 'teste@test.com', tv: 0 }, process.env.JWT_SECRET, {
+    expiresIn: '5m',
+  })
 }
 
 function base(overrides = {}) {
@@ -44,9 +55,11 @@ beforeEach(() => {
   mockQuery.mockReset()
   mockEnviarEmail.mockReset()
   mockEnviarEmail.mockResolvedValue({ enviado: true, simulado: false })
+  resetarFalhasDeConta()
   for (const ip of ['127.0.0.1', '::1', '::ffff:127.0.0.1']) {
     limiterAuth.resetKey(ip)
     limiterReenvio.resetKey(ip)
+    limiterLogin.resetKey(ip)
   }
 })
 
@@ -297,6 +310,42 @@ describe('POST /api/auth/login', () => {
       .send({ email: 'teste@test.com', senha: 'errada' })
     expect(res.status).toBe(401)
   })
+
+  it('bloqueia a conta após 5 senhas erradas mesmo trocando de IP', async () => {
+    for (let i = 0; i < 5; i += 1) {
+      mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true })] })
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'teste@test.com', senha: `errada-${i}` })
+      expect(res.status).toBe(i === 4 ? 429 : 401)
+    }
+
+    const consultasFeitas = mockQuery.mock.calls.length
+
+    // Conta travada: até a senha certa é recusada, sem nem consultar o banco.
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'TESTE@test.com', senha: '123456' }) // caixa mista
+    expect(res.status).toBe(429)
+    expect(mockQuery.mock.calls.length).toBe(consultasFeitas)
+  })
+
+  it('um login certo limpa as falhas acumuladas da conta', async () => {
+    const { registrarFalhaDeConta, contaBloqueada } = await import(
+      '../src/middleware/rateLimiter.js'
+    )
+    for (let i = 0; i < 4; i += 1) registrarFalhaDeConta('teste@test.com')
+
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true })] })
+    const ok = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'teste@test.com', senha: '123456' })
+    expect(ok.status).toBe(200)
+
+    // Se as 4 falhas tivessem ficado, esta seria a 5ª e travaria a conta.
+    registrarFalhaDeConta('teste@test.com')
+    expect(contaBloqueada('teste@test.com')).toBe(false)
+  })
 })
 
 describe('POST /api/auth/esqueci-senha', () => {
@@ -453,6 +502,72 @@ describe('POST /api/auth/redefinir-senha', () => {
     expect(update[1][0]).not.toBe(NOVA_SENHA)
     expect(String(update[0])).toContain('reset_hash = NULL') // código não reutilizável
     expect(res.body.token).toBeUndefined() // volta pro login do jeito normal
+  })
+})
+
+describe('POST /api/auth/logout', () => {
+  it('deve exigir token', async () => {
+    const res = await request(app).post('/api/auth/logout')
+    expect(res.status).toBe(401)
+  })
+
+  it('deve invalidar todos os tokens do usuário no servidor', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true })] }) // auth
+    mockQuery.mockResolvedValueOnce({ rows: [] }) // UPDATE
+
+    const res = await request(app)
+      .post('/api/auth/logout')
+      .set('Authorization', `Bearer ${tokenDoUsuario()}`)
+
+    expect(res.status).toBe(200)
+    expect(res.body.mensagem).toContain('Sessão')
+    const update = mockQuery.mock.calls.find(([sql]) =>
+      String(sql).includes('token_version = token_version + 1')
+    )
+    expect(update).toBeDefined()
+    expect(update[1]).toEqual([1])
+  })
+
+  it('deve recusar token emitido antes do logout', async () => {
+    // Token antigo (tv=0) contra usuário que já saiu (token_version=1).
+    mockQuery.mockResolvedValueOnce({ rows: [base({ token_version: 1 })] })
+    const res = await request(app)
+      .get('/api/auth/perfil')
+      .set('Authorization', `Bearer ${tokenDoUsuario()}`)
+    expect(res.status).toBe(401)
+    expect(res.body.erro).toContain('expirada')
+  })
+})
+
+describe('token de sessão (tv)', () => {
+  it('o token emitido no login carrega a versão da sessão', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true, token_version: 3 })] })
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'teste@test.com', senha: '123456' })
+    expect(res.status).toBe(200)
+    const payload = JSON.parse(Buffer.from(res.body.token.split('.')[1], 'base64url').toString())
+    expect(payload.tv).toBe(3)
+    expect(payload.id).toBe(1)
+  })
+
+  it('trocar a senha incrementa token_version (derruba sessões abertas)', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        base({
+          reset_hash: hashCodigo('123456'),
+          reset_expira_em: new Date(Date.now() + 10 * 60 * 1000),
+          reset_tentativas: 0,
+        }),
+      ],
+    })
+    mockQuery.mockResolvedValueOnce({ rows: [] })
+    const res = await request(app)
+      .post('/api/auth/redefinir-senha')
+      .send({ email: 'teste@test.com', codigo: '123456', senha: 'senha-nova-123' })
+    expect(res.status).toBe(200)
+    const update = mockQuery.mock.calls.find(([sql]) => String(sql).includes('senha_hash = $1'))
+    expect(String(update[0])).toContain('token_version = token_version + 1')
   })
 })
 

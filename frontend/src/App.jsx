@@ -8,6 +8,7 @@ import Perfil from './components/pages/Perfil'
 import Favoritos from './components/pages/Favoritos'
 import CarrinhoDrawer from './components/pages/Carrinho'
 import PedidoStatus from './components/pages/PedidoStatus'
+import Privacidade from './components/pages/Privacidade'
 import Admin from './components/pages/Admin'
 import ProdutoFormModal from './components/ui/ProdutoFormModal'
 import { generos as generosPadrao, produtos as produtosPadrao } from './data/produtos'
@@ -21,6 +22,7 @@ function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, most
   if (mostrarAdmin) return `${BASE}/admin`
   if (mostrarPerfil) return `${BASE}/login`
   if (mostrarFavoritos) return `${BASE}/favoritos`
+  if (pagina === 'privacidade') return `${BASE}/privacidade`
   if (pagina === 'pedido' && pedidoId) return `${BASE}/pedido/${pedidoId}`
   if (pagina === 'detalhe' && produtoSelecionado && generoId)
     return `${BASE}/${generoId}/produto/${produtoSelecionado.id}`
@@ -34,6 +36,7 @@ function URLparaEstado(pathname, produtosLista) {
   if (partes[0] === 'admin') return { pagina: 'entrada', mostrarAdmin: true }
   if (partes[0] === 'login') return { pagina: 'entrada', mostrarPerfil: true }
   if (partes[0] === 'favoritos') return { pagina: 'entrada', mostrarFavoritos: true }
+  if (partes[0] === 'privacidade') return { pagina: 'privacidade' }
   if (partes[0] === 'pedido') {
     const pedidoId = Number(partes[1])
     if (Number.isInteger(pedidoId) && pedidoId > 0) return { pagina: 'pedido', pedidoId }
@@ -269,20 +272,28 @@ function App() {
 
   function handleAdicionarAoCarrinho(produto, quantidade = 1, personalizacao = null) {
     setCarrinho((atual) => {
+      // Teto do estoque: nem somando no carrinho dá para passar do disponível.
+      const estoque = Number(produto?.estoque)
+      const limite = Number.isFinite(estoque) && estoque >= 0 ? estoque : Infinity
+      if (limite <= 0) return atual
+
       const existente = atual.find((item) => item.produto.id === produto.id)
       if (existente) {
         return atual.map((item) =>
           item.produto.id === produto.id
             ? {
                 ...item,
-                quantidade: item.quantidade + quantidade,
+                quantidade: Math.min(item.quantidade + quantidade, limite),
                 // Arquivo novo substitui o anterior; sem arquivo novo, mantém o que já tinha.
                 personalizacao: personalizacao ?? item.personalizacao ?? null,
               }
             : item
         )
       }
-      return [...atual, { produto, quantidade, personalizacao: personalizacao ?? null }]
+      return [
+        ...atual,
+        { produto, quantidade: Math.min(quantidade, limite), personalizacao: personalizacao ?? null },
+      ]
     })
     setMostrarCarrinho(true)
   }
@@ -300,11 +311,15 @@ function App() {
   function handleAlterarQuantidade(id, delta) {
     setCarrinho((atual) =>
       atual
-        .map((item) =>
-          item.produto.id === id
-            ? { ...item, quantidade: item.quantidade + delta }
-            : item
-        )
+        .map((item) => {
+          if (item.produto.id !== id) return item
+          const estoque = Number(item.produto.estoque)
+          const limite = Number.isFinite(estoque) && estoque >= 0 ? estoque : Infinity
+          return {
+            ...item,
+            quantidade: Math.min(Math.max(item.quantidade + delta, 0), limite),
+          }
+        })
         .filter((item) => item.quantidade > 0)
     )
   }
@@ -399,6 +414,8 @@ function App() {
           onVoltar={handleVoltarHome}
           onEntrar={handleMostrarPerfil}
         />
+      ) : pagina === 'privacidade' ? (
+        <Privacidade onVoltar={handleVoltarHome} />
       ) : pagina === 'detalhe' && produtoSelecionado ? (
         <ProdutoDetalhe
           produto={produtoSelecionado}
@@ -459,6 +476,7 @@ function App() {
           onHome={handleVoltarHome}
           onSelecionarGenero={handleSelecionarGenero}
           onIrParaDestaques={handleIrParaDestaques}
+          onPrivacidade={() => navegar({ pagina: 'privacidade' })}
           nichos={nichos}
         />
       )}

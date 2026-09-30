@@ -92,7 +92,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onAssinar, onMostrarPerf
 <button
             className="bg-transparent border-none p-0 cursor-pointer"
             onClick={() => setBuscando(true)}
-            aria-label="Buscar universos"
+            aria-label="Buscar gênero "
             aria-expanded={buscando}
           >
             <img
@@ -191,7 +191,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onAssinar, onMostrarPerf
               <input
                 autoFocus
                 type="text"
-                placeholder="Pesquise uma categoria (ex.: sensoriais, articulados, personagens)"
+                placeholder="Pesquise uma categoria (ex.: Livro, Brinq. Sensorial, Colecionáveis, Pacotes)"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 onKeyDown={(e) => {
@@ -218,7 +218,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onAssinar, onMostrarPerf
                   ))
                 ) : (
                   <li className="px-3 py-2 text-sm" style={{ color: 'var(--cor-texto-suave)' }}>
-                    Nenhum universo encontrado.
+                    Nenhuma categoria encontrada.
                   </li>
                 )}
               </ul>

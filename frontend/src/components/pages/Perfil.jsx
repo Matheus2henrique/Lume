@@ -43,6 +43,8 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
   const [sucesso, setSucesso] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [usuario, setUsuario] = useState(null)
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
+  const [confirmacaoExclusao, setConfirmacaoExclusao] = useState('')
 
   // Modos com formulário próprio (sem troca para registro/login nem Google).
   const modoComCodigo = modo === 'verificar' || modo === 'recuperar' || modo === 'redefinir'
@@ -218,6 +220,30 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     onAdminLogout?.()
   }
 
+  // LGPD: exclusão da conta e dos dados pessoais (pedidos ficam anonimizados).
+  async function handleExcluirConta() {
+    if (confirmacaoExclusao.trim().toLowerCase() !== String(usuario?.email || '').toLowerCase()) {
+      setErro('Digite o e-mail da sua conta para confirmar.')
+      return
+    }
+    setErro('')
+    setCarregando(true)
+    try {
+      await api.excluirDados(confirmacaoExclusao.trim())
+      limparSessao()
+      setUsuario(null)
+      setConfirmandoExclusao(false)
+      setConfirmacaoExclusao('')
+      setSucesso('Sua conta e seus dados pessoais foram excluídos.')
+      onAdminLogout?.()
+      onVoltar?.()
+    } catch (err) {
+      setErro(err.message)
+    } finally {
+      setCarregando(false)
+    }
+  }
+
   // Passo 1 de "esqueci minha senha": pede o código por e-mail.
   // A resposta do backend é sempre genérica (não revela se a conta existe).
   async function handleEsqueciSenha(e) {
@@ -367,6 +393,72 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
               Voltar
 </button>
           </div>
+
+          {!usuario.admin && (
+            <div
+              className="mt-8 rounded-2xl p-5 flex flex-col gap-3"
+              style={{ background: 'var(--cor-fundo-cartao)', border: '1px solid var(--cor-borda)' }}
+            >
+              {!confirmandoExclusao ? (
+                <>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--cor-texto-suave)' }}>
+                    Ao excluir, sua conta e seus dados pessoais são removidos. Seus pedidos ficam
+                    apenas como registro fiscal, sem nome, e-mail ou endereço.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setConfirmandoExclusao(true)
+                      setErro('')
+                    }}
+                    className="px-4 py-2 rounded-full text-sm cursor-pointer bg-transparent transition-all duration-300 hover:underline"
+                    style={{ color: '#ef4444', border: '1px solid #ef4444' }}
+                  >
+                    Excluir minha conta
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--cor-texto-suave)' }}>
+                    Esta ação é permanente. Digite <strong>{usuario.email}</strong> para confirmar.
+                  </p>
+                  <input
+                    type="email"
+                    value={confirmacaoExclusao}
+                    onChange={(e) => setConfirmacaoExclusao(e.target.value)}
+                    placeholder="Seu e-mail"
+                    className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+                    style={{
+                      background: 'var(--cor-fundo)',
+                      color: 'var(--cor-texto)',
+                      border: '1px solid var(--cor-borda)',
+                    }}
+                  />
+                  {erro && <p className="text-xs" style={{ color: '#ef4444' }}>{erro}</p>}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleExcluirConta}
+                      disabled={carregando}
+                      className="px-4 py-2 rounded-full text-sm text-white cursor-pointer border-none disabled:opacity-60"
+                      style={{ background: '#ef4444' }}
+                    >
+                      {carregando ? 'Excluindo…' : 'Excluir definitivamente'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setConfirmandoExclusao(false)
+                        setConfirmacaoExclusao('')
+                        setErro('')
+                      }}
+                      className="px-4 py-2 rounded-full text-sm bg-transparent cursor-pointer"
+                      style={{ color: 'var(--cor-texto)' }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </section>
     )

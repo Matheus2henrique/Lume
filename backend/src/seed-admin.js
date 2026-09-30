@@ -26,11 +26,19 @@ try {
     } else {
       console.log(`Usuário admin ${ADMIN_EMAIL} já existe.`)
     }
+    // Contas criadas por seeds antigos nasceram sem verificação e seriam
+    // apagadas pela rotina de limpeza — repara na subida seguinte.
+    await pool.query(
+      'UPDATE usuarios SET email_verificado = TRUE WHERE email = $1 AND admin = TRUE AND email_verificado = FALSE',
+      [ADMIN_EMAIL]
+    )
   } else {
     const senhaHash = bcrypt.hashSync(ADMIN_SENHA, 10)
+    // email_verificado = TRUE: a conta nasce pronta. Sem isso a rotina de
+    // limpeza apaga o admin em <= 60 s e o login cai em 410 (conta expirada).
     await pool.query(
-      `INSERT INTO usuarios (nome, email, senha_hash, admin)
-       VALUES ($1, $2, $3, TRUE)`,
+      `INSERT INTO usuarios (nome, email, senha_hash, admin, email_verificado)
+       VALUES ($1, $2, $3, TRUE, TRUE)`,
       [ADMIN_NOME, ADMIN_EMAIL, senhaHash]
     )
     console.log(`Admin criado: ${ADMIN_EMAIL}`)

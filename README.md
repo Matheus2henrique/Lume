@@ -157,7 +157,7 @@ npm run seed:admin   # cria/eleva o admin (senha via ADMIN_SENHA ou gerada)
 
 ```console
 npm run dev          # http://localhost:4000
-npm test             # 6 suítes / 78 testes
+npm test             # 13 suítes / 150 testes
 ```
 
 > O frontend já está ligado à API (cadastro com verificação, login, favoritos e finalização de compra).
@@ -197,14 +197,18 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 
 | Método | Rota | Descrição | Autenticação |
 |---|---|---|---|
+| `GET` | `/` | **Índice da API** — HTML com as rotas agrupadas por método (colapsáveis), acesso, rate limit e link/botão para bater direto na rota | — |
+| `GET` | `/api/rotas` | Mesmo índice em JSON (lista descoberta do próprio Express em `src/rotas.js`) | — |
 | `GET` | `/api/health` | Health do serviço (checa o banco; 503 se indisponível) | — |
 | `POST` | `/api/auth/registrar` | Cria conta e envia o código de verificação | — |
 | `POST` | `/api/auth/verificar` | Confirma o código de 6 dígitos (10 min, 5 tentativas) | — |
 | `POST` | `/api/auth/reenviar-verificacao` | Reenvia o código com cooldown | — |
 | `POST` | `/api/auth/esqueci-senha` | Envia o código de redefinição de senha (resposta genérica) | — |
 | `POST` | `/api/auth/redefinir-senha` | Troca a senha validando o código (10 min, 5 tentativas) | — |
-| `POST` | `/api/auth/login` | Entra (exige e-mail verificado) e devolve token JWT | — |
+| `POST` | `/api/auth/login` | Entra (exige e-mail verificado) e devolve token JWT — bloqueia a conta após 5 senhas erradas | — |
+| `POST` | `/api/auth/logout` | Encerra a sessão em **todos** os dispositivos (incrementa `token_version`) | Token |
 | `GET` | `/api/auth/perfil` | Consulta o usuário logado no banco | Token |
+| `DELETE` | `/api/auth/dados` | **LGPD**: exclui a conta (pedidos anonimizados, cadastro e newsletter removidos) | Token |
 | `GET` | `/api/produtos` | Lista o catálogo | — |
 | `GET` | `/api/produtos/:id` | Detalhe de um produto | — |
 | `POST` | `/api/produtos` | Cria produto | Admin |
@@ -218,24 +222,24 @@ Para cobrar de verdade, siga o passo a passo completo em **[Normas.md](./Normas.
 | `GET` | `/api/favoritos` | Lista favoritos do usuário | Token |
 | `POST` | `/api/favoritos/:produtoId` | Adiciona favorito | Token |
 | `DELETE` | `/api/favoritos/:produtoId` | Remove favorito | Token |
-| `POST` | `/api/pedidos` | Checkout (exige sessão — sem token → 401; aceita `personalizacao` por item) | Obrigatória |
+| `POST` | `/api/pedidos` | Checkout (exige sessão — sem token → 401; aceita `personalizacao` por item; repetir o mesmo carrinho em 60 s devolve `duplicado: true`) | Obrigatória |
 | `GET` | `/api/pedidos` | Lista pedidos do usuário (`?todos=1` = todos, somente admin) | Token |
 | `GET` | `/api/pedidos/:id` | Status de um pedido (dono ou admin) — alimenta a rota `/pedido/:id` | Token |
 | `PATCH` | `/api/pedidos/:id/status` | Atualiza status manual (baixa/devolve estoque com lock) | Admin |
 | `GET` | `/api/pagamentos/status` | Informa se o gateway está ativo | — |
-| `POST` | `/api/pagamentos/preferencia` | Cria o checkout no Mercado Pago | Obrigatória |
+| `POST` | `/api/pagamentos/preferencia` | Gera o checkout no Mercado Pago (reutiliza a preferência já criada para o pedido) | Obrigatória |
 | `POST` | `/api/pagamentos/webhook` | Confirma o pagamento (assinatura validada) | — |
 | `GET` | `/api/pagamentos/webhook` | Validação/health do webhook do MP | — |
-| `POST` | `/api/newsletter` | Assina a newsletter | — |
+| `POST` | `/api/newsletter` | Assina a newsletter (**exige `aceite: true`**, grava `aceite_em`) | — |
 
 ## 🧪 Testes
 
 ```console
 cd backend
-npm test        # Jest — 6 suítes, 78 testes
+npm test        # Jest — 13 suítes, 150 testes
 ```
 
-Cobertura: cadastro/login e **verificação de e-mail**, **recuperação de senha** (código por e-mail com expiração/tentativas), health (banco), catálogo de produtos, **assinatura do webhook** do Mercado Pago (manifesto oficial `id/request-id/ts`, timing-safe), portões de compra (401 sem sessão), **consulta de pedido** (`GET /api/pedidos/:id` com dono/admin), **painel admin de pedidos** (`PATCH /:status` com baixa/devolução de estoque e lock), **personalização no pedido** (validação de data URL) e as **travas de produção do `env.js`** (o servidor recusa subir com segredo fraco, CORS localhost ou senha de banco padrão). O fluxo de checkout também foi validado de ponta a ponta com Postgres real — incluindo a **corrida de estoque** (8 checkouts simultâneos de 5 peças em um estoque de 20).
+Cobertura: cadastro/login e **verificação de e-mail**, **recuperação de senha** (código por e-mail com expiração/tentativas), **bloqueio de conta por senha errada** (por conta, não só por IP) e **logout/troca de senha derrubando todas as sessões** (`token_version`), health (banco), catálogo de produtos, **assinatura do webhook** do Mercado Pago (manifesto oficial `id/request-id/ts`, timing-safe e frescura do `ts`), portões de compra (401 sem sessão), **criação de pedido com snapshot do cliente** (sem reescrever cadastro de terceiros) e **idempotência do checkout** (mesmo carrinho em 60 s devolve `duplicado: true`), **preferência de pagamento reutilizada** (não cria link novo a cada clique), **consulta de pedido** (`GET /api/pedidos/:id` com dono/admin), **painel admin de pedidos** (`PATCH /:status` com baixa/devolução de estoque e lock), **personalização no pedido** (validação de data URL), **LGPD** (consentimento da newsletter, exclusão da conta e redact/mascaração nos logs) e as **travas de produção do `env.js`** (o servidor recusa subir com segredo fraco, CORS localhost ou senha de banco padrão). O fluxo de checkout também foi validado de ponta a ponta com Postgres real — incluindo a **corrida de estoque** (8 checkouts simultâneos de 5 peças em um estoque de 20) e o **duplo clique no checkout**.
 
 ## 🌐 Deploy (GitHub Pages)
 
@@ -272,7 +276,10 @@ npm run deploy    # build automático (predeploy) + push na branch gh-pages
 | `npm run seed` | Popula produtos e universos (só se as tabelas estiverem vazias) |
 | `npm run seed:admin` | Cria/eleva o admin inicial (senha via `ADMIN_SENHA` ou gerada) |
 | `npm run seed:generos` | Popula apenas os universos |
-| `npm test` | Roda a suíte Jest (6 suítes / 78 testes) |
+| `npm test` | Roda a suíte Jest (13 suítes / 150 testes) |
+| `npm run backup` | Dump do banco para `backend/backups/` (aceita `--pg-bin "C:\Program Files\PostgreSQL\18\bin"`) |
+| `npm run restore:teste` | Restaura o backup mais recente em `lume_restore_teste` e compara tabelas/índices/CHECKs |
+| `node scripts/smoke.mjs` | Smoke: sobe o servidor, faz login, checa token/`tv`, newsletter e o banco |
 
 ## 📐 Normas e boas práticas
 
@@ -285,26 +292,37 @@ Consulte **[Normas.md](./Normas.md)** para:
 
 ## ✅ Checklist de produção
 
-> 📄 **Passo a passo completo com links e onde pegar cada credencial:** **[CONFIGURACOES_EXTERNAS.md](./CONFIGURACOES_EXTERNAS.md)** (Mercado Pago, SMTP, hospedagem, GitHub Pages, Google, backup…).
+> 📄 **O que você precisa fazer FORA do código (ordem, passo a passo, tempo):** **[O_QUE_FAZER_FORA_DO_CODIGO.md](./O_QUE_FAZER_FORA_DO_CODIGO.md)**.
+> Detalhamento de cada credencial/painel: **[CONFIGURACOES_EXTERNAS.md](./CONFIGURACOES_EXTERNAS.md)** (Mercado Pago, SMTP, hospedagem, GitHub Pages, Google, backup…).
 
 **Já pronto (23/09):**
 
 - [x] `JWT_SECRET` forte no `.env` + **travas**: com `NODE_ENV=production` o servidor **recusa iniciar** com segredo fraco/placeholder, CORS localhost ou senha de banco `postgres` (testado em `__tests__/env.test.js`)
 - [x] Headers de segurança completos via `helmet` (HSTS, CSP `default-src 'none'`, `X-Frame-Options: DENY`, nosniff, CORP, Referrer-Policy)
-- [x] **CI** no GitHub Actions: testes (78) + `npm audit` (bloqueia backend) + lint/build do frontend + build da imagem Docker — a cada push/PR
+- [x] **CI** no GitHub Actions: testes (150) + **gitleaks** (varredura de segredos) + **smoke com Postgres real** + `npm audit` (bloqueia backend) + lint/build do frontend + build da imagem Docker — a cada push/PR
 - [x] **Deploy** do workflow na raiz (estava em `frontend/.github/`, onde o GitHub não lê) com `VITE_API_URL` via variável
 - [x] **Docker**: `backend/Dockerfile` (node:22-alpine, usuário sem privilégios, healthcheck) + `docker-compose.yml` (api + postgres)
 - [x] Compra só com sessão; verificação de e-mail por código de 4–6 dígitos
 - [x] **MVP completo (23/09)**: carrinho persistido, personalização entregue no pedido, rota `/pedido/:id` com status ao vivo, aba Pedidos no painel admin e recuperação de senha por código
 
-**Falta você (precisa de credenciais/seu clique):**
+**Endurecido em 26/09 (segurança/qualidade):**
 
-- [ ] **SMTP**: preencher `EMAIL_SMTP_USER` / `EMAIL_SMTP_PASS` em `backend/.env` (ex.: senha de app do Gmail) — sem isso os códigos só vão para o log
-- [ ] **Hospedar o backend** (Render/Railway/VPS + banco gerenciado): subir a imagem com `NODE_ENV=production`, `TRUST_PROXY=true` e `CLIENTE_ORIGEM`/`BACKEND_URL` com o domínio
+- [x] Snapshot do cliente no pedido + idempotência do checkout (sem pedido duplicado em duplo clique)
+- [x] Preferência de pagamento reutilizada (não cria link novo a cada clique)
+- [x] Sessão revogável: `POST /api/auth/logout` e troca de senha derrubam todos os tokens (`token_version`)
+- [x] Bloqueio de conta após 5 senhas erradas, mesmo trocando de IP
+- [x] LGPD: consentimento da newsletter, exclusão da conta (`DELETE /api/auth/dados`), Política de Privacidade e logs sem dado pessoal (`redact` + `mascaraEmail`)
+- [x] `npm run backup` + `npm run restore:teste` (restore testado contra banco de teste)
+
+**Falta você (precisa de credenciais/seu clique) — ordem e passo a passo em [O_QUE_FAZER_FORA_DO_CODIGO.md](./O_QUE_FAZER_FORA_DO_CODIGO.md):**
+
+- [ ] **0. Revogar a credencial de e-mail que estava no repositório** (senha de app do Gmail) e gerar a nova para o `.env`: https://myaccount.google.com/apppasswords
+- [ ] **SMTP**: preencher `EMAIL_SMTP_USER` / `EMAIL_SMTP_PASS` em `backend/.env` (senha de app do Gmail) — sem isso os códigos só vão para o log
 - [ ] **Mercado Pago real**: `MP_ACCESS_TOKEN` + `MP_WEBHOOK_SECRET` + um pagamento de ponta a ponta (hoje o pagamento é simulado)
+- [ ] **Hospedar o backend** (Render + banco gerenciado): `NODE_ENV=production`, `TRUST_PROXY=true`, `DB_SSL=true`, `CLIENTE_ORIGEM`/`BACKEND_URL` com o domínio
 - [ ] **GitHub**: Settings → Pages → Source = "GitHub Actions" e variável `VITE_API_URL` (Settings → Secrets and variables → Actions → Variables)
+- [ ] **Agendar o backup** no Agendador de Tarefas do Windows (`npm run backup`; restore testado com `npm run restore:teste`)
 - [ ] `npm audit fix` no **Windows** (4 advisories em ferramentas de build do frontend) e Dependabot em Settings → Security
-- [ ] Backup + restore testado (ver [PLANO_PRODUCAO.md](./PLANO_PRODUCAO.md)) — recuperação de senha já está pronta
 
 ## 🗺️ Próximos passos
 

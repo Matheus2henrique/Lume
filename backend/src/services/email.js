@@ -54,7 +54,7 @@ function obterTransporte() {
 
 export async function enviarEmail({ para, assunto, html, texto }) {
   if (!transporteConfigurado()) {
-    logger.warn({ para, assunto }, 'SMTP não configurado — e-mail NÃO enviado (modo dev).')
+    logger.warn({ assunto }, 'SMTP não configurado — e-mail NÃO enviado (modo dev).')
     return { enviado: false, simulado: true }
   }
   await obterTransporte().sendMail({
@@ -65,6 +65,25 @@ export async function enviarEmail({ para, assunto, html, texto }) {
     html,
   })
   return { enviado: true, simulado: false }
+}
+
+/**
+ * Em desenvolvimento o código é logado para testar o fluxo sem SMTP.
+ * Em qualquer outro ambiente (produção, teste) ele NUNCA é logado: um log
+ * com o código de verificação ou de redefinição de senha equivale a entregar
+ * a conta de qualquer usuário para quem tiver acesso aos logs (provedor,
+ * agregador, arquivo em disco). Regra por lista branca — falha fechada.
+ */
+export function logarCodigoSimulado(tipo, codigo, contexto = {}) {
+  if (env.NODE_ENV !== 'development') {
+    logger.warn(
+      { ...contexto, tipo },
+      'E-mail simulado — código NÃO logado (configure o SMTP para enviar de verdade)'
+    )
+    return false
+  }
+  logger.warn({ ...contexto, tipo }, `Código de ${tipo} (dev): ${codigo}`)
+  return true
 }
 
 export function templateCodigoVerificacao({ nome, codigo, expiraMinutos }) {

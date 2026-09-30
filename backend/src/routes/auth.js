@@ -4,8 +4,21 @@ import jwt from 'jsonwebtoken'
 import crypto from 'node:crypto'
 import pool from '../db.js'
 import { autenticar } from '../middleware/auth.js'
-import { limiterAuth, limiterReenvio } from '../middleware/rateLimiter.js'
-import { enviarEmail, templateCodigoVerificacao, templateRedefinicaoSenha } from '../services/email.js'
+import {
+  limiterAuth,
+  limiterReenvio,
+  limiterLogin,
+  limiterConta,
+  contaBloqueada,
+  registrarFalhaDeConta,
+  limparFalhasDeConta,
+} from '../middleware/rateLimiter.js'
+import {
+  enviarEmail,
+  logarCodigoSimulado,
+  templateCodigoVerificacao,
+  templateRedefinicaoSenha,
+} from '../services/email.js'
 import { removerContaPendente } from '../services/limpeza.js'
 import logger from '../logger.js'
 
@@ -15,9 +28,13 @@ const EXPIRA_MINUTOS = 10
 const MAX_TENTATIVAS = 5
 
 function tokenPara(usuario) {
-  return jwt.sign({ id: usuario.id, email: usuario.email }, process.env.JWT_SECRET, {
-    expiresIn: '7d',
-  })
+  // `tv` (token_version) permite invalidar a sessão inteira no servidor:
+  // incrementar a coluna derruba todos os tokens já emitidos.
+  return jwt.sign(
+    { id: usuario.id, email: usuario.email, tv: usuario.token_version ?? 0 },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  )
 }
 
 function publico(usuario) {
@@ -62,8 +79,8 @@ async function enviarCodigoEmail(usuario, codigo) {
       html,
     })
     if (resultado.simulado) {
-      // Modo dev (sem SMTP): loga o código para testar o fluxo local.
-      logger.warn({ userId: usuario.id }, `Código de verificação (dev): ${codigo}`)
+      // Modo dev (sem SMTP): loga o código — nunca em produção.
+      logarCodigoSimulado('verificação', codigo, { userId: usuario.id })
     }
     return resultado
   } catch (err) {
@@ -228,7 +245,9 @@ router.post('/reenviar-verificacao', limiterReenvio, async (req, res) => {
   }
 })
 
-router.post('/login', limiterAuth, async (req, res) => {
+// limiterLogin conta só erro (skipSuccessfulRequests); limiterConta trava a
+// conta alvo mesmo quando o atacante troca de IP.
+router.post('/login', limiterLogin, limiterConta, async (req, res) => {
   const { email, senha } = req.body || {}
 
   if (!email || !senha) {
@@ -275,6 +294,13 @@ router.post('/login', limiterAuth, async (req, res) => {
     }
 
     if (!bcrypt.compareSync(String(senha), usuario.senha_hash)) {
+      registrarFalhaDeConta(email)
+      if (contaBloqueada(email)) {
+        logger.warn({ userId: usuario.id }, 'Conta bloqueada após tentativas de login')
+        return res
+          .status(429)
+          .json({ erro: 'Muitas tentativas para esta conta. Aguarde alguns minutos.' })
+      }
       return res.status(401).json({ erro: 'E-mail ou senha incorretos.' })
     }
 
@@ -303,6 +329,7 @@ router.post('/login', limiterAuth, async (req, res) => {
     }
 
     logger.info({ userId: usuario.id }, 'Login realizado')
+    limparFalhasDeConta(email)
     res.json({ usuario: publico(usuario), token: tokenPara(usuario) })
   } catch (err) {
     logger.error({ err }, 'Erro ao fazer login')
@@ -350,8 +377,8 @@ router.post('/esqueci-senha', limiterReenvio, async (req, res) => {
           html,
         })
         if (envio.simulado) {
-          // Modo dev (sem SMTP): loga o código para testar o fluxo local.
-          logger.warn({ userId: usuario.id }, `Código de redefinição (dev): ${codigo}`)
+          // Modo dev (sem SMTP): loga o código — nunca em produção.
+          logarCodigoSimulado('redefinição de senha', codigo, { userId: usuario.id })
         }
       } catch (err) {
         logger.error({ err, userId: usuario.id }, 'Falha ao enviar e-mail de redefinição')
@@ -408,7 +435,8 @@ router.post('/redefinir-senha', limiterAuth, async (req, res) => {
        SET senha_hash = $1,
            reset_hash = NULL,
            reset_expira_em = NULL,
-           reset_tentativas = 0
+           reset_tentativas = 0,
+           token_version = token_version + 1
        WHERE id = $2`,
       [senhaHash, usuario.id]
     )
@@ -417,6 +445,81 @@ router.post('/redefinir-senha', limiterAuth, async (req, res) => {
   } catch (err) {
     logger.error({ err }, 'Erro ao redefinir senha')
     res.status(500).json({ erro: 'Não foi possível redefinir a senha.' })
+  }
+})
+
+// Encerra a sessão no servidor: incrementa token_version e invalida TODOS os
+// tokens já emitidos (todos os dispositivos) — mais barato que lista negra.
+router.post('/logout', autenticar, async (req, res) => {
+  try {
+    await pool.query('UPDATE usuarios SET token_version = token_version + 1 WHERE id = $1', [
+      req.usuario.id,
+    ])
+    logger.info({ userId: req.usuario.id }, 'Sessões do usuário invalidadas')
+    res.json({ mensagem: 'Sessão encerrada em todos os dispositivos.' })
+  } catch (err) {
+    logger.error({ err }, 'Erro ao encerrar sessão')
+    res.status(500).json({ erro: 'Não foi possível encerrar a sessão.' })
+  }
+})
+
+// LGPD — exclusão da conta e dos dados pessoais.
+// • os pedidos ficam (obrigação fiscal), mas desvinculados e anonimizados;
+// • o cadastro de contato some, a menos que outro pedido ainda o use;
+// • a inscrição na newsletter sai junto (opt-out);
+// • token_version sobe: qualquer sessão aberta morre na hora.
+router.delete('/dados', autenticar, async (req, res) => {
+  if (req.usuario.admin) {
+    return res
+      .status(403)
+      .json({ erro: 'A conta de administradora não pode ser excluída por aqui.' })
+  }
+
+  const email = String(req.usuario.email).trim()
+  const { confirmacao } = req.body || {}
+  if (String(confirmacao || '').trim().toLowerCase() !== email.toLowerCase()) {
+    return res.status(400).json({ erro: 'Confirme seu e-mail para excluir a conta.' })
+  }
+
+  let client = null
+  try {
+    client = await pool.connect()
+    await client.query('BEGIN')
+
+    await client.query(
+      `UPDATE pedidos
+       SET usuario_id = NULL,
+           cliente_id = NULL,
+           cliente_dados = jsonb_build_object(
+             'nome', 'Cliente removido',
+             'email', 'removido@privacidade',
+             'telefone', '',
+             'endereco', ''
+           )
+       WHERE usuario_id = $1`,
+      [req.usuario.id]
+    )
+    await client.query(
+      `DELETE FROM clientes c
+       WHERE lower(c.email) = lower($1)
+         AND NOT EXISTS (SELECT 1 FROM pedidos p WHERE p.cliente_id = c.id)`,
+      [email]
+    )
+    await client.query('DELETE FROM newsletter WHERE lower(email) = lower($1)', [email])
+    await client.query('UPDATE usuarios SET token_version = token_version + 1 WHERE id = $1', [
+      req.usuario.id,
+    ])
+    await client.query('DELETE FROM usuarios WHERE id = $1', [req.usuario.id])
+
+    await client.query('COMMIT')
+    logger.info({ userId: req.usuario.id }, 'Conta excluída (LGPD)')
+    res.json({ mensagem: 'Conta e dados pessoais excluídos.' })
+  } catch (err) {
+    if (client) await client.query('ROLLBACK').catch(() => {})
+    logger.error({ err }, 'Erro ao excluir conta')
+    res.status(500).json({ erro: 'Não foi possível excluir a conta.' })
+  } finally {
+    client?.release()
   }
 })
 

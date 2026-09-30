@@ -25,6 +25,10 @@ function carregarEnv(extra = {}) {
       JWT_SECRET: 'x'.repeat(48),
       CLIENTE_ORIGEM: 'https://matheus2henrique.github.io',
       DB_PASSWORD: 'senha-forte-de-teste',
+      // Fixados para o teste não depender do backend/.env da máquina.
+      BACKEND_URL: 'https://loja-exemplo.com',
+      MP_ACCESS_TOKEN: '',
+      MP_WEBHOOK_SECRET: '',
       ...extra,
     },
   })
@@ -62,6 +66,30 @@ describe('Travas de configuração de produção (src/env.js)', () => {
     const resultado = carregarEnv({ DB_PASSWORD: 'postgres' })
     expect(resultado.status).toBe(1)
     expect(saida(resultado)).toContain('DB_PASSWORD')
+  })
+
+  it('RECUSA iniciar com pagamento ativo e sem MP_WEBHOOK_SECRET', () => {
+    const resultado = carregarEnv({ MP_ACCESS_TOKEN: 'APP_USR-123', MP_WEBHOOK_SECRET: '' })
+    expect(resultado.status).toBe(1)
+    expect(saida(resultado)).toContain('MP_WEBHOOK_SECRET')
+  })
+
+  it('sobe com pagamento ativo e o segredo do webhook preenchido', () => {
+    const resultado = carregarEnv({
+      MP_ACCESS_TOKEN: 'APP_USR-123',
+      MP_WEBHOOK_SECRET: 'segredo-do-webhook-123',
+    })
+    expect(resultado.status).toBe(0)
+  })
+
+  it('RECUSA iniciar com BACKEND_URL em localhost quando o gateway está ligado', () => {
+    const resultado = carregarEnv({
+      MP_ACCESS_TOKEN: 'APP_USR-123',
+      MP_WEBHOOK_SECRET: 'segredo-do-webhook-123',
+      BACKEND_URL: 'http://localhost:4000',
+    })
+    expect(resultado.status).toBe(1)
+    expect(saida(resultado)).toContain('BACKEND_URL')
   })
 
   it('avisa (mas não bloqueia) quando SMTP e Mercado Pago estão vazios', () => {

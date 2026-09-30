@@ -138,7 +138,7 @@ A validação TLS **continua ativa** (a CA extra é *somada* às CAs padrão). E
    ```
    > ⚠️ Com `NODE_ENV=production` o servidor **recusa iniciar** se o `JWT_SECRET` for fraco/placeholder, se `CLIENTE_ORIGEM` tiver `localhost` ou se `DB_PASSWORD` for `postgres`. É proposital — a mensagem de erro no log diz exatamente o que falta.
 4. **Seed da loja** (uma vez): no console do provedor → `npm run seed` (produtos/gêneros) e `npm run seed:admin` (admin).
-5. ⚠️ **Pendência minha**: bancos como Neon/Supabase exigem **SSL** na conexão e o `db.js` ainda não liga o SSL do pool — **me avise quando tiver o banco** que eu ajusto.
+5. **SSL do banco já está no código:** ligue com `DB_SSL=true` (e `DB_SSL_REJECT_UNAUTHORIZED=true`, o padrão) junto com as demais variáveis acima — é o caso de Neon/Supabase. Pool, timeouts e `DB_STATEMENT_TIMEOUT_MS` já vêm configurados no `.env.example`.
 
 **Como conferir:** abrir `https://SEU-BACKEND/api/health` → `{"ok":true,...,"banco":"ok"}`.
 
@@ -224,7 +224,7 @@ npm run seed:admin
 
 - **Sem `ADMIN_SENHA`**, o seed gera uma senha forte e **imprime só uma vez** no terminal — anote.
 - Já criado e quer trocar a senha? Rode o `seed:admin` de novo com o `ADMIN_SENHA` novo (atualiza o mesmo e-mail).
-- “Esqueci minha senha” **não existe ainda** (item de código — me avise se quiser).
+- “Esqueci minha senha” **já existe** na tela de login (código por e-mail, 10 min, 5 tentativas) — só precisa do SMTP configurado (item 2).
 
 ---
 
@@ -239,21 +239,16 @@ npm run seed:admin
 
 ## 9. 💾 Backup do banco 🟠
 
-**No seu PC (banco em Docker):**
+**No seu PC (banco local):** os scripts já estão prontos — falta só agendar.
 
-Crie `backend/backup-lume.bat`:
-
-```bat
-@echo off
-docker exec lume-db pg_dump -U postgres -d Lume -f /tmp/lume.sql
-docker cp lume-db:/tmp/lume.sql C:\lume-backups\lume-%DATE:~6,4%-%DATE:~3,2%-%DATE:~0,2%.sql
+```console
+cd backend
+npm run backup -- --pg-bin "C:\Program Files\PostgreSQL\18\bin"   # gera backups/lume-AAAAMMDD-HHmmss.sql
+npm run restore:teste -- --pg-bin "C:\Program Files\PostgreSQL\18\bin"   # restore num banco de teste + compara + apaga
 ```
 
-- Crie a pasta `C:\lume-backups` e agende no **Agendador de Tarefas do Windows** (diário, ao iniciar sessão).
-- **Backup que não foi testado não existe** — teste o restore:
-  ```console
-  docker exec -i lume-db psql -U postgres -d Lume < C:\lume-backups\lume-2026-09-23.sql
-  ```
+- Passo a passo do **Agendador de Tarefas do Windows** (diário, horário que a máquina esteja ligada): em [O_QUE_FAZER_FORA_DO_CODIGO.md, item 7](./O_QUE_FAZER_FORA_DO_CODIGO.md#7-agendar-o-backup-do-banco-windows).
+- **Backup que não foi testado não existe** — rode o `restore:teste` e espere **RESTORE OK**.
 
 **Em produção:** confirme/ative o backup automático do provedor que escolher (Neon e Supabase têm backup diário/PITR nos planos pagos; veja o limite do plano gratuito).
 

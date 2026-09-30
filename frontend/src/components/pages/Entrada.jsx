@@ -12,8 +12,39 @@ function colunasDesktop(total) {
   return Math.ceil(total / fileiras)
 }
 
+// Número do WhatsApp da loja (formato internacional, só dígitos).
+const WHATSAPP_NUMERO = '5573998663011'
+const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent('Olá! Vim pelo site da Lume e quero personalizar uma peça.')}`
+
+function BlocoContato({ className = '' }) {
+  return (
+    <div className={`flex flex-col ${className}`}>
+      <h2 className="font-[Georgia,serif] text-lg sm:text-2xl lg:text-xl xl:text-2xl leading-snug" style={{ color: 'var(--cor-texto)' }}>
+        Entre em contato
+        <br />
+        <span className="inline-flex items-center gap-2.5">
+          <span style={{ color: 'var(--cor-laranja-claro)' }}>personalize</span>
+          <a
+            href={WHATSAPP_LINK}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Falar no WhatsApp"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-full transition-transform hover:scale-110 shadow-[0_6px_18px_rgba(37,211,102,0.35)]"
+            style={{ background: '#25D366', color: '#ffffff' }}
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden="true">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413" />
+            </svg>
+          </a>
+        </span>
+      </h2>
+    </div>
+  )
+}
+
 function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto, onSalvarNichos, onExcluirNichos }) {
   const [newsletterEmail, setNewsletterEmail] = useState('')
+  const [newsletterAceite, setNewsletterAceite] = useState(false)
   const [newsletterEnviado, setNewsletterEnviado] = useState(false)
   const [newsletterErro, setNewsletterErro] = useState('')
   const [nichoEditando, setNichoEditando] = useState(null)
@@ -23,20 +54,20 @@ function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, fa
 
   return (
     <section>
-      <div className="min-h-[380px] md:min-h-[420px] flex items-center justify-between px-5 md:px-6 lg:pl-[calc((100vw-1200px)/2+1.5rem)] lg:pr-[calc((100vw-1200px)/2+1.5rem)] relative overflow-hidden"
+      <div className="min-h-[380px] md:min-h-[420px] flex flex-col lg:flex-row items-center justify-center lg:justify-between gap-10 lg:gap-5 px-5 md:px-6 lg:pl-[max(1.5rem,calc((100vw_-_1200px)/2_+_1.5rem))] lg:pr-[max(1.5rem,calc((100vw_-_1200px)/2_+_1.5rem))] relative overflow-hidden"
         style={{ background: '#0a0a0a' }}
       >
         <div className="absolute top-1/2 left-[20%] -translate-y-1/2 w-[500px] h-[300px] rounded-full opacity-30 blur-[120px]" style={{ background: 'var(--cor-laranja)' }} />
         <div className="absolute top-1/2 left-[35%] -translate-y-1/2 w-[250px] h-[200px] rounded-full opacity-15 blur-[80px]" style={{ background: 'var(--cor-laranja-claro)' }} />
-        <div>
+        <div className="w-full lg:w-auto lg:flex-1 lg:order-2 lg:-translate-x-[300px]">
           <span
-            className="tracking-[8px] text-xs md:text-sm text-left"
+            className="block tracking-[6px] pl-[8px] text-xs md:text-sm text-center"
             style={{ color: 'var(--cor-laranja-claro)', animation: 'aparecer 0.7s ease-out 0.12s both' }}
           >
             PARA QUEM VIVE DENTRO DOS LIVROS
           </span>
           <h1
-            className="text-4xl sm:text-5xl md:text-6xl leading-[0.95] my-5 font-[Georgia,serif] text-left"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl leading-[0.95] my-5 font-[Georgia,serif] text-center"
             style={{ color: 'var(--cor-texto)', animation: 'aparecer 0.7s ease-out 0.28s both' }}
           >
             <span style={{ color: 'var(--cor-laranja-claro)' }}>Lume</span> — onde suas
@@ -44,16 +75,16 @@ function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, fa
             histórias ganham forma
           </h1>
           <p
-            className="text-lg sm:text-xl max-w-[560px] text-left"
+            className="text-lg sm:text-xl max-w-[560px] mx-auto text-center"
             style={{ color: 'var(--cor-texto-suave)', animation: 'aparecer 0.7s ease-out 0.44s both' }}
           >
             Decorações e colecionáveis para os leitores que querem
             levar o seu gênero favorito para todos os cantos.
           </p>
         </div>
-        <div className="hidden lg:block flex-shrink-0 -mr-[-110px]" style={{ animation: 'aparecer 0.7s ease-out 0.56s both' }}>
-          <svg viewBox="0 0 300 340" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
-            className="w-[220px] h-auto"
+        <div className="flex flex-row lg:flex-col items-center justify-start gap-4 sm:gap-6 lg:gap-0 flex-shrink-0 lg:order-3 lg:w-[180px] xl:w-[220px] lg:-translate-x-[105px]" style={{ animation: 'aparecer 0.7s ease-out 0.56s both' }}>
+          <svg viewBox="0 0 300 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+            className="w-[110px] sm:w-[150px] lg:w-[160px] xl:w-[220px] h-auto"
           >
             <defs>
               <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -106,17 +137,10 @@ function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, fa
               fill="#E8A93B" fillOpacity="0.25"
               stroke="#E8A93B" strokeWidth="1.4"
             />
-
-            <polygon points="90,190 210,190 170,250 50,250"
-              stroke="#F5F4EF" strokeOpacity="0.35"
-              strokeWidth="1.4" fill="none"
-            />
-            <polygon points="105,205 195,205 165,238 75,238"
-              stroke="#F5F4EF" strokeOpacity="0.5"
-              strokeWidth="1.4" fill="none"
-            />
           </svg>
+          <BlocoContato className="items-center text-center lg:mt-7" />
         </div>
+        <div aria-hidden="true" className="hidden lg:block shrink-0 lg:order-1 lg:w-[180px] xl:w-[220px]" />
       </div>
 
       <div className="max-w-[1200px] mx-auto py-[70px] px-6">
@@ -352,9 +376,10 @@ function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, fa
                   e.preventDefault()
                   setNewsletterErro('')
                   try {
-                    await api.newsletter(newsletterEmail)
+                    await api.newsletter(newsletterEmail, newsletterAceite)
                     setNewsletterEnviado(true)
                     setNewsletterEmail('')
+                    setNewsletterAceite(false)
                   } catch (err) {
                     setNewsletterErro(err.message)
                   }
@@ -380,6 +405,20 @@ function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, fa
                   )}
                 </form>
               )}
+              <label
+                className="flex items-start gap-2 text-xs mt-4 max-w-lg cursor-pointer"
+                style={{ color: 'var(--cor-texto-suave)' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={newsletterAceite}
+                  onChange={(e) => setNewsletterAceite(e.target.checked)}
+                  required
+                  className="mt-0.5"
+                />
+                Aceito receber novidades e ofertas da Lume por e-mail. Posso cancelar a inscrição a
+                qualquer momento.
+              </label>
             </div>
             <div className="hidden lg:flex justify-center">
               <svg viewBox="0 0 300 340" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"

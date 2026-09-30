@@ -196,7 +196,7 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, on
               Seu carrinho está vazio
             </h3>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--cor-texto-suave)' }}>
-              Explore os universos e adicione peças incríveis para levar a magia para casa.
+              Explore os gêneros e adicione peças incríveis para levar a magia para casa.
             </p>
             <button
               onClick={onFechar}
@@ -232,7 +232,7 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, on
               ))}
               {[
                 { label: 'E-mail', tipo: 'email', placeholder: 'seu@email.com', chave: 'email' },
-                { label: 'Telefone', tipo: 'tel', placeholder: '(11) 99999-9999', chave: 'telefone' },
+                { label: 'Telefone', tipo: 'tel', placeholder: '(73) 99866-3011', chave: 'telefone' },
                 { label: 'Endereço', tipo: 'text', placeholder: 'Rua, número, bairro, cidade', chave: 'endereco' },
               ].map((c) => (
                 <div key={c.chave} className="text-left">
@@ -330,6 +330,8 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, on
             <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
               {itens.map((item) => {
                 const p = item.produto
+                const estoque = Number(p.estoque)
+                const noMaximo = Number.isFinite(estoque) && item.quantidade >= estoque
                 return (
                   <div
                     key={p.id}
@@ -389,8 +391,14 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, on
                           </span>
                           <button
                             onClick={() => onAlterar(p.id, 1)}
-                            className="w-6 h-6 rounded-full cursor-pointer border-none text-base font-bold flex items-center justify-center"
-                            style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
+                            disabled={noMaximo}
+                            className="w-6 h-6 rounded-full border-none text-base font-bold flex items-center justify-center disabled:cursor-not-allowed"
+                            style={{
+                              background: 'var(--cor-primaria-suave)',
+                              color: 'var(--cor-primaria)',
+                              opacity: noMaximo ? 0.45 : 1,
+                              cursor: noMaximo ? 'not-allowed' : 'pointer',
+                            }}
                             aria-label="Aumentar quantidade"
                           >
                             +
@@ -400,6 +408,12 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, on
                           {formatarMoeda(p.preco * item.quantidade)}
                         </p>
                       </div>
+
+                      {noMaximo && (
+                        <p className="mt-2 text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
+                          Máximo disponível: {estoque} unidade{estoque === 1 ? '' : 's'}
+                        </p>
+                      )}
 
                       {item.personalizacao && (
                         <p

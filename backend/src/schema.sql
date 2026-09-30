@@ -134,3 +134,151 @@ BEGIN
     ALTER TABLE usuarios ADD COLUMN reset_tentativas INTEGER NOT NULL DEFAULT 0;
   END IF;
 END $$;
+
+-- ===========================================================================
+-- Produção — sessão, histórico de pedido, idempotência, LGPD e integridade
+-- ===========================================================================
+
+-- Sessão revogável: trocar a senha/sair incrementa token_version e derruba
+-- todos os JWT emitidos antes (ver src/middleware/auth.js e src/routes/auth.js).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'token_version'
+  ) THEN
+    ALTER TABLE usuarios ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0;
+  END IF;
+END $$;
+
+-- Snapshot do cliente no pedido: o histórico deixa de depender da tabela
+-- clientes, que um novo pedido pode reescrever (ver src/routes/pedidos.js).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'pedidos' AND column_name = 'cliente_dados'
+  ) THEN
+    ALTER TABLE pedidos ADD COLUMN cliente_dados JSONB;
+  END IF;
+END $$;
+
+-- Backfill: pedidos antigos herdam os dados conhecidos do cliente.
+UPDATE pedidos p
+SET cliente_dados = jsonb_build_object(
+      'nome', c.nome, 'email', c.email, 'telefone', c.telefone, 'endereco', c.endereco
+    )
+FROM clientes c
+WHERE p.cliente_id = c.id AND p.cliente_dados IS NULL;
+
+-- Idempotência do checkout: a chave é gravada na MESMA transação do pedido,
+-- então duplo clique/retry de rede devolve o pedido já criado em vez de outro.
+CREATE TABLE IF NOT EXISTS dedupe (
+  hash TEXT PRIMARY KEY,
+  pedido_id INTEGER NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_dedupe_criado_em ON dedupe (criado_em);
+
+-- LGPD: consentimento explícito da newsletter.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'newsletter' AND column_name = 'aceite'
+  ) THEN
+    ALTER TABLE newsletter ADD COLUMN aceite BOOLEAN NOT NULL DEFAULT FALSE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'newsletter' AND column_name = 'aceite_em'
+  ) THEN
+    ALTER TABLE newsletter ADD COLUMN aceite_em TIMESTAMPTZ;
+  END IF;
+END $$;
+
+-- Índices de listagem/administração.
+CREATE INDEX IF NOT EXISTS idx_pedidos_status ON pedidos (status);
+CREATE INDEX IF NOT EXISTS idx_pedidos_criado_em ON pedidos (criado_em DESC);
+CREATE INDEX IF NOT EXISTS idx_usuarios_email_verificado ON usuarios (email_verificado)
+  WHERE email_verificado = FALSE;
+
+-- Restrições de verificação. Regra: NUNCA alteram dado existente — se os
+-- dados atuais violarem a regra, a constraint é adiada com um aviso.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'chk_produtos_preco' AND conrelid = 'produtos'::regclass
+  ) THEN
+    IF EXISTS (SELECT 1 FROM produtos WHERE preco < 0) THEN
+      RAISE NOTICE 'chk_produtos_preco adiada: existem precos negativos em produtos';
+    ELSE
+      ALTER TABLE produtos ADD CONSTRAINT chk_produtos_preco CHECK (preco >= 0);
+    END IF;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'chk_produtos_estoque' AND conrelid = 'produtos'::regclass
+  ) THEN
+    IF EXISTS (SELECT 1 FROM produtos WHERE estoque < 0) THEN
+      RAISE NOTICE 'chk_produtos_estoque adiada: existem estoques negativos (ja usados como saida)';
+    ELSE
+      ALTER TABLE produtos ADD CONSTRAINT chk_produtos_estoque CHECK (estoque >= 0);
+    END IF;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'chk_pedidos_total' AND conrelid = 'pedidos'::regclass
+  ) THEN
+    IF EXISTS (SELECT 1 FROM pedidos WHERE total < 0) THEN
+      RAISE NOTICE 'chk_pedidos_total adiada: existem totais negativos em pedidos';
+    ELSE
+      ALTER TABLE pedidos ADD CONSTRAINT chk_pedidos_total CHECK (total >= 0);
+    END IF;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'chk_pedidos_status' AND conrelid = 'pedidos'::regclass
+  ) THEN
+    IF EXISTS (
+      SELECT 1 FROM pedidos
+      WHERE status NOT IN ('novo', 'pendente', 'pago', 'enviado', 'entregue', 'cancelado')
+    ) THEN
+      RAISE NOTICE 'chk_pedidos_status adiada: existem status fora da lista permitida';
+    ELSE
+      ALTER TABLE pedidos ADD CONSTRAINT chk_pedidos_status
+        CHECK (status IN ('novo', 'pendente', 'pago', 'enviado', 'entregue', 'cancelado'));
+    END IF;
+  END IF;
+END $$;
+
+-- ============================================================
+-- Reserva de estoque (PLANO 1.6)
+--
+-- A peça sai do estoque na CRIAÇÃO do pedido (qualquer status) e só volta
+-- quando ele for cancelado (webhook, admin) ou expirar sem pagamento.
+-- `estoque_reservado` é a trava de idempotência: é ela que impede webhook
+-- repetido ou cancelamento em dobro de devolver a peça DUAS vezes.
+-- ============================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'pedidos' AND column_name = 'estoque_reservado'
+  ) THEN
+    ALTER TABLE pedidos ADD COLUMN estoque_reservado BOOLEAN NOT NULL DEFAULT FALSE;
+
+    -- Backfill dos pedidos que já existem: baixavam estoque (novo/pago/enviado/
+    -- entregue) viram TRUE. 'pendente' antigo NÃO baixava — continua FALSE,
+    -- para não devolver peça que nunca saiu.
+    UPDATE pedidos
+       SET estoque_reservado = TRUE
+     WHERE status IN ('novo', 'pago', 'enviado', 'entregue');
+  END IF;
+END $$;
+
+-- Pedidos esperando pagamento dentro do prazo (o job de expiração varre isso).
+CREATE INDEX IF NOT EXISTS idx_pedidos_pendente_expirar
+  ON pedidos (criado_em)
+  WHERE status = 'pendente';

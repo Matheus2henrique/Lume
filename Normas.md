@@ -50,11 +50,13 @@ DB_NAME=lume            # nome do banco
 
 | Tabela | Finalidade | Observações |
 |---|---|---|
-| `usuarios` | Contas (login/registro) | `email` único, `senha_hash` (bcrypt), `provedor` |
-| `clientes` | Dados de entrega por e-mail | `email` único; upsert automático no checkout |
+| `usuarios` | Contas (login/registro) | `email` único, `senha_hash` (bcrypt), `provedor`, `token_version` (sessão revogável) |
+| `clientes` | Dados de entrega por e-mail | `email` único; só é atualizado quando o e-mail é o do próprio usuário |
 | `produtos` | Catálogo | `preco NUMERIC`, `estoque INTEGER`, `permite_upload BOOLEAN` |
-| `pedidos` | Pedidos/checkout | `itens JSONB`, `pagamento JSONB`, `status` |
+| `pedidos` | Pedidos/checkout | `itens JSONB`, `pagamento JSONB`, `cliente_dados JSONB` (snapshot imutável), `status` |
 | `favoritos` | Favoritos por usuário | PK `(usuario_id, produto_id)`, `ON DELETE CASCADE` |
+| `newsletter` | Inscritos | `email` único + `aceite`/`aceite_em` (consentimento LGPD) |
+| `dedupe` | Idempotência do checkout | PK `hash` do pedido; `pedido_id` com `ON DELETE CASCADE` |
 
 **Convenções** (seguir sempre ao evoluir o schema):
 

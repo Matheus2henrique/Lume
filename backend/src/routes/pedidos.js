@@ -1,7 +1,9 @@
 import { Router } from 'express'
+import crypto from 'node:crypto'
 import pool from '../db.js'
 import { autenticar, autenticarAdmin } from '../middleware/auth.js'
 import { gatewayConfigurado } from '../services/mercadoPago.js'
+import { somarPorProduto, conferir, travarProdutos, aplicar, devolverEstoque } from '../services/estoque.js'
 import logger from '../logger.js'
 
 const router = Router()
@@ -33,6 +35,35 @@ function validarPersonalizacao(personalizacao) {
 // Status que o dono da loja pode definir manualmente no painel.
 const STATUS_PEDIDO = new Set(['novo', 'pendente', 'pago', 'enviado', 'entregue', 'cancelado'])
 
+// Janela em que o mesmo carrinho do mesmo usuário devolve o pedido já criado
+// em vez de criar outro (duplo clique, retry de rede, back do navegador).
+const JANELA_IDEMPOTENCIA_SEGUNDOS = 60
+
+/**
+ * Assinatura do checkout: usuário + contato + itens (ordem normalizada) +
+ * tamanho da personalização. Dois POSTs idênticos em sequência curta geram
+ * o mesmo hash — é o que permite devolver o pedido original.
+ */
+function hashIdempotencia(usuarioId, email, itens) {
+  const itensNormalizados = itens
+    .map((item) => {
+      const pessoal = item?.personalizacao
+      return [
+        idDoItem(item),
+        Number(item.quantidade),
+        pessoal?.nome ?? '',
+        typeof pessoal?.dados === 'string' ? pessoal.dados.length : 0,
+      ].join(':')
+    })
+    .sort()
+    .join('|')
+
+  return crypto
+    .createHash('sha256')
+    .update(`${usuarioId}|${String(email).toLowerCase().trim()}|${itensNormalizados}`)
+    .digest('hex')
+}
+
 // Só quem está logado pode finalizar a compra (401 sem token válido).
 router.post('/', autenticar, async (req, res) => {
   const { cliente, itens, pagamento } = req.body || {}
@@ -58,58 +89,130 @@ router.post('/', autenticar, async (req, res) => {
     }
   }
 
+  const gatewayAtivo = gatewayConfigurado() && Boolean(pagamento)
+
   let client = null
   try {
     client = await pool.connect()
     await client.query('BEGIN')
 
+    // Idempotência: mesmo carrinho em janela curta devolve o pedido original.
+    // O lock nomeado serializa dois POSTs idênticos que chegam ao mesmo tempo
+    // — sem ele, os dois passariam pelo SELECT abaixo e criariam dois pedidos.
+    const hash = hashIdempotencia(req.usuario.id, cliente.email, itens)
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [hash])
+
+    const { rows: repetido } = await client.query(
+      `SELECT p.id, p.total, p.status
+       FROM dedupe d
+       JOIN pedidos p ON p.id = d.pedido_id
+       WHERE d.hash = $1
+         AND p.status NOT IN ('cancelado')
+         AND d.criado_em > now() - make_interval(secs => $2)`,
+      [hash, JANELA_IDEMPOTENCIA_SEGUNDOS]
+    )
+    if (repetido[0]) {
+      await client.query('COMMIT')
+      const pedido = repetido[0]
+      logger.info(
+        { pedidoId: pedido.id, usuarioId: req.usuario.id },
+        'Checkout repetido devolveu o pedido já criado'
+      )
+      return res.status(200).json({
+        id: pedido.id,
+        total: Number(pedido.total),
+        status: pedido.status,
+        precisaPagamento: gatewayAtivo && pedido.status === 'pendente',
+        duplicado: true,
+        mensagem: 'Este pedido já foi registrado.',
+      })
+    }
+
     // IDs únicos em ordem + lock de linha: evita corrida de estoque
     // entre checkouts simultâneos (e deadlock por ordem de lock).
-    const ids = [...new Set(itens.map(idDoItem))].sort((a, b) => a - b)
+    // A conferência é pelo TOTAL por produto: o mesmo item pode aparecer
+    // duas no carrinho e somar mais do que existe.
+    const necessario = somarPorProduto(
+      itens.map((item) => ({ produtoId: idDoItem(item), quantidade: item.quantidade }))
+    )
     const { rows: produtos } = await client.query(
       'SELECT * FROM produtos WHERE id = ANY($1) ORDER BY id FOR UPDATE',
-      [ids]
+      [...necessario.keys()].sort((a, b) => a - b)
     )
     const porId = new Map(produtos.map((p) => [p.id, p]))
 
-    let total = 0
-    for (const item of itens) {
-      const produtoId = idDoItem(item)
-      const produto = porId.get(produtoId)
-      if (!produto) {
+    for (const produtoId of necessario.keys()) {
+      if (!porId.has(produtoId)) {
         await client.query('ROLLBACK')
         return res.status(400).json({ erro: `Produto ${produtoId} não encontrado.` })
       }
-      if (produto.estoque < item.quantidade) {
-        await client.query('ROLLBACK')
-        return res
-          .status(400)
-          .json({ erro: `Estoque insuficiente para "${produto.nome}". Restam ${produto.estoque}.` })
-      }
-      total += Number(produto.preco) * item.quantidade
+    }
+
+    const faltando = conferir(porId, necessario)
+    if (faltando.length > 0) {
+      await client.query('ROLLBACK')
+      const p = faltando[0]
+      return res.status(400).json({
+        erro: `Estoque insuficiente para "${p.nome}". Restam ${p.disponivel} — você pediu ${p.pedido}.`,
+      })
+    }
+
+    let total = 0
+    for (const item of itens) {
+      total += Number(porId.get(idDoItem(item)).preco) * item.quantidade
     }
 
     const usuarioId = req.usuario.id
+    const emailCliente = String(cliente.email).trim()
+    // Só o dono da conta pode reescrever o próprio cadastro de contato.
+    // E-mail de terceiros no checkout não dá direito de alterar os dados
+    // (telefone/endereço) de quem já é cliente desta loja.
+    const emailProprio =
+      emailCliente.toLowerCase() === String(req.usuario.email).trim().toLowerCase()
+
+    // Snapshot no pedido: o histórico passa a ser imutável e não depende da
+    // tabela clientes, que um novo pedido pode reescrever (PLANO 1.5).
+    const snapshot = {
+      nome: String(cliente.nome).trim(),
+      email: emailCliente,
+      telefone: typeof cliente.telefone === 'string' ? cliente.telefone : '',
+      endereco: typeof cliente.endereco === 'string' ? cliente.endereco : '',
+    }
+
     let clienteId = null
     const { rows: existentes } = await client.query(
-      'SELECT id FROM clientes WHERE email = $1',
-      [cliente.email]
+      'SELECT id FROM clientes WHERE lower(email) = lower($1)',
+      [emailCliente]
     )
     if (existentes.length > 0) {
       clienteId = existentes[0].id
-      await client.query(
-        'UPDATE clientes SET nome = $1, telefone = $2, endereco = $3 WHERE id = $4',
-        [cliente.nome, cliente.telefone || '', cliente.endereco || '', clienteId]
-      )
+      if (emailProprio) {
+        await client.query(
+          'UPDATE clientes SET nome = $1, telefone = $2, endereco = $3 WHERE id = $4',
+          [snapshot.nome, snapshot.telefone, snapshot.endereco, clienteId]
+        )
+      }
     } else {
+      // ON CONFLICT cobre a corrida de dois checkouts simultâneos com o mesmo
+      // e-mail (o SELECT+INSERT antigo devolvia 23505 → 500).
       const { rows: novos } = await client.query(
-        'INSERT INTO clientes (nome, email, telefone, endereco) VALUES ($1, $2, $3, $4) RETURNING id',
-        [cliente.nome, cliente.email, cliente.telefone || '', cliente.endereco || '']
+        `INSERT INTO clientes (nome, email, telefone, endereco)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (email) DO NOTHING
+         RETURNING id`,
+        [snapshot.nome, emailCliente, snapshot.telefone, snapshot.endereco]
       )
-      clienteId = novos[0].id
+      if (novos[0]) {
+        clienteId = novos[0].id
+      } else {
+        const { rows: naCorrida } = await client.query(
+          'SELECT id FROM clientes WHERE lower(email) = lower($1)',
+          [emailCliente]
+        )
+        clienteId = naCorrida[0]?.id ?? null
+      }
     }
 
-    const gatewayAtivo = gatewayConfigurado() && Boolean(pagamento)
     const status = gatewayAtivo ? 'pendente' : pagamento ? 'pago' : 'novo'
 
     // Nunca persiste dados de cartão — guarda apenas o método escolhido.
@@ -121,8 +224,8 @@ router.post('/', autenticar, async (req, res) => {
       : null
 
     const { rows: pedidos } = await client.query(
-      `INSERT INTO pedidos (usuario_id, cliente_id, total, status, itens, pagamento)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO pedidos (usuario_id, cliente_id, total, status, itens, pagamento, cliente_dados, estoque_reservado)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
        RETURNING id, total, status`,
       [
         usuarioId,
@@ -143,26 +246,23 @@ router.post('/', autenticar, async (req, res) => {
           })
         ),
         pagamentoSalvo ? JSON.stringify(pagamentoSalvo) : null,
+        JSON.stringify(snapshot),
       ]
     )
 
-    if (!gatewayAtivo) {
-      // Simulado: baixa na hora. O lock de linha já garante consistência.
-      const baixa = new Map()
-      for (const item of itens) {
-        const id = idDoItem(item)
-        baixa.set(id, (baixa.get(id) || 0) + item.quantidade)
-      }
-      const idsBaixa = [...baixa.keys()].sort((a, b) => a - b)
-      const quantidadesBaixa = idsBaixa.map((id) => baixa.get(id))
+    // Registrado na MESMA transação: se o COMMIT falhar, não fica registro
+    // órfão apontando para pedido que não existe.
+    await client.query(
+      'INSERT INTO dedupe (hash, pedido_id) VALUES ($1, $2) ON CONFLICT (hash) DO NOTHING',
+      [hash, pedidos[0].id]
+    )
 
-      await client.query(
-        `UPDATE produtos SET estoque = estoque - v.qtd
-         FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qtd) AS v
-         WHERE produtos.id = v.id`,
-        [idsBaixa, quantidadesBaixa]
-      )
-    }
+    // Reserva de estoque: a peça sai do estoque AGORA, em qualquer status —
+    // inclusive no 'pendente' do Mercado Pago. É isso que impede a loja de
+    // vender mais do que existe enquanto o pagamento não cai (PLANO 1.6).
+    // O lock de linha acima já garante consistência; a devolução só acontece
+    // quando o pedido é cancelado (webhook/admin) ou expira.
+    await aplicar(client, necessario, false)
 
     await client.query('COMMIT')
 
@@ -198,7 +298,13 @@ router.get('/', autenticar, async (req, res) => {
   try {
     const { rows } = verTodos
       ? await pool.query(
-          `SELECT p.*, c.nome AS cliente_nome, c.email AS cliente_email, c.endereco AS cliente_endereco
+          // O snapshot do pedido tem prioridade sobre a tabela clientes:
+          // um pedido novo não pode reescrever o endereço dos anteriores.
+          `SELECT p.*,
+                  COALESCE(p.cliente_dados->>'nome', c.nome) AS cliente_nome,
+                  COALESCE(p.cliente_dados->>'email', c.email) AS cliente_email,
+                  COALESCE(p.cliente_dados->>'telefone', c.telefone) AS cliente_telefone,
+                  COALESCE(p.cliente_dados->>'endereco', c.endereco) AS cliente_endereco
            FROM pedidos p
            LEFT JOIN clientes c ON c.id = p.cliente_id
            ORDER BY p.criado_em DESC
@@ -224,7 +330,11 @@ router.get('/:id', autenticar, async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      `SELECT p.*, c.nome AS cliente_nome, c.email AS cliente_email, c.telefone AS cliente_telefone, c.endereco AS cliente_endereco
+      `SELECT p.*,
+              COALESCE(p.cliente_dados->>'nome', c.nome) AS cliente_nome,
+              COALESCE(p.cliente_dados->>'email', c.email) AS cliente_email,
+              COALESCE(p.cliente_dados->>'telefone', c.telefone) AS cliente_telefone,
+              COALESCE(p.cliente_dados->>'endereco', c.endereco) AS cliente_endereco
        FROM pedidos p
        LEFT JOIN clientes c ON c.id = p.cliente_id
        WHERE p.id = $1`,
@@ -246,7 +356,8 @@ router.get('/:id', autenticar, async (req, res) => {
 })
 
 // Mudança manual de status (admin): a loja não opera às cegas.
-// Sair para "pago" baixa o estoque (com lock); cancelar um pedido pago devolve a peça.
+// A peça já foi reservada na criação, então aqui só se resolve o caso legado
+// (baixar ao virar "pago" de pedido antigo) e a devolução ao cancelar.
 router.patch('/:id/status', autenticarAdmin, async (req, res) => {
   const id = Number(req.params.id)
   const { status } = req.body || {}
@@ -270,49 +381,38 @@ router.patch('/:id/status', autenticarAdmin, async (req, res) => {
     }
     const pedido = rows[0]
 
-    const itens = Array.isArray(pedido.itens) ? pedido.itens : []
-    const baixa = new Map()
-    for (const item of itens) {
-      if (!item?.produtoId) continue
-      baixa.set(item.produtoId, (baixa.get(item.produtoId) || 0) + Number(item.quantidade || 0))
-    }
-    const ids = [...baixa.keys()].sort((a, b) => a - b)
+    const mapa = somarPorProduto(pedido.itens)
+    const reservado = pedido.estoque_reservado === true
 
-    // Baixa ao virar "pago"; devolução ao cancelar um pedido que estava pago.
-    const baixar = status === 'pago' && pedido.status !== 'pago'
-    const devolver = pedido.status === 'pago' && status === 'cancelado'
+    // A reserva nasce com o pedido (estoque_reservado). Portanto:
+    //  • baixar só quem NASCEU ANTES da reserva (pedido legado virando "pago");
+    //  • devolver só quem realmente está com a peça fora do estoque.
+    // As duas condições se excluem — nunca baixa e devolve no mesmo passo.
+    const baixar = status === 'pago' && pedido.status !== 'pago' && !reservado
+    const devolver = status === 'cancelado' && pedido.status !== 'cancelado' && reservado
 
-    if ((baixar || devolver) && ids.length > 0) {
-      const { rows: produtos } = await client.query(
-        'SELECT id, nome, estoque FROM produtos WHERE id = ANY($1) ORDER BY id FOR UPDATE',
-        [ids]
-      )
-      const porId = new Map(produtos.map((p) => [p.id, p]))
-
-      if (baixar) {
-        for (const produtoId of ids) {
-          const produto = porId.get(produtoId)
-          const quantidade = baixa.get(produtoId)
-          if (!produto || produto.estoque < quantidade) {
-            await client.query('ROLLBACK')
-            return res.status(400).json({
-              erro: `Estoque insuficiente para marcar como pago: "${
-                produto?.nome ?? `produto ${produtoId}`
-              }" (restam ${produto?.estoque ?? 0}, pedido ${quantidade}).`,
-            })
-          }
-        }
+    if (baixar && mapa.size > 0) {
+      const produtos = await travarProdutos(client, mapa)
+      const faltando = conferir(produtos, mapa)
+      if (faltando.length > 0) {
+        await client.query('ROLLBACK')
+        const p = faltando[0]
+        return res.status(400).json({
+          erro: `Estoque insuficiente para marcar como pago: "${p.nome}" (restam ${p.disponivel}, pedido ${p.pedido}).`,
+        })
       }
-
-      await client.query(
-        `UPDATE produtos SET estoque = estoque ${baixar ? '-' : '+'} v.qtd
-         FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qtd) AS v
-         WHERE produtos.id = v.id`,
-        [ids, ids.map((produtoId) => baixa.get(produtoId))]
-      )
+      await aplicar(client, mapa, false)
+    } else if (devolver) {
+      await devolverEstoque(client, pedido.itens)
     }
 
-    await client.query('UPDATE pedidos SET status = $1 WHERE id = $2', [status, id])
+    // estoque_reservado acompanha a troca: vira TRUE ao baixar e FALSE ao
+    // devolver — é a trava que impede devolução em dobro.
+    await client.query('UPDATE pedidos SET status = $1, estoque_reservado = $3 WHERE id = $2', [
+      status,
+      id,
+      baixar ? true : devolver ? false : reservado,
+    ])
     await client.query('COMMIT')
     logger.info(
       { pedidoId: id, de: pedido.status, para: status, adminId: req.usuario.id },

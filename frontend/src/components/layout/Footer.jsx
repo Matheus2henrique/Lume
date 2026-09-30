@@ -4,10 +4,12 @@ import { Check, Instagram, WhatsApp } from '../ui/Icones'
 import { api } from '../../api'
 
 const LINK_INSTAGRAM = 'https://www.instagram.com/3d_.lume/'
-const LINK_WHATSAPP = '#' // TODO: colocar o link do WhatsApp quando for enviado
+const WHATSAPP_NUMERO = '5573998663011'
+const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent('Olá! Vim pelo site da Lume e quero personalizar uma peça.')}`
 
-function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, nichos }) {
+function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, onPrivacidade, nichos }) {
   const [email, setEmail] = useState('')
+  const [aceite, setAceite] = useState(false)
   const [inscrito, setInscrito] = useState(false)
   const [erro, setErro] = useState('')
   const generos = nichos?.length ? nichos : generosPadrao
@@ -16,9 +18,10 @@ function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, nichos }) {
     e.preventDefault()
     setErro('')
     try {
-      await api.newsletter(email)
+      await api.newsletter(email, aceite)
       setInscrito(true)
       setEmail('')
+      setAceite(false)
     } catch (err) {
       setErro(err.message)
     }
@@ -46,7 +49,7 @@ function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, nichos }) {
 
         <div className="order-2">
           <h4 className="text-sm font-semibold mb-4 uppercase tracking-wider" style={{ color: 'var(--cor-texto)' }}>
-            Universos
+            Categorias
           </h4>
           <ul className="flex flex-col gap-3 list-none">
             {generos.map((genero) => (
@@ -83,9 +86,19 @@ function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, nichos }) {
           <ul className="flex flex-col gap-3 list-none">
             {['Perguntas frequentes', 'Trocas e devoluções', 'Política de privacidade'].map((ajuda) => (
               <li key={ajuda}>
-                <a href="#" className="text-sm" style={{ color: 'var(--cor-texto-suave)' }}>
-                  {ajuda}
-                </a>
+                {ajuda === 'Política de privacidade' ? (
+                  <button
+                    onClick={onPrivacidade}
+                    className="bg-transparent border-none cursor-pointer text-sm p-0"
+                    style={{ color: 'var(--cor-texto-suave)' }}
+                  >
+                    {ajuda}
+                  </button>
+                ) : (
+                  <a href="#" className="text-sm" style={{ color: 'var(--cor-texto-suave)' }}>
+                    {ajuda}
+                  </a>
+                )}
               </li>
             ))}
           </ul>
@@ -97,7 +110,7 @@ function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, nichos }) {
           </h4>
           <ul className="flex flex-col gap-3 text-sm list-none" style={{ color: 'var(--cor-texto-suave)' }}>
             <li>ola@lume.com</li>
-            <li>(11) 99999-9999</li>
+            <li>(73) 99866-3011</li>
             <li>Atendemos todo o Brasil</li>
           </ul>
 
@@ -118,10 +131,10 @@ function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, nichos }) {
               <Instagram className="w-5 h-5" />
             </a>
             <a
-              href={LINK_WHATSAPP}
+              href={WHATSAPP_LINK}
               aria-label="WhatsApp da Lume"
               title="WhatsApp"
-              {...(LINK_WHATSAPP !== '#' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              {...(WHATSAPP_LINK !== '#' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
               className="flex items-center justify-center w-10 h-10 rounded-full border transition-all duration-300 hover:scale-110"
               style={{
                 background: 'var(--cor-fundo-cartao)',
@@ -172,6 +185,20 @@ function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, nichos }) {
                   Enviar
                 </button>
               </form>
+              <label
+                className="flex items-start gap-2 text-xs mt-3 max-w-xl cursor-pointer"
+                style={{ color: 'var(--cor-texto-suave)' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={aceite}
+                  onChange={(e) => setAceite(e.target.checked)}
+                  required
+                  className="mt-0.5"
+                />
+                Aceito receber novidades e ofertas da Lume por e-mail. Posso cancelar a inscrição a
+                qualquer momento.
+              </label>
               {erro && <p className="text-xs mt-2" style={{ color: '#ef4444' }}>{erro}</p>}
             </>
           )}

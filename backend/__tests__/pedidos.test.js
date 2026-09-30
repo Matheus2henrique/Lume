@@ -72,10 +72,13 @@ describe('POST /api/pedidos', () => {
     const client = { release: jest.fn(), query: jest.fn() }
     const fila = [
       { rows: [] }, // BEGIN
+      { rows: [] }, // pg_advisory_xact_lock (idempotência)
+      { rows: [] }, // SELECT dedupe (não é repetição)
       { rows: [{ id: 1, nome: 'Produto', preco: 20, estoque: 10 }] }, // SELECT produtos
       { rows: [] }, // SELECT clientes
       { rows: [{ id: 7 }] }, // INSERT clientes
       { rows: [{ id: 3, total: 40, status: 'pago' }] }, // INSERT pedidos
+      { rows: [] }, // INSERT dedupe
       { rows: [] }, // baixa de estoque
       { rows: [] }, // COMMIT
     ]
@@ -96,6 +99,187 @@ describe('POST /api/pedidos', () => {
     expect(insert).toBeDefined()
     expect(insert[1][0]).toBe(USUARIO.id) // usuario_id
     expect(client.release).toHaveBeenCalled()
+  })
+
+  it('reserva o estoque na criação mesmo com o gateway de pagamento ativo', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [USUARIO] })
+
+    const client = { release: jest.fn(), query: jest.fn() }
+    const fila = [
+      { rows: [] }, // BEGIN
+      { rows: [] }, // pg_advisory_xact_lock
+      { rows: [] }, // SELECT dedupe
+      { rows: [{ id: 1, nome: 'Produto', preco: 20, estoque: 10 }] }, // SELECT produtos FOR UPDATE
+      { rows: [] }, // SELECT clientes
+      { rows: [{ id: 7 }] }, // INSERT clientes
+      { rows: [{ id: 3, total: 40, status: 'pendente' }] }, // INSERT pedidos
+      { rows: [] }, // INSERT dedupe
+      { rows: [] }, // baixa de estoque
+      { rows: [] }, // COMMIT
+    ]
+    client.query.mockImplementation(() => Promise.resolve(fila.shift() || { rows: [] }))
+    mockConnect.mockResolvedValue(client)
+
+    process.env.MP_ACCESS_TOKEN = 'TEST-1234567890'
+    let res
+    try {
+      res = await request(app)
+        .post('/api/pedidos')
+        .set('Authorization', `Bearer ${token()}`)
+        .send(CORPO)
+    } finally {
+      delete process.env.MP_ACCESS_TOKEN
+    }
+
+    expect(res.status).toBe(201)
+    // Sem baixa condicionada ao status: pendente do MP já sai do estoque.
+    expect(res.body.status).toBe('pendente')
+    expect(res.body.precisaPagamento).toBe(true)
+
+    const insert = client.query.mock.calls.find(([sql]) =>
+      String(sql).includes('INSERT INTO pedidos')
+    )
+    expect(insert[0]).toContain('estoque_reservado')
+    expect(insert[0]).toContain('VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)')
+
+    const baixa = client.query.mock.calls.find(([sql]) =>
+      String(sql).includes('estoque = estoque - v.qtd')
+    )
+    expect(baixa).toBeDefined()
+    expect(baixa[1]).toEqual([[1], [2]])
+    expect(client.release).toHaveBeenCalled()
+  })
+
+  it('soma itens repetidos do mesmo produto antes de conferir o estoque', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [USUARIO] })
+
+    const client = { release: jest.fn(), query: jest.fn() }
+    const fila = [
+      { rows: [] }, // BEGIN
+      { rows: [] }, // pg_advisory_xact_lock
+      { rows: [] }, // SELECT dedupe
+      { rows: [{ id: 1, nome: 'Produto', preco: 20, estoque: 3 }] }, // SELECT produtos
+      { rows: [] }, // ROLLBACK
+    ]
+    client.query.mockImplementation(() => Promise.resolve(fila.shift() || { rows: [] }))
+    mockConnect.mockResolvedValue(client)
+
+    const res = await request(app)
+      .post('/api/pedidos')
+      .set('Authorization', `Bearer ${token()}`)
+      .send({
+        ...CORPO,
+        itens: [
+          { produtoId: 1, quantidade: 2 },
+          { produtoId: 1, quantidade: 2 },
+        ],
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('Estoque insuficiente')
+    expect(res.body.erro).toContain('Restam 3')
+    const inserts = client.query.mock.calls.filter(([sql]) =>
+      String(sql).includes('INSERT INTO pedidos')
+    )
+    expect(inserts).toHaveLength(0)
+    const baixa = client.query.mock.calls.filter(([sql]) =>
+      String(sql).includes('estoque = estoque - v.qtd')
+    )
+    expect(baixa).toHaveLength(0)
+    expect(client.release).toHaveBeenCalled()
+  })
+
+  it('deve devolver o pedido original quando o mesmo checkout se repete', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [USUARIO] })
+
+    const client = { release: jest.fn(), query: jest.fn() }
+    const fila = [
+      { rows: [] }, // BEGIN
+      { rows: [] }, // pg_advisory_xact_lock
+      { rows: [{ id: 3, total: 40, status: 'pendente' }] }, // dedupe já tem este hash
+    ]
+    client.query.mockImplementation(() => Promise.resolve(fila.shift() || { rows: [] }))
+    mockConnect.mockResolvedValue(client)
+
+    const res = await request(app)
+      .post('/api/pedidos')
+      .set('Authorization', `Bearer ${token()}`)
+      .send(CORPO)
+
+    expect(res.status).toBe(200)
+    expect(res.body.duplicado).toBe(true)
+    expect(res.body.id).toBe(3)
+    expect(typeof res.body.precisaPagamento).toBe('boolean')
+
+    const inserts = client.query.mock.calls.filter(([sql]) => String(sql).includes('INSERT INTO pedidos'))
+    expect(inserts).toHaveLength(0) // não criou um segundo pedido
+    expect(client.release).toHaveBeenCalled()
+  })
+
+  it('não reescreve o cadastro quando o e-mail do pedido é de outra pessoa', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [USUARIO] })
+
+    const client = { release: jest.fn(), query: jest.fn() }
+    const fila = [
+      { rows: [] }, // BEGIN
+      { rows: [] }, // pg_advisory_xact_lock
+      { rows: [] }, // SELECT dedupe
+      { rows: [{ id: 1, nome: 'Produto', preco: 20, estoque: 10 }] }, // SELECT produtos
+      { rows: [{ id: 9 }] }, // SELECT clientes: contato já existe
+      { rows: [{ id: 3, total: 40, status: 'pago' }] }, // INSERT pedidos
+      { rows: [] }, // INSERT dedupe
+      { rows: [] }, // baixa de estoque
+      { rows: [] }, // COMMIT
+    ]
+    client.query.mockImplementation(() => Promise.resolve(fila.shift() || { rows: [] }))
+    mockConnect.mockResolvedValue(client)
+
+    const res = await request(app)
+      .post('/api/pedidos')
+      .set('Authorization', `Bearer ${token()}`)
+      .send({
+        ...CORPO,
+        cliente: { nome: 'Outra Pessoa', email: 'outra@x.com', telefone: '11 9999', endereco: 'Rua Y' },
+      })
+
+    expect(res.status).toBe(201)
+    const updates = client.query.mock.calls.filter(([sql]) => String(sql).startsWith('UPDATE clientes'))
+    expect(updates).toHaveLength(0)
+
+    const insert = client.query.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO pedidos'))
+    const snapshot = insert[1][6] // 7ª coluna: cliente_dados
+    expect(JSON.parse(snapshot).email).toBe('outra@x.com') // histórico preservado
+  })
+
+  it('atualiza o próprio cadastro quando o e-mail do pedido é o do usuário', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [USUARIO] })
+
+    const client = { release: jest.fn(), query: jest.fn() }
+    const fila = [
+      { rows: [] }, // BEGIN
+      { rows: [] }, // pg_advisory_xact_lock
+      { rows: [] }, // SELECT dedupe
+      { rows: [{ id: 1, nome: 'Produto', preco: 20, estoque: 10 }] }, // SELECT produtos
+      { rows: [{ id: 4 }] }, // SELECT clientes: já existe
+      { rows: [] }, // UPDATE clientes
+      { rows: [{ id: 3, total: 40, status: 'pago' }] }, // INSERT pedidos
+      { rows: [] }, // INSERT dedupe
+      { rows: [] }, // baixa de estoque
+      { rows: [] }, // COMMIT
+    ]
+    client.query.mockImplementation(() => Promise.resolve(fila.shift() || { rows: [] }))
+    mockConnect.mockResolvedValue(client)
+
+    const res = await request(app)
+      .post('/api/pedidos')
+      .set('Authorization', `Bearer ${token()}`)
+      .send({ ...CORPO, cliente: { ...CORPO.cliente, telefone: '11 9888', endereco: 'Rua Z' } })
+
+    expect(res.status).toBe(201)
+    const update = client.query.mock.calls.find(([sql]) => String(sql).startsWith('UPDATE clientes'))
+    expect(update).toBeDefined()
+    expect(update[1][3]).toBe(4)
+    expect(update[1][2]).toBe('Rua Z')
   })
 })
 
@@ -134,10 +318,13 @@ describe('POST /api/pedidos — personalização', () => {
     const client = { release: jest.fn(), query: jest.fn() }
     const fila = [
       { rows: [] }, // BEGIN
+      { rows: [] }, // pg_advisory_xact_lock (idempotência)
+      { rows: [] }, // SELECT dedupe (não é repetição)
       { rows: [{ id: 1, nome: 'Produto', preco: 20, estoque: 10 }] }, // SELECT produtos
       { rows: [] }, // SELECT clientes
       { rows: [{ id: 7 }] }, // INSERT clientes
       { rows: [{ id: 4, total: 20, status: 'pago' }] }, // INSERT pedidos
+      { rows: [] }, // INSERT dedupe
       { rows: [] }, // baixa de estoque
       { rows: [] }, // COMMIT
     ]
@@ -306,7 +493,7 @@ describe('PATCH /api/pedidos/:id/status', () => {
       String(sql).includes('UPDATE pedidos SET status')
     )
     expect(update).toBeDefined()
-    expect(update[1]).toEqual(['enviado', 5])
+    expect(update[1]).toEqual(['enviado', 5, false])
     expect(client.release).toHaveBeenCalled()
   })
 
@@ -365,7 +552,9 @@ describe('PATCH /api/pedidos/:id/status', () => {
     const client = { release: jest.fn(), query: jest.fn() }
     const fila = [
       { rows: [] }, // BEGIN
-      { rows: [{ id: 5, status: 'pago', itens: [{ produtoId: 1, quantidade: 2 }] }] },
+      {
+        rows: [{ id: 5, status: 'pago', estoque_reservado: true, itens: [{ produtoId: 1, quantidade: 2 }] }],
+      },
       { rows: [{ id: 1, nome: 'Peça', estoque: 8 }] }, // SELECT produtos FOR UPDATE
       { rows: [] }, // devolução de estoque
       { rows: [] }, // UPDATE pedidos
@@ -385,5 +574,61 @@ describe('PATCH /api/pedidos/:id/status', () => {
     )
     expect(devolucao).toBeDefined()
     expect(devolucao[1]).toEqual([[1], [2]])
+
+    // A flag cai junto com a devolução: cancelar de novo não repete o estoque.
+    const update = client.query.mock.calls.find(([sql]) =>
+      String(sql).includes('UPDATE pedidos SET status')
+    )
+    expect(update[1]).toEqual(['cancelado', 5, false])
+  })
+
+  it('não devolve estoque ao cancelar pedido que nunca reservou (pendente simulado)', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [ADMIN] })
+    const client = { release: jest.fn(), query: jest.fn() }
+    const fila = [
+      { rows: [] }, // BEGIN
+      { rows: [{ id: 5, status: 'pendente', estoque_reservado: false, itens: [{ produtoId: 1, quantidade: 2 }] }] },
+      { rows: [] }, // UPDATE pedidos
+      { rows: [] }, // COMMIT
+    ]
+    client.query.mockImplementation(() => Promise.resolve(fila.shift() || { rows: [] }))
+    mockConnect.mockResolvedValue(client)
+
+    const res = await request(app)
+      .patch('/api/pedidos/5/status')
+      .set('Authorization', `Bearer ${tokenAdmin()}`)
+      .send({ status: 'cancelado' })
+
+    expect(res.status).toBe(200)
+    const devolucoes = client.query.mock.calls.filter(([sql]) =>
+      String(sql).includes('estoque = estoque + v.qtd')
+    )
+    expect(devolucoes).toHaveLength(0)
+  })
+
+  it('cancelar duas vezes não devolve o estoque em dobro', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [ADMIN] })
+    const client = { release: jest.fn(), query: jest.fn() }
+    const fila = [
+      { rows: [] }, // BEGIN
+      {
+        rows: [{ id: 5, status: 'cancelado', estoque_reservado: true, itens: [{ produtoId: 1, quantidade: 2 }] }],
+      },
+      { rows: [] }, // UPDATE pedidos
+      { rows: [] }, // COMMIT
+    ]
+    client.query.mockImplementation(() => Promise.resolve(fila.shift() || { rows: [] }))
+    mockConnect.mockResolvedValue(client)
+
+    const res = await request(app)
+      .patch('/api/pedidos/5/status')
+      .set('Authorization', `Bearer ${tokenAdmin()}`)
+      .send({ status: 'cancelado' })
+
+    expect(res.status).toBe(200)
+    const devolucoes = client.query.mock.calls.filter(([sql]) =>
+      String(sql).includes('estoque = estoque + v.qtd')
+    )
+    expect(devolucoes).toHaveLength(0)
   })
 })

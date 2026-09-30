@@ -2,11 +2,13 @@
 
 Do MVP funcional para um projeto pronto para **vender de verdade**.
 
-> **Situação em 23/09/2026:** backend corrigido, validado e com as travas de
-> produção (ver [O que já foi feito](#-o-que-já-foi-feito-nesta-rodada)).
-> **MVP fechado na mesma data:** carrinho persistente, personalização
-> entregue, tela `/pedido/:id`, painel de pedidos e recuperação de senha
-> — **78 testes verdes**.
+> **Situação em 26/09/2026:** backend endurecido para produção (Fase A de
+> bloqueadores + Fase B de segurança/qualidade concluídas) — **150 testes
+> verdes** em 13 suítes, smoke com Postgres real e restore testado.
+> Pendem só ações fora do código: revogar a credencial Gmail commitada,
+> preencher `MP_ACCESS_TOKEN`/`MP_WEBHOOK_SECRET`, hospedar e agendar o backup
+> (passo a passo em [O_QUE_FAZER_FORA_DO_CODIGO.md](O_QUE_FAZER_FORA_DO_CODIGO.md),
+> detalhes de cada painel em [CONFIGURACOES_EXTERNAS.md](CONFIGURACOES_EXTERNAS.md)).
 > Esforço estimado até produção: **2 a 3 semanas** de trabalho focado (1 pessoa)
 > — Fase 0 de código concluída; resta credencial/hospedagem/backup (S) + Fase 1.
 
@@ -48,6 +50,21 @@ Do MVP funcional para um projeto pronto para **vender de verdade**.
 | Carrinho sumia ao recarregar a página | ✅ persistido em `localStorage` (`utils/carrinho.js`), sem a imagem para não estourar a cota |
 | Botão "Esqueci minha senha" morto | ✅ fluxo completo por código: `POST /api/auth/esqueci-senha` (resposta genérica) + `POST /api/auth/redefinir-senha` (HMAC, 10 min, 5 tentativas) |
 | Testes/documentação desatualizados | ✅ **78 testes** (6 suítes) + README e plano atualizados |
+| Credencial de e-mail commitada no `.env.example` | ✅ removida (sem reescrever histórico) + job **gitleaks** no CI — **ação sua:** revogar em `myaccount.google.com/apppasswords` (commit `03254fa`) |
+| Produção podia subir sem segredo do webhook ou com URL local | ✅ travas no `env.js` (recusa iniciar) + webhook exige assinatura e frescura do `ts` (≤10 min) |
+| Conta podia nascer/continuar sem `email_verificado` | ✅ seed cria e **repara** a conta como verificada; a limpeza nunca apaga conta sem prazo de código |
+| Erro do Postgres virava 500 genérico | ✅ `statusDoErro()` mapeia 400/403/404/409/413/504 (com teste) |
+| Pool sem SSL nem timeouts configuráveis | ✅ `DB_SSL`, `DB_SSL_REJECT_UNAUTHORIZED`, `DB_POOL_MAX` e timeouts de conexão/ocioso/stmt via `.env` |
+| Webhook do MP podia receber 429 do rate limit | ✅ `/webhook` e `/health` fora do teto global + `limiterWebhook` próprio (300/min) |
+| Gateway travava o usuário no timeout | ✅ `AbortSignal.timeout` (10 s, `MP_TIMEOUT_MS`) → 504 com mensagem clara |
+| Sem backup/restore testado | ✅ `npm run backup` + `npm run restore:teste` (dump → banco de teste → compara tabelas, índices e CHECKs) — falta **agendar no Windows** |
+| Um novo pedido reescrevia o endereço dos anteriores | ✅ coluna `pedidos.cliente_dados` (snapshot) + leitura com `COALESCE`; `clientes` só é atualizado quando o e-mail é o do próprio usuário (upsert `ON CONFLICT`) |
+| Duplo clique/retry de rede criava pedido duplicado | ✅ tabela `dedupe` + `pg_advisory_xact_lock` na mesma transação: mesmo checkout em 60 s devolve `duplicado: true` (validado com Postgres real) |
+| Cada clique em "Pagar" criava uma preferência nova no MP | ✅ reutiliza o `preferencia_id` já existente e só cria outro se o MP não devolver o `init_point` |
+| Força bruta de senha trocando de IP | ✅ bloqueio **por conta** (5 falhas/15 min, em memória) + `limiterLogin` que conta só erro; `/logout` e troca de senha incrementam `token_version` e derrubam todas as sessões |
+| Logs com e-mail, senha e token em texto (LGPD) | ✅ `redact` do pino + `mascaraEmail()` + `pino-http` com serializadores sem cabeçalhos (com teste) |
+| Newsletter gravava e-mail sem consentimento | ✅ exige `aceite` e grava `aceite_em`; checkbox no rodapé e na home |
+| Não havia como excluir a conta | ✅ `DELETE /api/auth/dados` (anonimiza pedidos, remove cadastro e newsletter) + botão no perfil + página de Política de Privacidade |
 
 ---
 
@@ -62,7 +79,7 @@ Do MVP funcional para um projeto pronto para **vender de verdade**.
 | 0.3 | ~~**Deploy automático do frontend**: mover `frontend/.github/workflows/deploy.yml` para `.github/workflows/` na raiz do repositório e definir `VITE_API_URL` no build~~ ✅ **feito em 23/09** — workflow na raiz, `VITE_API_URL` lida de `${{ vars.VITE_API_URL }}`. **Ação sua (1 clique):** Settings → Pages → Source = "GitHub Actions" + definir a variável | Site publicado está "casca vazia" | S |
 | 0.4 | ~~**Tela de status do pedido**: `back_urls` do MP voltam para a home; criar rota `/pedido/:id` que consulta `GET /api/pedidos/:id` e mostra `pendente/pago` (com polling)~~ ✅ **feito em 23/09** — rota `/pedido/:id` com polling (para em status final), `back_urls` do MP apontam para ela, botão "Ver meu pedido" no checkout | Primeira impressão pós-compra | ~~M~~ **feito** |
 | 0.5 | ~~**Painel de pedidos para o dono**: `GET /api/pedidos` (admin vê todos) + tela no Admin com status, itens, valor e mudança manual de status~~ ✅ **feito em 23/09** — `?todos=1` (admin) + aba Pedidos; `PATCH /api/pedidos/:id/status` com lock, baixa ao virar `pago` e devolução ao cancelar pedido pago | Loja não pode operar às cegas | ~~M~~ **feito** |
-| 0.6 | **Backup antes do primeiro dia** + teste de restore (`pg_dump.exe` agendado no Agendador de Tarefas do Windows) | Sem restore testado, backup não existe | S |
+| 0.6 | ~~**Backup antes do primeiro dia** + teste de restore (`pg_dump.exe` agendado no Agendador de Tarefas do Windows)~~ ✅ **scripts prontos em 26/09** — `npm run backup` e `npm run restore:teste` (cria `lume_restore_teste`, restaura, compara tabelas/índices/CHECKs e apaga; aceita `--pg-bin`) — **falta sua ação:** agendar o backup no Agendador de Tarefas | Sem restore testado, backup não existe | ~~S~~ **falta agendar** |
 | 0.7 | ~~**Atualizar README** (estrutura de pastas mudou: `layout/`, `pages/`, `ui/`; documentar endpoints `/generos`, `/newsletter` e CRUD admin)~~ ✅ **feito** — README com estrutura, tabela de endpoints completa (auth/pedidos/admin), 78 testes e checklist atualizados | Primeira impressão de quem entra no projeto | ~~S~~ **feito** |
 
 ---
@@ -75,9 +92,9 @@ Do MVP funcional para um projeto pronto para **vender de verdade**.
 | 1.2 | **E-mails transacionais** (confirmação de pedido, senha) via Resend/SES | Confiança + reduz chargeback/dúvida | M |
 | 1.3 | **Upload de imagem real** (endpoint multipart + S3/R2) — hoje é base64 dentro do JSON (limitado a 10mb e incha o banco) | Banco leve e upload confiável | M |
 | 1.4 | ~~**Upload de personalização de verdade** — `ProdutoDetalhe.jsx` só guarda o arquivo no state e **não existe endpoint**: hoje a loja vende personalização que não entrega~~ ✅ **feito (MVP) em 23/09** — `ProdutoDetalhe` lê o arquivo (≤5 MB) como data URL, o item vai em `pedido.itens` (JSONB) validado no backend e o admin **baixa pelo painel**; migrar para S3/R2 (junto com 1.3) quando o volume crescer | Funcionalidade prometida e inexistente | ~~L~~ **feito** |
-| 1.5 | **Snapshot do cliente no pedido** — hoje o endereço é gravado só em `clientes` e um novo pedido **re-escreve** o endereço dos anteriores; adicionar coluna `pedido.cliente_dados JSONB` (migração idempotente no `schema.sql`) | Histórico de pedidos incorreto | S |
-| 1.6 | **Reserva de estoque + expiração**: pedido `pendente` deve reservar peça e ser liberado por job após X minutos sem pagar | Evita oversell no gateway ativo (hoje só descobre na aprovação) | M |
-| 1.7 | **LGPD**: consentimento na newsletter (hoje só grava e loga e-mail), política de privacidade, endpoint de exclusão de dados, `remover e-mail dos logs` | Exigência legal no Brasil | M |
+| 1.5 | ~~**Snapshot do cliente no pedido** — hoje o endereço é gravado só em `clientes` e um novo pedido **re-escreve** o endereço dos anteriores; adicionar coluna `pedido.cliente_dados JSONB` (migração idempotente no `schema.sql`)~~ ✅ **feito em 26/09** — coluna `cliente_dados` com backfill, leitura com `COALESCE(p.cliente_dados->>…, c.…)`, `clientes` só muda quando o e-mail é o do próprio usuário (upsert `ON CONFLICT`, sem corrida 23505) e idempotência do checkout (`dedupe` + advisory lock) | Histórico de pedidos incorreto | ~~S~~ **feito** |
+| 1.6 | ~~**Reserva de estoque + expiração**: pedido `pendente` deve reservar peça e ser liberado por job após X minutos sem pagar~~ ✅ **feito em 29/09** — coluna `pedidos.estoque_reservado` (migração idempotente + backfill + índice parcial em `status='pendente'`); a **baixa acontece na criação do pedido**, em qualquer status (`services/estoque.js`: soma por produto → `FOR UPDATE` → valida → baixa, tudo na mesma transação); webhook aprovação **não baixa de novo** (só pedido legado), recusa/webhook repetido devolvem **no máximo uma vez** (flag vira `FALSE` antes de subir o estoque); job `expirarPedidosNaoPagos()` roda a cada 60 s e cancela `pendente` vencido (`PEDIDO_EXPIRA_MINUTOS`, padrão 30, `0` desliga); carrinho limita `+` ao estoque e o backend recusa com *"Estoque insuficiente… Restam X"* | Evita oversell no gateway ativo (hoje só descobre na aprovação) | ~~M~~ **feito** |
+| 1.7 | ~~**LGPD**: consentimento na newsletter (hoje só grava e loga e-mail), política de privacidade, endpoint de exclusão de dados, `remover e-mail dos logs`~~ ✅ **feito em 26/09** — `POST /api/newsletter` exige `aceite` e grava `aceite_em` (checkbox no rodapé e na home); `DELETE /api/auth/dados` anonimiza os pedidos, remove cadastro/newsletter e derruba as sessões (botão no perfil); página **Política de Privacidade** (`/privacidade`); logs com `redact` + `mascaraEmail()` | Exigência legal no Brasil | ~~M~~ **feito** |
 | 1.8 | **Observabilidade de erro**: Sentry (backend + frontend) mantendo o pino | Ver falhas antes do cliente | S |
 | 1.9 | **Testes do fluxo de pagamento com MP mockado** (injeção de `fetch` em `obterPagamento`/`criarPreferencia`) cobrindo: aprovado, valor divergente, `pending` do Pix, recusa, webhook repetido | Regressão no pagamento é dinheiro perdido | M |
 | 1.10 | **Testes de frontend** (Vitest + Testing Library) no carrinho/checkout | O carrinho é o coração da loja | M |
@@ -90,12 +107,12 @@ Do MVP funcional para um projeto pronto para **vender de verdade**.
 |---|---|---|---|
 | 2.1 | ~~**CI na raiz**: GitHub Actions rodando `lint + test + build` em cada PR~~ ✅ **feito** — `.github/workflows/ci.yml` (backend: 78 testes + audit; frontend: lint + build; docker: build da imagem) | Regressão não chega ao main | S |
 | 2.2 | ~~**`npm audit`/Dependabot** no CI~~ ✅ **feito** (audit bloqueia backend; frontend informativo — 4 advisories em ferramentas de build, corrigir com `npm audit fix` no Windows). Dependabot: ativar em Settings → Security | Dependência vulnerável = brecha | S |
-| 2.3 | **Rate limit em Redis** (hoje em memória) quando houver mais de 1 instância | Escala horizontal | M |
+| 2.3 | **Rate limit em Redis** (hoje em memória) quando houver mais de 1 instância — *decisão da rodada: sem Redis agora*; em paralelo entrou **bloqueio por conta** (5 falhas/15 min) que não depende de IP | Escala horizontal | M |
 | 2.4 | ~~**Helmet** (pacote) + HSTS~~ ✅ **feito** — `helmet@8` com CSP de API, frame DENY, HSTS (ativo assim que houver HTTPS), CORP e Referrer-Policy | Profundura dos cabeçalhos | S |
 | 2.5 | **Imagens em CDN** (sair do base64/TEXT) + `ETag`/cache em `/api/produtos` | Performance e custo de banco | M |
 | 2.6 | **Paginação/busca/filtro** em `/api/produtos` | Catálogo cresce | M |
 | 2.7 | **Fila/worker de webhooks**: responder 200 rápido e processar fora do request (evita timeout do MP em carga) | Confiabilidade do pagamento | M |
-| 2.8 | **Logs sensíveis**: revisar para não logar e-mail/PAGANODE em texto (pino com redact) | LGPD | S |
+| 2.8 | ~~**Logs sensíveis**: revisar para não logar e-mail/PAGANODE em texto (pino com redact)~~ ✅ **feito em 26/09** — `redact` (e-mail, senha, código, token, Authorization/Cookie), `mascaraEmail()` para quando o e-mail ajuda no diagnóstico e `pino-http` com serializadores só de método/rota/status (com teste) | LGPD | ~~S~~ **feito** |
 | 2.9 | ~~**Docker**: Dockerfile + `docker-compose` (api + postgres)~~ ✅ **feito** — `backend/Dockerfile` (node:22-alpine, não-root, healthcheck, roda migrate na subida) + `docker-compose.yml` (`docker compose up --build`) | Onboarding e deploy | S |
 
 ---
@@ -116,10 +133,10 @@ Checklist da chave:
 - [ ] Site publicado apontando para a API (`VITE_API_URL`) — verificado em produção
 - [x] Dono da loja consegue **ver e atualizar pedidos** (aba Pedidos no admin, 23/09)
 - [x] Cliente vê a **confirmação do pedido** ao voltar do Mercado Pago (rota `/pedido/:id`, 23/09)
-- [ ] Backup automatizado + **restore testado**
+- [ ] Backup **agendado** + restore testado — scripts e restore ✅ em 26/09 (`npm run backup`, `npm run restore:teste`); falta agendar no Agendador de Tarefas
 - [x] Recuperação de senha funcionando (`esqueci-senha` + `redefinir-senha`, 23/09)
-- [ ] LGPD básica (política, consentimento, exclusão de dados)
-- [x] CI rodando lint + testes em todo PR (23/09)
+- [x] LGPD básica (política, consentimento, exclusão de dados) — 26/09
+- [x] CI rodando lint + testes em todo PR (23/09) — 150 testes + gitleaks + smoke com Postgres real
 - [ ] Sentry (ou equivalente) recebendo erros
 - [x] Upload de personalização entregando o arquivo ao dono da loja (vai no pedido + download no painel, 23/09)
 

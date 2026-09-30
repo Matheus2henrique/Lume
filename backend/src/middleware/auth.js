@@ -2,47 +2,66 @@ import jwt from 'jsonwebtoken'
 import pool from '../db.js'
 import logger from '../logger.js'
 
-export async function autenticar(req, res, next) {
-  const auth = req.headers.authorization
-  if (!auth) {
-    return res.status(401).json({ erro: 'Não autenticado.' })
-  }
-
-  const token = auth.replace('Bearer ', '')
+/**
+ * Carrega e valida a sessão por trás de um token.
+ *
+ * Além de assinar/verificar o JWT, compara `tv` (token_version) com a versão
+ * gravada no usuário: trocar a senha ou chamar /logout incrementa a versão e
+ * derruba TODOS os tokens emitidos antes — sem precisar de lista negra.
+ * Tokens antigos (sem `tv`) são tratados como versão 0.
+ */
+async function sessaoDoToken(token) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET)
     const { rows } = await pool.query('SELECT * FROM usuarios WHERE id = $1', [payload.id])
     if (rows.length === 0) {
-      return res.status(401).json({ erro: 'Usuário não encontrado.' })
+      return { ok: false, status: 401, erro: 'Usuário não encontrado.' }
     }
-    req.usuario = rows[0]
-    next()
+    const usuario = rows[0]
+    if ((payload.tv ?? 0) !== (usuario.token_version ?? 0)) {
+      logger.info({ userId: usuario.id }, 'Token recusado: sessão invalidada por troca de senha/logout')
+      return { ok: false, status: 401, erro: 'Sessão expirada. Faça login novamente.' }
+    }
+    return { ok: true, usuario }
   } catch {
-    res.status(401).json({ erro: 'Sessão inválida ou expirada.' })
+    return { ok: false, status: 401, erro: 'Sessão inválida ou expirada.' }
   }
 }
 
-export async function autenticarAdmin(req, res, next) {
+function tokenDaRequisicao(req) {
   const auth = req.headers.authorization
-  if (!auth) {
+  return auth ? auth.replace('Bearer ', '') : null
+}
+
+export async function autenticar(req, res, next) {
+  const token = tokenDaRequisicao(req)
+  if (!token) {
     return res.status(401).json({ erro: 'Não autenticado.' })
   }
 
-  const token = auth.replace('Bearer ', '')
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET)
-    const { rows } = await pool.query('SELECT * FROM usuarios WHERE id = $1', [payload.id])
-    if (rows.length === 0) {
-      return res.status(401).json({ erro: 'Usuário não encontrado.' })
-    }
-    if (!rows[0].admin) {
-      return res.status(403).json({ erro: 'Acesso negado. Apenas administradores.' })
-    }
-    req.usuario = rows[0]
-    next()
-  } catch {
-    res.status(401).json({ erro: 'Sessão inválida ou expirada.' })
+  const sessao = await sessaoDoToken(token)
+  if (!sessao.ok) {
+    return res.status(sessao.status).json({ erro: sessao.erro })
   }
+  req.usuario = sessao.usuario
+  next()
+}
+
+export async function autenticarAdmin(req, res, next) {
+  const token = tokenDaRequisicao(req)
+  if (!token) {
+    return res.status(401).json({ erro: 'Não autenticado.' })
+  }
+
+  const sessao = await sessaoDoToken(token)
+  if (!sessao.ok) {
+    return res.status(sessao.status).json({ erro: sessao.erro })
+  }
+  if (!sessao.usuario.admin) {
+    return res.status(403).json({ erro: 'Acesso negado. Apenas administradores.' })
+  }
+  req.usuario = sessao.usuario
+  next()
 }
 
 export function serAdmin(req, res, next) {
@@ -58,17 +77,12 @@ export function serAdmin(req, res, next) {
  * recebe um checkoutToken curto para pagar em seguida.
  */
 export async function autenticarOpcional(req, _res, next) {
-  const auth = req.headers.authorization
-  if (!auth) return next()
+  const token = tokenDaRequisicao(req)
+  if (!token) return next()
 
-  try {
-    const token = auth.replace('Bearer ', '')
-    const payload = jwt.verify(token, process.env.JWT_SECRET)
-    const { rows } = await pool.query('SELECT * FROM usuarios WHERE id = $1', [payload.id])
-    if (rows[0]) req.usuario = rows[0]
-  } catch {
-    // Token ausente/inválido — segue como convidado sem quebrar o fluxo.
-  }
+  const sessao = await sessaoDoToken(token)
+  if (sessao.ok) req.usuario = sessao.usuario
+  // Token ausente/inválido/sessão revogada — segue como convidado.
   next()
 }
 

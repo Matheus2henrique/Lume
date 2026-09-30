@@ -93,7 +93,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
 <button
             className="bg-transparent border-none p-0 cursor-pointer"
             onClick={() => setBuscando(true)}
-            aria-label="Buscar universos"
+            aria-label="Buscar gênero "
             aria-expanded={buscando}
           >
             <svg viewBox="0 0 24 24" className="header-icon-lupa w-7 h-7 md:w-8 md:h-8" fill="none" stroke="var(--cor-texto)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -200,7 +200,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
               <input
                 autoFocus
                 type="text"
-                placeholder="Pesquise uma categoria (ex.: sensoriais, articulados, personagens)"
+                placeholder="Pesquise uma categoria (ex.: Livro, Brinq. Sensorial, Colecionáveis, Pacotes)"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 onKeyDown={(e) => {
@@ -227,7 +227,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
                   ))
                 ) : (
                   <li className="px-3 py-2 text-sm" style={{ color: 'var(--cor-texto-suave)' }}>
-                    Nenhum universo encontrado.
+                    Nenhuma categoria encontrada.
                   </li>
                 )}
               </ul>

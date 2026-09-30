@@ -48,7 +48,23 @@ function Genero({ genero, produtos, onSelecionarProduto, favoritos, onToggleFavo
       >
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full opacity-30 blur-[120px]" style={{ background: 'var(--cor-laranja)' }} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[200px] rounded-full opacity-15 blur-[80px]" style={{ background: 'var(--cor-laranja-claro)' }} />
-        <div className="relative z-10">
+        {genero.id === 'dinossauros' && (
+          <>
+            <img
+              src="https://png.pngtree.com/png-vector/20250209/ourmid/pngtree-realistic-dinosaurs-isolated-png-image_15430210.png"
+              alt="dinossauro esquerda"
+              aria-hidden="true"
+              className="hidden md:block absolute left-2 lg:left-8 xl:left-16 top-1/2 -translate-y-1/2 w-24 lg:w-40 xl:w-60 select-none pointer-events-none drop-shadow-[0_12px_28px_rgba(0,0,0,0.55)]"
+            />
+            <img
+              src="https://static.vecteezy.com/system/resources/thumbnails/024/586/225/small/dinosaur-with-ai-generated-free-png.png"
+              alt="dinossauro direita"
+              aria-hidden="true"
+              className="hidden md:block absolute right-2 lg:right-8 xl:right-16 top-1/2 -translate-y-1/2 w-24 lg:w-36 xl:w-52 rounded-2xl border  shadow-[0_12px_28px_rgba(0,0,0,0.55)] object-cover aspect-square select-none pointer-events-none"
+            />
+          </>
+        )}
+        <div className="relative z-10" style={genero.id === 'dinossauros' ? { maxWidth: '540px' } : undefined}>
           <h1 className="text-5xl md:text-6xl font-[Georgia,serif]" style={{ color: 'var(--cor-texto)' }}>
             Universo <span style={{ color: 'var(--cor-laranja-claro)' }}>{genero.nome}</span>
           </h1>

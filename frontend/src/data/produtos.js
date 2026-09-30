@@ -1,57 +1,56 @@
 export const generos = [
   {
-    id: "sensoriais",
-    nome: "Sensoriais",
-    tagline: "Estímulos que despertam os sentidos.",
+    id: "livro",
+    nome: "Livro",
+    tagline: "Tudo para quem vive entre páginas.",
     descricao:
-      "Peças pensadas para tocar, sentir e explorar. Texturas, formas e volumes que transformam o contato em experiência.",
+      "Marcas-páginas, suportes, luminárias e decoração para deixar os seus livros ainda mais especiais.",
     imagem:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShUpIIvldF_e2CicERkNYox_nbvwKSvsa9mN47sEu4WwzF5QnBTPP2tQY&s=10",
   },
   {
-    id: "articulados",
-    nome: "Articulados",
-    tagline: "Peças que se movem e ganham vida.",
+    id: "brinq-sensorial",
+    nome: "Brinq. Sensorial",
+    tagline: "Tocar, sentir e explorar.",
     descricao:
-      "Figuras e objetos com articulações funcionais. Brinque, pose e explore o movimento em cada peça impressa em 3D.",
+      "Peças com texturas, formas e volumes pensadas para estimular os sentidos e transformar o toque em experiência.",
     imagem:
-      "https://img.magnific.com/fotos-gratis/uma-porta-que-se-estende-para-o-mundo-da-fantasia_23-2151661315.jpg?semt=ais_hybrid&w=740&q=80",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShUpIIvldF_e2CicERkNYox_nbvwKSvsa9mN47sEu4WwzF5QnBTPP2tQY&s=10",
   },
   {
-    id: "personagens",
-    nome: "Personagens",
-    tagline: "Seus favoritos ganhando forma.",
+    id: "colecionaveis",
+    nome: "Colecionáveis",
+    tagline: "Os seus favoritos ganhando forma.",
     descricao:
-      "Figuras colecionáveis e miniaturas dos personagens que você ama. Detalhes feitos com carinho para os fãs mais dedicados.",
+      "Figuras e miniaturas dos personagens que você ama, impressas em 3D com acabamento caprichado.",
     imagem:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQN4tctKkyKUJggyYalKWzUWZDJ6T7QGT8TNBo-CMEimj5ItFqSO0LGmQ0&s=10",
   },
   {
-    id: "casa-decoracao",
-    nome: "Casa/Decoração",
-    tagline: "Decorando espaços com personalidade.",
+    id: "pacotes",
+    nome: "Pacotes",
+    tagline: "Kits e conjuntos completos.",
     descricao:
-      "Peças decorativas para transformar a sua casa. Organizadores, luminárias, suportes e muito estilo impresso em 3D.",
-    imagem:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShUpIIvldF_e2CicERkNYox_nbvwKSvsa9mN47sEu4WwzF5QnBTPP2tQY&s=10",
-  },
-  {
-    id: "faca-voce-mesmo",
-    nome: "Faça Você Mesmo",
-    tagline: "Crie, personalize, seja o autor.",
-    descricao:
-      "Peças com upload personalizado, moldes e kits para você montar e customizar. Seu projeto, o seu jeito.",
+      "Quer turbinar sua coleção ou garantir o cenário perfeito? Aqui você encontra pacotes especiais com vários itens impressos em 3D selecionados a dedo para você.",
     imagem:
       "https://img.magnific.com/fotos-gratis/uma-porta-que-se-estende-para-o-mundo-da-fantasia_23-2151661315.jpg?semt=ais_hybrid&w=740&q=80",
+  },
+  {
+    id: "dinossauros",
+    nome: "Dinossauros",
+    tagline: "A era dos gigantes na sua estante.",
+    descricao:
+      "Figuras, miniaturas e decorações dos dinossauros, impressas em 3D com detalhes que fazem qualquer um voltar à infância.",
+    imagem: "https://www.ufsm.br/app/uploads/2026/03/arte.jpg",
   },
 ]
 
 export const produtos = [
-  // ─────────────────────────── SENSORIAIS ───────────────────────────
+  // ─────────────────────────── BRINQ. SENSORIAL ───────────────────────────
   {
     id: 1,
     nome: "Porta-retrato Coração de Papel",
-    genero: "sensoriais",
+    genero: "brinq-sensorial",
     tipo: "decoracao",
     preco: 29.9,
     estoque: 12,
@@ -64,7 +63,7 @@ export const produtos = [
   {
     id: 2,
     nome: "Marca-páginas Beijo de Pétalas",
-    genero: "sensoriais",
+    genero: "brinq-sensorial",
     tipo: "decoracao",
     preco: 19.9,
     estoque: 25,
@@ -77,7 +76,7 @@ export const produtos = [
   {
     id: 3,
     nome: "Suporte de Livros Dois Amantes",
-    genero: "sensoriais",
+    genero: "brinq-sensorial",
     tipo: "decoracao",
     preco: 59.9,
     estoque: 8,
@@ -90,7 +89,7 @@ export const produtos = [
   {
     id: 4,
     nome: "Chaveiro Poema de Amor",
-    genero: "sensoriais",
+    genero: "brinq-sensorial",
     tipo: "decoracao",
     preco: 24.9,
     estoque: 18,
@@ -103,7 +102,7 @@ export const produtos = [
   {
     id: 5,
     nome: "Colecionável Casal de Capa",
-    genero: "sensoriais",
+    genero: "brinq-sensorial",
     tipo: "colecionavel",
     preco: 89.9,
     estoque: 5,
@@ -116,7 +115,7 @@ export const produtos = [
   {
     id: 6,
     nome: "Colecionável Herói do Livro",
-    genero: "sensoriais",
+    genero: "brinq-sensorial",
     tipo: "colecionavel",
     preco: 79.9,
     estoque: 6,
@@ -127,11 +126,11 @@ export const produtos = [
       "https://makerworld.bblmw.com/makerworld/model/DSM00000001280560/design/2025-04-03_9216a2734aba5.jpg?x-oss-process=image/resize,w_1000/format,webp",
   },
 
-  // ─────────────────────────── ARTICULADOS ───────────────────────────
+  // ─────────────────────────── LIVRO ───────────────────────────
   {
     id: 7,
     nome: "Marca-páginas Porta dos Mundos",
-    genero: "articulados",
+    genero: "livro",
     tipo: "decoracao",
     preco: 19.9,
     estoque: 20,
@@ -144,7 +143,7 @@ export const produtos = [
   {
     id: 8,
     nome: "Suporte Dragão Guardião",
-    genero: "articulados",
+    genero: "livro",
     tipo: "decoracao",
     preco: 69.9,
     estoque: 7,
@@ -157,7 +156,7 @@ export const produtos = [
   {
     id: 9,
     nome: "Luminária Castelo Encantado",
-    genero: "articulados",
+    genero: "livro",
     tipo: "decoracao",
     preco: 89.9,
     estoque: 4,
@@ -170,7 +169,7 @@ export const produtos = [
   {
     id: 10,
     nome: "Chaveiro Varinha Mágica",
-    genero: "articulados",
+    genero: "livro",
     tipo: "decoracao",
     preco: 27.9,
     estoque: 15,
@@ -183,7 +182,7 @@ export const produtos = [
   {
     id: 11,
     nome: "Colecionável Dragão dos Ventos",
-    genero: "articulados",
+    genero: "livro",
     tipo: "colecionavel",
     preco: 129.9,
     estoque: 3,
@@ -196,7 +195,7 @@ export const produtos = [
   {
     id: 12,
     nome: "Colecionável Elfa das Estrelas",
-    genero: "articulados",
+    genero: "livro",
     tipo: "colecionavel",
     preco: 109.9,
     estoque: 4,
@@ -207,11 +206,11 @@ export const produtos = [
       "https://makerworld.bblmw.com/makerworld/model/USea5cf9cb2d0057/design/2025-01-23_9d59945f3212d8.jpg?x-oss-process=image/resize,w_1000/format,webp",
   },
 
-  // ─────────────────────────── PERSONAGENS ───────────────────────────
+  // ─────────────────────────── COLECIONÁVEIS ───────────────────────────
   {
     id: 13,
     nome: "Marca-páginas Olho do Detetive",
-    genero: "personagens",
+    genero: "colecionaveis",
     tipo: "decoracao",
     preco: 21.9,
     estoque: 22,
@@ -224,7 +223,7 @@ export const produtos = [
   {
     id: 14,
     nome: "Suporte Cofre Mistério",
-    genero: "personagens",
+    genero: "colecionaveis",
     tipo: "decoracao",
     preco: 74.9,
     estoque: 6,
@@ -237,7 +236,7 @@ export const produtos = [
   {
     id: 15,
     nome: "Luminária Lua de Crime",
-    genero: "personagens",
+    genero: "colecionaveis",
     tipo: "decoracao",
     preco: 94.9,
     estoque: 4,
@@ -250,7 +249,7 @@ export const produtos = [
   {
     id: 16,
     nome: "Chaveiro Pegada Escura",
-    genero: "personagens",
+    genero: "colecionaveis",
     tipo: "decoracao",
     preco: 26.9,
     estoque: 14,
@@ -263,7 +262,7 @@ export const produtos = [
   {
     id: 17,
     nome: "Colecionável Detetive Noir",
-    genero: "personagens",
+    genero: "colecionaveis",
     tipo: "colecionavel",
     preco: 139.9,
     estoque: 3,
@@ -276,7 +275,7 @@ export const produtos = [
   {
     id: 18,
     nome: "Colecionável Sombra da Meia-Noite",
-    genero: "personagens",
+    genero: "colecionaveis",
     tipo: "colecionavel",
     preco: 119.9,
     estoque: 4,

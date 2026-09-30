@@ -10,6 +10,13 @@ const env = cleanEnv(process.env, {
   DB_USER: str({ default: 'postgres' }),
   DB_PASSWORD: str({ default: 'postgres' }),
   DB_NAME: str({ default: 'lume' }),
+  // Conexão: TLS para banco gerenciado + timeouts para não segurar worker.
+  DB_SSL: bool({ default: false }),
+  DB_SSL_REJECT_UNAUTHORIZED: bool({ default: true }),
+  DB_POOL_MAX: num({ default: 10 }),
+  DB_CONN_TIMEOUT_MS: num({ default: 10_000 }),
+  DB_IDLE_TIMEOUT_MS: num({ default: 30_000 }),
+  DB_STATEMENT_TIMEOUT_MS: num({ default: 30_000 }),
   PORT: port({ default: 4000 }),
   CLIENTE_ORIGEM: str({ default: 'http://localhost:5173' }),
   BACKEND_URL: str({ default: 'http://localhost:4000' }),
@@ -20,6 +27,9 @@ const env = cleanEnv(process.env, {
   // Ative quando houver um proxy reverso na frente (nginx/Railway/Render)
   // para o rate limit enxergar o IP real do cliente.
   TRUST_PROXY: bool({ default: false }),
+  // Minutos que um pedido 'pendente' (esperando Mercado Pago) pode ficar sem
+  // pagar antes do job liberar a peça reservada. 0 desliga a expiração.
+  PEDIDO_EXPIRA_MINUTOS: num({ default: 30 }),
   // E-mail transacional via SMTP (verificação de conta).
   // Sem EMAIL_SMTP_PASS o envio é simulado (código só logado no console).
   EMAIL_SMTP_HOST: str({ default: 'smtp.gmail.com' }),
@@ -52,6 +62,20 @@ if (env.NODE_ENV === 'production') {
   if (!env.DB_PASSWORD || env.DB_PASSWORD === 'postgres') {
     problemas.push('DB_PASSWORD vazia ou padrão ("postgres") — use a senha forte do provedor do banco')
   }
+  // Com o gateway ligado, o webhook é a única coisa que confirma pagamento.
+  // Sem segredo, a assinatura não pode ser validada — o servidor não sobe.
+  if (env.MP_ACCESS_TOKEN && !env.MP_WEBHOOK_SECRET) {
+    problemas.push(
+      'MP_WEBHOOK_SECRET ausente com MP_ACCESS_TOKEN preenchido — gere o segredo no painel ' +
+        'do Mercado Pago (Suas integrações > Webhooks > Configurar notificação > revelar chave)'
+    )
+  }
+  if (env.MP_ACCESS_TOKEN && /localhost|127\.0\.0\.1/i.test(env.BACKEND_URL)) {
+    problemas.push(
+      'BACKEND_URL apontando para localhost com pagamento ativo — o Mercado Pago não alcança ' +
+        'esse webhook; use a URL pública (https://seu-dominio.com)'
+    )
+  }
 
   if (problemas.length > 0) {
     console.error('\n❌ O servidor RECUSOU iniciar: configuração de produção inválida.')
@@ -62,7 +86,10 @@ if (env.NODE_ENV === 'production') {
 
   // Avisos: o servidor sobe, mas o comportamento fica limitado.
   if (!env.EMAIL_SMTP_USER || !env.EMAIL_SMTP_PASS) {
-    console.warn('⚠️  SMTP não configurado: e-mails de verificação ficam SIMULADOS (código só no log).')
+    console.warn(
+      '⚠️  SMTP não configurado: e-mails de verificação ficam SIMULADOS e o código NÃO é ' +
+        'logado em produção. Sem SMTP ninguém consegue verificar conta nem recuperar senha.'
+    )
   }
   if (!env.MP_ACCESS_TOKEN) {
     console.warn('⚠️  MP_ACCESS_TOKEN vazio: pagamento segue SIMULADO (nenhum valor é cobrado).')

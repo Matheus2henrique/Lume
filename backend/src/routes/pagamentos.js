@@ -1,8 +1,15 @@
 import { Router } from 'express'
 import pool from '../db.js'
-import { gatewayConfigurado, criarPreferencia, obterPagamento, validarAssinaturaWebhook } from '../services/mercadoPago.js'
+import {
+  gatewayConfigurado,
+  criarPreferencia,
+  obterPagamento,
+  obterPreferencia,
+  validarAssinaturaWebhook,
+} from '../services/mercadoPago.js'
 import { autenticar, validarCheckoutToken } from '../middleware/auth.js'
-import { limiterPagamento } from '../middleware/rateLimiter.js'
+import { somarPorProduto, travarProdutos, conferir, aplicar, devolverEstoque } from '../services/estoque.js'
+import { limiterPagamento, limiterWebhook } from '../middleware/rateLimiter.js'
 import logger from '../logger.js'
 
 const router = Router()
@@ -33,7 +40,7 @@ router.post('/preferencia', autenticar, limiterPagamento, async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      'SELECT id, usuario_id, total, status FROM pedidos WHERE id = $1',
+      'SELECT id, usuario_id, total, status, pagamento FROM pedidos WHERE id = $1',
       [pedidoId]
     )
     if (rows.length === 0) {
@@ -62,22 +69,53 @@ router.post('/preferencia', autenticar, limiterPagamento, async (req, res) => {
     // O valor cobrado vem SEMPRE do banco — nunca do corpo da requisição.
     const total = Number(pedido.total)
 
-    const preferencia = await criarPreferencia({ pedidoId: pedido.id, total, titulo, cliente })
-    await pool.query(
-      `UPDATE pedidos
-       SET pagamento = jsonb_set(COALESCE(pagamento, '{}'::jsonb), '{preferencia_id}', to_jsonb($1::text))
-       WHERE id = $2`,
-      [String(preferencia.id), pedido.id]
-    )
-    logger.info({ pedidoId: pedido.id, userId: req.usuario?.id ?? null }, 'Preferência de pagamento criada')
+    // Idempotência da cobrança: cada chamada ao MP cria uma preferência nova
+    // (e um link de pagamento a mais). Se já existe uma para este pedido,
+    // reutiliza o init_point — só cria outra se o MP não a devolver.
+    let preferencia = null
+    const preferenciaAnterior = pedido.pagamento?.preferencia_id
+    if (preferenciaAnterior) {
+      try {
+        const anterior = await obterPreferencia(preferenciaAnterior)
+        if (anterior?.init_point && String(anterior.external_reference) === String(pedido.id)) {
+          preferencia = anterior
+          logger.info(
+            { pedidoId: pedido.id, preferenciaId: anterior.id },
+            'Preferência de pagamento reutilizada'
+          )
+        }
+      } catch (err) {
+        logger.warn(
+          { err: err.message, pedidoId: pedido.id, preferenciaId: preferenciaAnterior },
+          'Preferência anterior indisponível — criando uma nova'
+        )
+      }
+    }
+
+    if (!preferencia) {
+      preferencia = await criarPreferencia({ pedidoId: pedido.id, total, titulo, cliente })
+      await pool.query(
+        `UPDATE pedidos
+         SET pagamento = jsonb_set(COALESCE(pagamento, '{}'::jsonb), '{preferencia_id}', to_jsonb($1::text))
+         WHERE id = $2`,
+        [String(preferencia.id), pedido.id]
+      )
+      logger.info({ pedidoId: pedido.id, userId: req.usuario?.id ?? null }, 'Preferência de pagamento criada')
+    }
+
     res.json({ init_point: preferencia.init_point, preferencia_id: preferencia.id })
   } catch (err) {
     logger.error({ err, pedidoId }, 'Erro ao criar preferência de pagamento')
+    if (err?.timeout) {
+      return res.status(504).json({ erro: 'O Mercado Pago não respondeu a tempo. Tente novamente.' })
+    }
     res.status(502).json({ erro: 'Não foi possível iniciar o pagamento no Mercado Pago.' })
   }
 })
 
-router.post('/webhook', async (req, res) => {
+// Limite próprio (o teto global pula esta rota): reenvio do MP não pode
+// virar 429 — mas flood continua bloqueado.
+router.post('/webhook', limiterWebhook, async (req, res) => {
   if (!validarAssinaturaWebhook(req)) {
     return res.status(401).json({ ok: false, erro: 'Assinatura inválida.' })
   }
@@ -94,7 +132,14 @@ router.post('/webhook', async (req, res) => {
     pagamento = await obterPagamento(data.id)
   } catch (err) {
     logger.error({ err, paymentId: data.id }, 'Erro ao consultar pagamento no MP')
-    return res.status(502).json({ ok: false, erro: 'Não foi possível consultar o pagamento.' })
+    // 504 em timeout: o MP trata 5xx como falha e reenvia a notificação.
+    const status = err?.timeout ? 504 : 502
+    return res.status(status).json({
+      ok: false,
+      erro: err?.timeout
+        ? 'Tempo esgotado ao consultar o Mercado Pago.'
+        : 'Não foi possível consultar o pagamento.',
+    })
   }
 
   const pedidoId = Number(pagamento.external_reference)
@@ -138,49 +183,30 @@ router.post('/webhook', async (req, res) => {
         return res.status(200).json({ ok: true, alerta: 'valor divergente — revisão manual' })
       }
 
-      // Baixa de estoque com lock de linha; sinaliza quando faltar peça
-      // (o pagamento já ocorreu — não dá para recusar, só avisar).
-      const itens = Array.isArray(pedido.itens) ? pedido.itens : []
-      const baixa = new Map()
-      for (const item of itens) {
-        if (!item?.produtoId) continue
-        baixa.set(item.produtoId, (baixa.get(item.produtoId) || 0) + Number(item.quantidade || 0))
-      }
-      const ids = [...baixa.keys()].sort((a, b) => a - b)
+      // Reserva: o pedido novo já baixou o estoque na criação — aqui só
+      // baixamos pedido legado (criado antes da reserva). O lock de linha
+      // garante consistência; se faltar peça, o pagamento já ocorreu e não
+      // dá para recusar: só avisar (alerta_estoque).
+      const jaReservado = pedido.estoque_reservado === true
+      const mapa = somarPorProduto(pedido.itens)
       let alertaEstoque = false
 
-      if (ids.length > 0) {
-        const { rows: produtos } = await client.query(
-          'SELECT id, nome, estoque FROM produtos WHERE id = ANY($1) ORDER BY id FOR UPDATE',
-          [ids]
-        )
-        const porId = new Map(produtos.map((p) => [p.id, p]))
-        const idsBaixa = []
-        const quantidadesBaixa = []
-
-        for (const id of ids) {
-          const produto = porId.get(id)
-          const quantidade = baixa.get(id)
-          if (!produto || produto.estoque < quantidade) {
-            alertaEstoque = true
+      if (!jaReservado && mapa.size > 0) {
+        const produtos = await travarProdutos(client, mapa)
+        const faltando = conferir(produtos, mapa)
+        if (faltando.length > 0) {
+          alertaEstoque = true
+          for (const p of faltando) {
             logger.error(
-              { pedidoId, produtoId: id, disponivel: produto?.estoque ?? 0, pedido: quantidade },
+              { pedidoId, produtoId: p.produtoId, disponivel: p.disponivel, pedido: p.pedido },
               'Estoque insuficiente na aprovação do pedido'
             )
-            continue
           }
-          idsBaixa.push(id)
-          quantidadesBaixa.push(quantidade)
+          // Baixa só o que couber (o pedido já está pago).
         }
-
-        if (idsBaixa.length > 0) {
-          await client.query(
-            `UPDATE produtos SET estoque = estoque - v.qtd
-             FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qtd) AS v
-             WHERE produtos.id = v.id`,
-            [idsBaixa, quantidadesBaixa]
-          )
-        }
+        const paraBaixar = new Map(mapa)
+        for (const p of faltando) paraBaixar.delete(p.produtoId)
+        await aplicar(client, paraBaixar, false)
       }
 
       const novoPagamento = {
@@ -193,14 +219,35 @@ router.post('/webhook', async (req, res) => {
       }
 
       await client.query(
-        `UPDATE pedidos SET status = 'pago', pagamento = $1::jsonb WHERE id = $2`,
+        `UPDATE pedidos SET status = 'pago', estoque_reservado = TRUE, pagamento = $1::jsonb WHERE id = $2`,
         [JSON.stringify(novoPagamento), pedidoId]
       )
-      logger.info({ pedidoId, paymentId: pagamento.id, alertaEstoque }, 'Pagamento aprovado e estoque baixado')
+      logger.info(
+        { pedidoId, paymentId: pagamento.id, alertaEstoque, jaReservado },
+        jaReservado ? 'Pagamento aprovado (estoque já reservado)' : 'Pagamento aprovado e estoque baixado'
+      )
     } else if (STATUS_FALHA.has(pagamento.status)) {
       // Cancela apenas em recusa definitiva.
-      await client.query(`UPDATE pedidos SET status = 'cancelado' WHERE id = $1`, [pedidoId])
-      logger.info({ pedidoId, statusMP: pagamento.status }, 'Pagamento recusado — pedido cancelado')
+      // A devolução da peça é condicionada a estoque_reservado: a flag vira
+      // FALSE ANTES do estoque subir, então uma notificação repetida do MP
+      // nunca devolve a mesma peça duas vezes.
+      const { rows: liberados } = await client.query(
+        `UPDATE pedidos SET estoque_reservado = FALSE
+          WHERE id = $1 AND estoque_reservado = TRUE
+          RETURNING itens`,
+        [pedidoId]
+      )
+      if (liberados[0]) {
+        await devolverEstoque(client, liberados[0].itens)
+      }
+      await client.query(
+        `UPDATE pedidos SET status = 'cancelado' WHERE id = $1 AND status <> 'cancelado'`,
+        [pedidoId]
+      )
+      logger.info(
+        { pedidoId, statusMP: pagamento.status, estoqueDevolvido: liberados.length > 0 },
+        'Pagamento recusado — pedido cancelado'
+      )
     } else {
       logger.info(
         { pedidoId, statusMP: pagamento.status },

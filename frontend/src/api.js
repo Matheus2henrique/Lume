@@ -114,5 +114,8 @@ export const api = {
   },
   criarPreferencia: (dados) => requisicao('/pagamentos/preferencia', { metodo: 'POST', corpo: dados, autenticado: true }),
   statusPagamento: () => requisicao('/pagamentos/status'),
-  newsletter: (email) => requisicao('/newsletter', { metodo: 'POST', corpo: { email } }),
+  newsletter: (email, aceite) =>
+    requisicao('/newsletter', { metodo: 'POST', corpo: { email, aceite } }),
+  excluirDados: (confirmacao) =>
+    requisicao('/auth/dados', { metodo: 'DELETE', corpo: { confirmacao }, autenticado: true }),
 }
