@@ -25,7 +25,7 @@ export const produtos = [
   },
   {
     nome: "Suporte de Livros Dois Amantes",
-    genero: "brinq-sensorial",
+    genero: "livro",
     tipo: "decoracao",
     preco: 59.9,
     estoque: 8,
@@ -37,7 +37,7 @@ export const produtos = [
   },
   {
     nome: "Chaveiro Poema de Amor",
-    genero: "brinq-sensorial",
+    genero: "articulados",
     tipo: "decoracao",
     preco: 24.9,
     estoque: 18,
@@ -45,7 +45,7 @@ export const produtos = [
     descricao:
       "Um chaveiro com o poema que você escolher, para carregar um pedacinho da sua história por onde for.\n\nPersonalize com o nome do casal ou um verso especial.",
     imagem:
-      "https://makerworld.bblmw.com/makerworld/model/USa0ef00e36555bb/design/df2d4b0e0fc182e3.png?x-oss-process=image/resize,w_1000/format,webp",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDNYdP_Is-SgSd7r9mdDE9CFx-Z5XHjMDNxjy4171zrA&s=10",
   },
   {
     nome: "Colecionável Casal de Capa",
@@ -61,7 +61,7 @@ export const produtos = [
   },
   {
     nome: "Colecionável Herói do Livro",
-    genero: "brinq-sensorial",
+    genero: "livro",
     tipo: "colecionavel",
     preco: 79.9,
     estoque: 6,
@@ -85,7 +85,7 @@ export const produtos = [
   },
   {
     nome: "Suporte Dragão Guardião",
-    genero: "livro",
+    genero: "dinossauros",
     tipo: "decoracao",
     preco: 69.9,
     estoque: 7,
@@ -97,7 +97,7 @@ export const produtos = [
   },
   {
     nome: "Luminária Castelo Encantado",
-    genero: "livro",
+    genero: "dinossauros",
     tipo: "decoracao",
     preco: 89.9,
     estoque: 4,
@@ -109,7 +109,7 @@ export const produtos = [
   },
   {
     nome: "Chaveiro Varinha Mágica",
-    genero: "livro",
+    genero: "pacotes",
     tipo: "decoracao",
     preco: 27.9,
     estoque: 15,
@@ -121,7 +121,7 @@ export const produtos = [
   },
   {
     nome: "Colecionável Dragão dos Ventos",
-    genero: "livro",
+    genero: "articulados",
     tipo: "colecionavel",
     preco: 129.9,
     estoque: 3,
@@ -129,11 +129,11 @@ export const produtos = [
     descricao:
       "Dragão colecionável com asas abertas em pleno voo. Montado à mão, peça por peça, para impressionar qualquer colecionador.\n\nEdição especial impressa sob demanda.",
     imagem:
-      "https://makerworld.bblmw.com/makerworld/model/US325acace30dc32/design/30c308e35c4d8001.jpg?x-oss-process=image/resize,w_1000/format,webp",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDNYdP_Is-SgSd7r9mdDE9CFx-Z5XHjMDNxjy4171zrA&s=10",
   },
   {
     nome: "Colecionável Elfa das Estrelas",
-    genero: "livro",
+    genero: "dinossauros",
     tipo: "colecionavel",
     preco: 109.9,
     estoque: 4,
@@ -169,7 +169,7 @@ export const produtos = [
   },
   {
     nome: "Luminária Lua de Crime",
-    genero: "colecionaveis",
+    genero: "pacotes",
     tipo: "decoracao",
     preco: 94.9,
     estoque: 4,
@@ -181,7 +181,7 @@ export const produtos = [
   },
   {
     nome: "Chaveiro Pegada Escura",
-    genero: "colecionaveis",
+    genero: "articulados",
     tipo: "decoracao",
     preco: 26.9,
     estoque: 14,
@@ -189,7 +189,7 @@ export const produtos = [
     descricao:
       "Um chaveiro com a pegada que ninguém conseguiu explicar. Leve a investigação com você.\n\nPersonalize com o número do seu caso ou uma sigla.",
     imagem:
-      "https://makerworld.bblmw.com/makerworld/model/US945c1d3206b829/design/2025-10-06_57df5fe2299b1.png?x-oss-process=image/resize,w_1000/format,webp",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDNYdP_Is-SgSd7r9mdDE9CFx-Z5XHjMDNxjy4171zrA&s=10",
   },
   {
     nome: "Colecionável Detetive Noir",
@@ -205,7 +205,7 @@ export const produtos = [
   },
   {
     nome: "Colecionável Sombra da Meia-Noite",
-    genero: "colecionaveis",
+    genero: "pacotes",
     tipo: "colecionavel",
     preco: 119.9,
     estoque: 4,

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../../api'
 import { formatarMoeda } from '../../utils/formatar'
+import { hexDaCor, textoOpcoes } from '../../utils/opcoesProduto'
 
 const ROTULO_STATUS = {
   novo: { texto: 'Recebido', cor: 'var(--cor-primaria)' },
@@ -166,6 +167,17 @@ function PedidoStatus({ pedidoId, onVoltar, onEntrar }) {
                     <div className="flex justify-between gap-3">
                       <span>
                         {item.nome} <span style={{ color: 'var(--cor-texto-suave)' }}>× {item.quantidade}</span>
+                        {(item.tamanho || item.cor) && (
+                          <span className="mt-0.5 flex items-center gap-1.5 text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
+                            {item.cor && (
+                              <span
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                style={{ background: hexDaCor(item.cor), border: '1px solid var(--cor-borda)' }}
+                              />
+                            )}
+                            {textoOpcoes({ tamanho: item.tamanho, cor: item.cor })}
+                          </span>
+                        )}
                       </span>
                       <span className="font-semibold whitespace-nowrap">
                         {formatarMoeda(Number(item.preco) * Number(item.quantidade))}
@@ -181,6 +193,21 @@ function PedidoStatus({ pedidoId, onVoltar, onEntrar }) {
               </ul>
             </div>
 
+            {pedido.frete && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm" style={{ color: 'var(--cor-texto-suave)' }}>
+                  Frete ({pedido.frete.servico}
+                  {pedido.frete.prazoMax > 0
+                    ? ` — ${pedido.frete.prazoMin} a ${pedido.frete.prazoMax} dias`
+                    : ''}
+                  )
+                </span>
+                <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--cor-texto)' }}>
+                  {formatarMoeda(pedido.frete.valor)}
+                </span>
+              </div>
+            )}
+
             <div
               className="flex items-center justify-between rounded-xl px-4 py-3"
               style={{ background: 'var(--cor-fundo-suave)' }}
@@ -193,13 +220,15 @@ function PedidoStatus({ pedidoId, onVoltar, onEntrar }) {
               </span>
             </div>
 
-            {pedido.cliente_endereco && (
+            {(pedido.cliente_endereco || pedido.frete?.cep) && (
               <div>
                 <p className="text-xs mb-1" style={{ color: 'var(--cor-texto-suave)' }}>
                   Entrega
                 </p>
                 <p className="text-sm" style={{ color: 'var(--cor-texto)' }}>
-                  {pedido.cliente_nome} — {pedido.cliente_endereco}
+                  {pedido.cliente_nome}
+                  {pedido.cliente_endereco ? ` — ${pedido.cliente_endereco}` : ''}
+                  {pedido.frete?.cep ? ` — CEP ${pedido.frete.cep.replace(/(\d{5})(\d{3})/, '$1-$2')}` : ''}
                 </p>
               </div>
             )}

@@ -115,6 +115,24 @@ export function montarProdutosCotacao(itens, porId) {
   return products
 }
 
+/**
+ * Encomenda padrão para a simulação pública da home (sem carrinho).
+ * Serve para dar uma ideia do preço de entrega antes da pessoa escolher as
+ * peças — o checkout sempre cotará com os produtos reais. Dimensões iguais
+ * ao fallback de montarProdutosCotacao e valor declarado 0 (sem seguro).
+ */
+export function pacotePadrao() {
+  return {
+    id: '1',
+    width: 20,
+    height: 15,
+    length: 20,
+    weight: 0.3,
+    insurance_value: 0,
+    quantity: 1,
+  }
+}
+
 /** Normaliza a resposta da API para o formato usado pelo frontend. */
 function normalizarOpcoes(resposta) {
   const lista = Array.isArray(resposta) ? resposta : []

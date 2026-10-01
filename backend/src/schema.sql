@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS generos (
   tagline TEXT NOT NULL DEFAULT '',
   descricao TEXT NOT NULL DEFAULT '',
   imagem TEXT NOT NULL DEFAULT '',
+  ordem INTEGER,
   criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -65,6 +66,17 @@ CREATE INDEX IF NOT EXISTS idx_pedidos_usuario ON pedidos (usuario_id);
 CREATE INDEX IF NOT EXISTS idx_pedidos_cliente ON pedidos (cliente_id);
 CREATE INDEX IF NOT EXISTS idx_favoritos_produto ON favoritos (produto_id);
 CREATE INDEX IF NOT EXISTS idx_produtos_genero ON produtos (genero);
+
+-- Migração: ordem de exibição dos nichos na loja (NULL = sem posição definida,
+-- cai no fim da lista ordenando por nome). Ver seed-generos.js.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'generos' AND column_name = 'ordem'
+  ) THEN
+    ALTER TABLE generos ADD COLUMN ordem INTEGER;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS newsletter (
   id SERIAL PRIMARY KEY,
@@ -279,7 +291,11 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns WHERE table_name = 'clientes' AND column_name = 'cep'
   ) THEN
-    ALTER TABLE clientes ADD COLUMN cep TEXT NOT NULL DEFAULT '';
+    ALTER TABLE clientes ADD COLUMN cep    TEXT NOT NULL DEFAULT '';
+    ALTER TABLE clientes ADD COLUMN numero TEXT NOT NULL DEFAULT '';
+    ALTER TABLE clientes ADD COLUMN bairro TEXT NOT NULL DEFAULT '';
+    ALTER TABLE clientes ADD COLUMN cidade TEXT NOT NULL DEFAULT '';
+    ALTER TABLE clientes ADD COLUMN uf     TEXT NOT NULL DEFAULT '';
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns WHERE table_name = 'pedidos' AND column_name = 'frete'

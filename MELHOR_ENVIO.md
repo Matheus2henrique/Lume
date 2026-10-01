@@ -127,7 +127,7 @@ POST /api/v2/me/shipment/calculate
                       │ POST /api/frete/calcular
 ┌─────────────────────▼───── BACKEND ─────────────┐
 │ routes/frete.js (novo)                          │
-│  - valida CEP, logado, carrinho                 │
+│  - valida CEP (e os itens, se vierem)                 │
 │  - monta products[] somando qtd dos itens       │
 │  - chama services/melhorEnvio.js                │
 │    └─ POST melhorenvio.com.br/api/v2/me/        │
@@ -196,14 +196,18 @@ Responsabilidades:
 ### 6.4 `backend/src/routes/frete.js` (NOVO)
 
 ```
-POST /api/frete/calcular   (autenticar — como o checkout)
-  body: { cep, itens: [{ produtoId, quantidade }] }
+GET  /api/frete/status     (público) → { ativo }
+
+POST /api/frete/calcular   (público + limiterFrete — serve o simulador da home
+                            e o carrinho; a cotação não expõe segredo, só preço/prazo)
+  body: { cep, itens?: [{ produtoId, quantidade }] }
   1. valida CEP: /^\d{8}$/ (aceita "00000-000" e normaliza)
-  2. valida itens (mesma regra de pedidos.js: produtoId inteiro, qtd 1..999)
-  3. SELECT produtos WHERE id = ANY(...)
-  4. monta products[] e chama o service
-  5. devolve { opcoes: [...], moeda: 'BRL' }
-  6. se ME_TOKEN vazio → 200 { opcoes: [], desativado: true }
+  2. SEM `itens` → cota a encomenda padrão (simulação pública, sem consultar o banco)
+     COM `itens` → valida (mesma regra de pedidos.js: produtoId inteiro, qtd 1..999),
+     SELECT produtos WHERE id = ANY(...) e monta products[]
+  3. chama o service (ME_CEP_ORIGEM só é lido aqui — nunca sai na resposta)
+  4. devolve { ativo: true, cep, pacote: 'carrinho'|'padrao', opcoes: [...] }
+  5. se ME_TOKEN vazio → 200 { ativo: false, cep: null, pacote: null, opcoes: [] }
      (frontend esconde a seção de frete e segue sem frete — como faz hoje)
 ```
 
@@ -230,7 +234,7 @@ Registrar no `server.js`: `app.use('/api/frete', freteRouter)` (junto dos outros
 ### 6.7 `frontend/src/api.js` (ALTERADO)
 
 ```js
-calcularFrete: (dados) => requisicao('/frete/calcular', { metodo: 'POST', corpo: dados, autenticado: true }),
+calcularFrete: (dados) => requisicao('/frete/calcular', { metodo: 'POST', corpo: dados }),
 ```
 
 ### 6.8 `frontend/src/components/pages/Carrinho.jsx` (ALTERADO — etapa `dados`)
@@ -266,6 +270,21 @@ Novo bloco entre "Endereço" e "Pagamento":
 
 - Exibir bloco "Entrega": endereço completo + `frete.servico`, `frete.valor`, prazo.
 - No Admin: mostrar frete por pedido (entra no cálculo de margem).
+
+### 6.10 `frontend/src/components/sections/SimuladorFrete.jsx` (NOVO — simulador da home)
+
+- Seção logo abaixo de "Destaques da loja" (`Entrada.jsx`), com o título
+  **"Simule o valor do frete"**.
+- Formulário: CEP* (máscara), Número, Endereço, Bairro, Cidade, UF. O ViaCEP
+  preenche rua/bairro/cidade/UF ao completar o CEP; **só o CEP vai ao backend** —
+  o CEP da loja (`ME_CEP_ORIGEM`) nunca é exibido.
+- Chama `POST /api/frete/calcular` (público): manda os `itens` do `localStorage`
+  quando há carrinho (estimativa mais justa) ou nenhum `itens` (encomenda padrão);
+  se um produto saiu da loja, refaz a chamada sem `itens`.
+- Resultado: "A partir de R$ …", lista das transportadoras com prazo (a mais barata
+  em destaque) e nota do que foi simulado.
+- Sem token configurado a mesma rota responde `ativo: false` e a seção mostra
+  "cálculo indisponível" — a home continua íntegra.
 
 ---
 

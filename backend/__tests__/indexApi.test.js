@@ -64,7 +64,15 @@ describe('Índice da API (GET / e /api/rotas)', () => {
     expect(achar(res.body, 'POST', '/api/auth/login').limite).toBe('limiterLogin, limiterConta')
     expect(achar(res.body, 'POST', '/api/pagamentos/webhook').limite).toBe('limiterWebhook')
     expect(achar(res.body, 'POST', '/api/pagamentos/preferencia').limite).toBe('limiterPagamento')
+    expect(achar(res.body, 'POST', '/api/frete/calcular').limite).toBe('limiterFrete')
     expect(achar(res.body, 'POST', '/api/newsletter').limite).toBeNull()
+  })
+
+  it('conhece as rotas do Melhor Envio', async () => {
+    const res = await request(app).get('/api/rotas')
+    expect(achar(res.body, 'GET', '/api/frete/status').acesso).toBe('público')
+    // Público de propósito: o simulador da home cota sem login.
+    expect(achar(res.body, 'POST', '/api/frete/calcular').acesso).toBe('público')
   })
 
   it('agrupa por método na ordem GET, POST, PUT, PATCH, DELETE', async () => {

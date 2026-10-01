@@ -14,7 +14,7 @@ import ProdutoFormModal from './components/ui/ProdutoFormModal'
 import { generos as generosPadrao, produtos as produtosPadrao } from './data/produtos'
 import { api, obterToken, obterUsuario } from './api'
 import { normalizarProduto } from './utils/formatar'
-import { carregarCarrinho, salvarCarrinho } from './utils/carrinho'
+import { carregarCarrinho, salvarCarrinho, chaveItem, normalizarOpcoes } from './utils/carrinho'
 
 const BASE = '/Lume'
 
@@ -214,6 +214,11 @@ function App() {
         permite_upload: dados.permiteUpload ?? dados.permite_upload,
         descricao: dados.descricao,
         imagem: dados.imagem || dados.imagemUrl?.trim() || '',
+        // Dimensões usadas pelo Melhor Envio na cotação do frete.
+        peso: dados.peso ?? null,
+        altura: dados.altura ?? null,
+        largura: dados.largura ?? null,
+        comprimento: dados.comprimento ?? null,
       }
       if (dados.id) {
         const atualizado = await api.produtos.atualizar(dados.id, corpo)
@@ -270,17 +275,22 @@ function App() {
     }
   }
 
-  function handleAdicionarAoCarrinho(produto, quantidade = 1, personalizacao = null) {
+  // `opcoes` = { cor, tamanho } escolhidos na página do produto. Cada
+  // combinação é uma linha própria do carrinho (camisa M preta ≠ camisa G preta).
+  function handleAdicionarAoCarrinho(produto, quantidade = 1, personalizacao = null, opcoes = null) {
+    const variacao = normalizarOpcoes(opcoes)
+    const chave = chaveItem({ produto, opcoes: variacao })
+
     setCarrinho((atual) => {
       // Teto do estoque: nem somando no carrinho dá para passar do disponível.
       const estoque = Number(produto?.estoque)
       const limite = Number.isFinite(estoque) && estoque >= 0 ? estoque : Infinity
       if (limite <= 0) return atual
 
-      const existente = atual.find((item) => item.produto.id === produto.id)
+      const existente = atual.find((item) => chaveItem(item) === chave)
       if (existente) {
         return atual.map((item) =>
-          item.produto.id === produto.id
+          chaveItem(item) === chave
             ? {
                 ...item,
                 quantidade: Math.min(item.quantidade + quantidade, limite),
@@ -292,27 +302,27 @@ function App() {
       }
       return [
         ...atual,
-        { produto, quantidade: Math.min(quantidade, limite), personalizacao: personalizacao ?? null },
+        { produto, quantidade: Math.min(quantidade, limite), personalizacao: personalizacao ?? null, opcoes: variacao },
       ]
     })
     setMostrarCarrinho(true)
   }
 
-  function handleRemoverDoCarrinho(id) {
-    setCarrinho((atual) => atual.filter((item) => item.produto.id !== id))
+  function handleRemoverDoCarrinho(chave) {
+    setCarrinho((atual) => atual.filter((item) => chaveItem(item) !== chave))
   }
 
-  function handleRemoverPersonalizacao(id) {
+  function handleRemoverPersonalizacao(chave) {
     setCarrinho((atual) =>
-      atual.map((item) => (item.produto.id === id ? { ...item, personalizacao: null } : item))
+      atual.map((item) => (chaveItem(item) === chave ? { ...item, personalizacao: null } : item))
     )
   }
 
-  function handleAlterarQuantidade(id, delta) {
+  function handleAlterarQuantidade(chave, delta) {
     setCarrinho((atual) =>
       atual
         .map((item) => {
-          if (item.produto.id !== id) return item
+          if (chaveItem(item) !== chave) return item
           const estoque = Number(item.produto.estoque)
           const limite = Number.isFinite(estoque) && estoque >= 0 ? estoque : Infinity
           return {
@@ -366,6 +376,7 @@ function App() {
       <Header
         generoId={generoId}
         onSelecionarGenero={handleSelecionarGenero}
+        onSelecionarProduto={handleSelecionarProduto}
         onHome={handleVoltarHome}
         onMostrarPerfil={handleMostrarPerfil}
         totalCarrinho={totalCarrinho}
@@ -373,6 +384,7 @@ function App() {
         totalFavoritos={favoritos.length}
         onMostrarFavoritos={handleMostrarFavoritos}
         nichos={nichos}
+        produtos={produtos}
       />
 
       {sucesso && (
@@ -418,13 +430,14 @@ function App() {
         <Privacidade onVoltar={handleVoltarHome} />
       ) : pagina === 'detalhe' && produtoSelecionado ? (
         <ProdutoDetalhe
+          key={produtoSelecionado.id}
           produto={produtoSelecionado}
           produtos={produtos}
           nichos={nichos}
           onVoltar={voltarParaGenero}
           onSelecionar={handleSelecionarProduto}
           onAdicionarAoCarrinho={handleAdicionarAoCarrinho}
-          noCarrinho={carrinho.some((item) => item.produto.id === produtoSelecionado.id)}
+          chavesNoCarrinho={carrinho.map((item) => chaveItem(item))}
           favoritos={favoritos}
           onToggleFavorito={toggleFavorito}
           admin={admin}

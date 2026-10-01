@@ -1,40 +1,162 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { api, sessaoValida } from '../../api'
-import { formatarMoeda } from '../../utils/formatar'
+import CabecalhoDrawer from './carrinho/CabecalhoDrawer'
+import EtapaPagando from './carrinho/EtapaPagando'
+import EtapaSucesso from './carrinho/EtapaSucesso'
+import CarrinhoVazio from './carrinho/CarrinhoVazio'
+import EtapaDados from './carrinho/EtapaDados'
+import EtapaItens from './carrinho/EtapaItens'
 
-const estiloInput = {
-  borderColor: 'var(--cor-borda)',
-  color: 'var(--cor-texto)',
-  background: 'var(--cor-fundo-cartao)',
+/** "01310100" → "01310-100" (máscara enquanto digita). */
+function mascararCep(valor) {
+  const digitos = String(valor).replace(/\D/g, '').slice(0, 8)
+  return digitos.length > 5 ? `${digitos.slice(0, 5)}-${digitos.slice(5)}` : digitos
 }
 
 function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, onEntrar, onVerPedido, onRemoverPersonalizacao }) {
   const [etapa, setEtapa] = useState('itens') // itens | dados | pagando | sucesso
-  const [cliente, setCliente] = useState({ nome: '', email: '', telefone: '', endereco: '' })
+  const [cliente, setCliente] = useState({ nome: '', email: '', telefone: '', endereco: '', bairro: '', cidade: '', uf: '' })
   const [metodo, setMetodo] = useState('cartao')
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [pedido, setPedido] = useState(null)
   const [gateway, setGateway] = useState(false)
 
+  // Frete (Melhor Envio) — tudo fica escondido quando a loja não configurou
+  // o token: o carrinho continua funcionando exatamente como antes.
+  const [freteLigado, setFreteLigado] = useState(false)
+  const [cep, setCep] = useState('')
+  const [opcoes, setOpcoes] = useState([])
+  const [freteEscolhido, setFreteEscolhido] = useState(null)
+  const [carregandoFrete, setCarregandoFrete] = useState(false)
+  const [erroFrete, setErroFrete] = useState('')
+
   useEffect(() => {
     api.statusPagamento()
       .then((r) => setGateway(Boolean(r.gateway)))
       .catch(() => setGateway(false))
+    api.statusFrete()
+      .then((r) => setFreteLigado(Boolean(r.ativo)))
+      .catch(() => setFreteLigado(false))
   }, [])
 
-  const total = itens.reduce((soma, item) => soma + item.produto.preco * item.quantidade, 0)
+  const subtotal = itens.reduce((soma, item) => soma + item.produto.preco * item.quantidade, 0)
   const totalItens = itens.reduce((soma, item) => soma + item.quantidade, 0)
+  const total = subtotal + (freteEscolhido?.valor ?? 0)
 
   // Compra só é permitida com conta logada (sessão existente e não expirada).
   const logado = sessaoValida()
+
+  const digitosCep = cep.replace(/\D/g, '')
+  const cepCompleto = digitosCep.length === 8
+  // Assinatura do carrinho: trocar quantidade/remover item precisa cotar de novo.
+  const assinaturaItens = itens.map((item) => `${item.produto.id}:${item.quantidade}`).join('|')
+
+  const cotarFrete = useCallback(async (digitos, listaItens) => {
+    setCarregandoFrete(true)
+    setErroFrete('')
+    try {
+      const resposta = await api.calcularFrete({
+        cep: digitos,
+        itens: listaItens.map((item) => ({
+          produtoId: item.produto.id,
+          quantidade: item.quantidade,
+        })),
+      })
+      if (!resposta.ativo) {
+        setFreteLigado(false)
+        setOpcoes([])
+        setFreteEscolhido(null)
+        return
+      }
+      const lista = resposta.opcoes || []
+      setOpcoes(lista)
+      // Mantém a escolha atual se ela ainda existe (outra cotação), senão
+      // pega a mais barata — a lista já vem ordenada por preço.
+      setFreteEscolhido((atual) => lista.find((o) => o.servicoId === atual?.servicoId) ?? lista[0] ?? null)
+    } catch (err) {
+      setOpcoes([])
+      setFreteEscolhido(null)
+      setErroFrete(err.message)
+    } finally {
+      setCarregandoFrete(false)
+    }
+  }, [])
+
+  // Cota (com debounce) quando o CEP fica completo e sempre que o carrinho
+  // muda — o total nunca pode mostrar um frete desatualizado. Só na etapa
+  // de dados: trocar quantidade na lista não deve gastar cota à toa.
+  // O zera-seleção acontece dentro do timeout (fora do corpo do efeito).
+  useEffect(() => {
+    if (!freteLigado || !cepCompleto || etapa !== 'dados') return undefined
+    const timer = setTimeout(() => {
+      setFreteEscolhido(null) // evita somar o frete do CEP/carrinho anterior
+      cotarFrete(digitosCep, itens)
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [freteLigado, cepCompleto, digitosCep, assinaturaItens, itens, etapa, cotarFrete])
+
+  // ViaCEP: preenche o endereço quando o CEP fica completo (melhor esforço —
+  // se a consulta falhar, o cliente digita à mão).
+  useEffect(() => {
+    if (!cepCompleto) return
+    let cancelado = false
+    fetch(`https://viacep.com.br/ws/${digitosCep}/json/`)
+      .then((r) => r.json())
+      .then((dados) => {
+        if (cancelado || dados?.erro) return
+        setCliente((atual) => ({
+          ...atual,
+          bairro: dados.bairro || atual.bairro,
+          cidade: dados.localidade || atual.cidade,
+          uf: dados.uf || atual.uf,
+          endereco: atual.endereco.trim()
+            ? atual.endereco
+            : [dados.logradouro, dados.bairro, dados.localidade, dados.uf].filter(Boolean).join(', '),
+        }))
+      })
+      .catch(() => {})
+    return () => {
+      cancelado = true
+    }
+  }, [cepCompleto, digitosCep])
+
+  /** Digitação do CEP: formata e limpa a cotação anterior se ficar incompleta. */
+  function alterarCep(valor) {
+    const formatado = mascararCep(valor)
+    setCep(formatado)
+    if (formatado.replace(/\D/g, '').length !== 8) {
+      setOpcoes([])
+      setFreteEscolhido(null)
+      setErroFrete('')
+    }
+  }
 
   function validarDados() {
     if (!cliente.nome.trim() || !cliente.email.trim()) {
       setErro('Informe nome e e-mail para continuar.')
       return false
     }
+    if (freteLigado) {
+      if (!cepCompleto) {
+        setErro('Informe o CEP com 8 dígitos para calcular o frete.')
+        return false
+      }
+      if (!freteEscolhido) {
+        setErro('Calcule e escolha uma opção de frete para continuar.')
+        return false
+      }
+    }
     return true
+  }
+
+  function voltarAoCarrinho() {
+    setEtapa('itens')
+    setErro('')
+  }
+
+  function irParaDados() {
+    setEtapa('dados')
   }
 
   async function handleFinalizar(e) {
@@ -51,11 +173,19 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, on
       // Nunca enviamos dados de cartão: o pagamento (real) é feito pelo
       // Mercado Pago e o simulado não cobra ninguém.
       const criado = await onFinalizar({
-        cliente,
+        cliente: { ...cliente, cep: digitosCep },
+        // O backend ignora o valor e REVALIDA o frete na API — aqui vai só
+        // a escolha (transportadora + CEP).
+        ...(freteLigado && freteEscolhido
+          ? { frete: { servicoId: freteEscolhido.servicoId, cep: digitosCep } }
+          : {}),
         pagamento: { metodo },
         itens: itens.map((item) => ({
           produtoId: item.produto.id,
           quantidade: item.quantidade,
+          // Variação escolhida na página do produto (cor/tamanho).
+          ...(item.opcoes?.cor ? { cor: item.opcoes.cor } : {}),
+          ...(item.opcoes?.tamanho ? { tamanho: item.opcoes.tamanho } : {}),
           // Personalização (arquivo em base64) vai junto no pedido:
           // é assim que a loja recebe o arquivo do cliente.
           ...(item.personalizacao ? { personalizacao: item.personalizacao } : {}),
@@ -94,387 +224,54 @@ function CarrinhoDrawer({ itens, onFechar, onRemover, onAlterar, onFinalizar, on
         className="absolute right-0 top-0 h-full w-full max-w-[430px] flex flex-col shadow-2xl animate-[slideIn_0.3s_ease-out] carrinho-drawer"
         style={{ background: 'var(--cor-fundo-cartao)' }}
       >
-
-        <div
-          className="flex items-center justify-between px-6 py-5 border-b"
-          style={{ borderColor: 'var(--cor-borda)' }}
-        >
-          <div className="flex items-center gap-3">
-            <span
-              className="w-12 h-12 rounded-full flex items-center justify-center"
-              style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
-            >
-              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                <circle cx="9" cy="21" r="1" fill="currentColor" />
-                <circle cx="20" cy="21" r="1" fill="currentColor" />
-              </svg>
-            </span>
-            <div>
-              <h2 className="text-xl font-[Georgia,serif] leading-tight" style={{ color: 'var(--cor-texto)' }}>
-                {etapa === 'dados' ? 'Finalizar compra' : etapa === 'sucesso' ? 'Pedido confirmado' : etapa === 'pagando' ? 'Pagamento' : 'Seu carrinho'}
-              </h2>
-              <p className="text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
-                {etapa === 'sucesso' ? 'Pagamento aprovado' : etapa === 'pagando' ? 'Mercado Pago' : `${totalItens} ${totalItens === 1 ? 'item' : 'itens'}`}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onFechar}
-            className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer border-none transition-colors"
-            style={{ background: 'var(--cor-fundo-suave)', color: 'var(--cor-texto)' }}
-            aria-label="Fechar carrinho"
-          >
-            ✕
-          </button>
-        </div>
+        <CabecalhoDrawer etapa={etapa} totalItens={totalItens} onFechar={onFechar} />
 
         {etapa === 'pagando' ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
-            <span className="w-20 h-20 rounded-full flex items-center justify-center text-white text-4xl animate-pulse" style={{ background: 'var(--cor-primaria)' }}>
-              🧾
-            </span>
-            <h3 className="text-lg font-semibold" style={{ color: 'var(--cor-texto)' }}>
-              Redirecionando para o Mercado Pago…
-            </h3>
-            <p className="text-sm leading-relaxed" style={{ color: 'var(--cor-texto-suave)' }}>
-              Você será levado ao ambiente seguro do Mercado Pago para concluir o pagamento com Pix, cartão ou boleto.
-            </p>
-            <button
-              onClick={onFechar}
-              className="mt-2 px-6 py-3 rounded-full text-sm font-medium cursor-pointer transition-all duration-300 hover:scale-105 border-none"
-              style={{ background: 'var(--cor-fundo-suave)', color: 'var(--cor-texto)' }}
-            >
-              Fechar
-            </button>
-          </div>
+          <EtapaPagando onFechar={onFechar} />
         ) : etapa === 'sucesso' ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
-            <span
-              className="w-20 h-20 rounded-full flex items-center justify-center text-white text-4xl"
-              style={{ background: 'var(--cor-primaria)' }}
-            >
-              ✓
-            </span>
-            <h3 className="text-lg font-semibold" style={{ color: 'var(--cor-texto)' }}>
-              Pedido #{pedido?.id} confirmado!
-            </h3>
-            <p className="text-sm leading-relaxed" style={{ color: 'var(--cor-texto-suave)' }}>
-              Recebemos seu pedido no valor de{' '}
-              <strong style={{ color: 'var(--cor-primaria)' }}>{formatarMoeda(pedido?.total || 0)}</strong>.
-              <br />
-              Produzimos sob demanda e enviamos para todo o Brasil.
-            </p>
-            <button
-              onClick={() => onVerPedido?.(pedido?.id)}
-              className="mt-2 px-6 py-3 rounded-full text-white text-sm font-medium cursor-pointer transition-transform duration-300 hover:scale-105 border-none"
-              style={{ background: 'var(--cor-primaria)' }}
-            >
-              Ver meu pedido
-            </button>
-            <button
-              onClick={onFechar}
-              className="px-6 py-3 rounded-full text-sm font-medium cursor-pointer transition-transform duration-300 hover:scale-105"
-              style={{ background: 'transparent', color: 'var(--cor-texto)', border: '1px solid var(--cor-borda)' }}
-            >
-              Continuar comprando
-            </button>
-          </div>
+          <EtapaSucesso pedido={pedido} onVerPedido={onVerPedido} onFechar={onFechar} />
         ) : itens.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
-          <span
-              className="w-30 h-30 rounded-full flex items-center justify-center"
-              style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
-            >
-              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                <circle cx="9" cy="21" r="1" fill="currentColor" />
-                <circle cx="20" cy="21" r="1" fill="currentColor" />
-              </svg>
-          </span>
-            <h3 className="text-lg font-semibold" style={{ color: 'var(--cor-texto)' }}>
-              Seu carrinho está vazio
-            </h3>
-            <p className="text-sm leading-relaxed" style={{ color: 'var(--cor-texto-suave)' }}>
-              Explore os gêneros e adicione peças incríveis para levar a magia para casa.
-            </p>
-            <button
-              onClick={onFechar}
-              className="mt-2 px-6 py-3 rounded-full text-white text-sm font-medium cursor-pointer transition-transform duration-300 hover:scale-105 border-none"
-              style={{ background: 'var(--cor-primaria)' }}
-            >
-              Continuar comprando
-            </button>
-          </div>
+          <CarrinhoVazio onFechar={onFechar} />
         ) : etapa === 'dados' ? (
-          <form onSubmit={handleFinalizar} className="flex-1 flex flex-col min-h-0">
-            <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
-              <p className="text-sm font-medium" style={{ color: 'var(--cor-texto)' }}>
-                Dados para entrega
-              </p>
-              {[
-                { label: 'Nome completo', tipo: 'text', placeholder: 'Seu nome', chave: 'nome', campo: cliente },
-              ].map((c) => (
-                <div key={c.chave} className="text-left">
-                  <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
-                    {c.label}*
-                  </label>
-                  <input
-                    type={c.tipo}
-                    placeholder={c.placeholder}
-                    value={c.campo[c.chave]}
-                    onChange={(e) => setCliente({ ...cliente, [c.chave]: e.target.value })}
-                    required
-                    className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors"
-                    style={estiloInput}
-                  />
-                </div>
-              ))}
-              {[
-                { label: 'E-mail', tipo: 'email', placeholder: 'seu@email.com', chave: 'email' },
-                { label: 'Telefone', tipo: 'tel', placeholder: '(73) 99866-3011', chave: 'telefone' },
-                { label: 'Endereço', tipo: 'text', placeholder: 'Rua, número, bairro, cidade', chave: 'endereco' },
-              ].map((c) => (
-                <div key={c.chave} className="text-left">
-                  <label className="text-sm mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>
-                    {c.label}
-                  </label>
-                  <input
-                    type={c.tipo}
-                    placeholder={c.placeholder}
-                    value={cliente[c.chave]}
-                    onChange={(e) => setCliente({ ...cliente, [c.chave]: e.target.value })}
-                    className="w-full border rounded-lg px-4 py-3 text-base outline-none transition-colors"
-                    style={estiloInput}
-                  />
-                </div>
-              ))}
-
-              <p className="text-sm font-medium mt-2" style={{ color: 'var(--cor-texto)' }}>
-                Pagamento
-              </p>
-              <div className="flex gap-2">
-                {[
-                  { id: 'cartao', nome: 'Cartão' },
-                  { id: 'pix', nome: 'Pix' },
-                ].map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setMetodo(m.id)}
-                    className={`flex-1 py-3 rounded-full cursor-pointer border-none text-sm font-medium transition-all ${
-                      metodo === m.id ? 'text-white' : ''
-                    }`}
-                    style={
-                      metodo === m.id
-                        ? { background: 'var(--cor-primaria)' }
-                        : { background: 'var(--cor-fundo-suave)', color: 'var(--cor-texto)' }
-                    }
-                  >
-                    {m.nome}
-                  </button>
-                ))}
-              </div>
-
-              <p
-                className="text-xs leading-relaxed rounded-lg px-3 py-2"
-                style={{ background: 'var(--cor-fundo-suave)', color: 'var(--cor-texto-suave)' }}
-              >
-                {gateway
-                  ? 'Você será levado ao Mercado Pago para pagar com Pix, cartão ou boleto. Nunca digite os dados do seu cartão aqui — eles são informados apenas no ambiente seguro do Mercado Pago.'
-                  : 'Pagamento simulado para demonstração: nenhum valor será cobrado.'}
-              </p>
-
-              {erro && (
-                <p className="text-sm" style={{ color: 'var(--cor-perigo)' }}>
-                  {erro}
-                </p>
-              )}
-            </div>
-
-            <div
-              className="px-6 py-5 border-t flex flex-col gap-3"
-              style={{ borderColor: 'var(--cor-borda)', background: 'var(--cor-fundo-suave)' }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: 'var(--cor-texto-suave)' }}>
-                  Total ({totalItens} {totalItens === 1 ? 'item' : 'itens'})
-                </span>
-                <span className="text-2xl font-bold" style={{ color: 'var(--cor-texto)' }}>
-                  {formatarMoeda(total)}
-                </span>
-              </div>
-              <button
-                type="submit"
-                disabled={carregando}
-                className="w-full py-4 rounded-full text-white text-base font-medium cursor-pointer transition-all duration-300 hover:scale-[1.02] border-none disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ background: 'var(--cor-primaria)', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
-              >
-                {carregando ? 'Processando…' : `Confirmar pagamento`}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEtapa('itens')
-                  setErro('')
-                }}
-                className="w-full py-3 rounded-full cursor-pointer text-sm font-medium transition-all duration-300 border-none"
-                style={{ background: 'transparent', color: 'var(--cor-texto)', border: '1px solid var(--cor-borda)' }}
-              >
-                Voltar ao carrinho
-              </button>
-            </div>
-          </form>
+          <EtapaDados
+            onSubmit={handleFinalizar}
+            cliente={cliente}
+            setCliente={setCliente}
+            freteLigado={freteLigado}
+            cep={cep}
+            alterarCep={alterarCep}
+            cepCompleto={cepCompleto}
+            carregandoFrete={carregandoFrete}
+            cotarFrete={cotarFrete}
+            digitosCep={digitosCep}
+            itens={itens}
+            erroFrete={erroFrete}
+            opcoes={opcoes}
+            freteEscolhido={freteEscolhido}
+            setFreteEscolhido={setFreteEscolhido}
+            metodo={metodo}
+            setMetodo={setMetodo}
+            gateway={gateway}
+            erro={erro}
+            carregando={carregando}
+            subtotal={subtotal}
+            totalItens={totalItens}
+            total={total}
+            onVoltar={voltarAoCarrinho}
+          />
         ) : (
-          <>
-            <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
-              {itens.map((item) => {
-                const p = item.produto
-                const estoque = Number(p.estoque)
-                const noMaximo = Number.isFinite(estoque) && item.quantidade >= estoque
-                return (
-                  <div
-                    key={p.id}
-                    className="flex gap-4 rounded-2xl p-3"
-                    style={{ background: 'var(--cor-fundo-suave)', border: '1px solid var(--cor-borda)' }}
-                  >
-                    <div
-                      className="w-20 h-20 rounded-xl overflow-hidden shrink-0"
-                      style={{ background: 'var(--cor-fundo-cartao)' }}
-                    >
-                      {p.imagem ? (
-                        <img src={p.imagem} alt={p.nome} className="w-full h-full object-cover" />
-                      ) : (
-                        <div
-                          className="w-full h-full flex items-center justify-center text-xl"
-                          style={{ color: 'var(--cor-texto-suave)' }}
-                          aria-hidden="true"
-                        >
-                          🎁
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-sm font-semibold leading-snug" style={{ color: 'var(--cor-texto)' }}>
-                          {p.nome}
-                        </h3>
-                        <button
-                          onClick={() => onRemover(p.id)}
-                          className="bg-transparent border-none cursor-pointer text-xs hover:underline shrink-0 flex items-center gap-1.5"
-                          style={{ color: 'var(--cor-perigo)' }}
-                          aria-label={`Remover ${p.nome}`}
-                        >
-                          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden="true">
-                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-                          </svg>
-                          Remover
-                        </button>
-                      </div>
-
-                      <div className="mt-2 flex items-center justify-between gap-3">
-                        <div
-                          className="flex items-center gap-3 rounded-full px-3 py-1"
-                          style={{ background: 'var(--cor-fundo-cartao)', border: '1px solid var(--cor-borda)' }}
-                        >
-                          <button
-                            onClick={() => onAlterar(p.id, -1)}
-                            className="w-6 h-6 rounded-full cursor-pointer border-none text-base font-bold flex items-center justify-center"
-                            style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
-                            aria-label="Diminuir quantidade"
-                          >
-                            −
-                          </button>
-                          <span className="text-sm font-semibold w-5 text-center" style={{ color: 'var(--cor-texto)' }}>
-                            {item.quantidade}
-                          </span>
-                          <button
-                            onClick={() => onAlterar(p.id, 1)}
-                            disabled={noMaximo}
-                            className="w-6 h-6 rounded-full border-none text-base font-bold flex items-center justify-center disabled:cursor-not-allowed"
-                            style={{
-                              background: 'var(--cor-primaria-suave)',
-                              color: 'var(--cor-primaria)',
-                              opacity: noMaximo ? 0.45 : 1,
-                              cursor: noMaximo ? 'not-allowed' : 'pointer',
-                            }}
-                            aria-label="Aumentar quantidade"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <p className="text-sm font-bold whitespace-nowrap" style={{ color: 'var(--cor-primaria)' }}>
-                          {formatarMoeda(p.preco * item.quantidade)}
-                        </p>
-                      </div>
-
-                      {noMaximo && (
-                        <p className="mt-2 text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
-                          Máximo disponível: {estoque} unidade{estoque === 1 ? '' : 's'}
-                        </p>
-                      )}
-
-                      {item.personalizacao && (
-                        <p
-                          className="mt-2 text-xs flex items-center gap-2 rounded-lg px-2 py-1"
-                          style={{ background: 'var(--cor-fundo-cartao)', color: 'var(--cor-primaria)' }}
-                        >
-                          <span className="truncate">
-                            📎 {item.personalizacao.nome}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => onRemoverPersonalizacao?.(p.id)}
-                            className="bg-transparent border-none cursor-pointer text-xs underline shrink-0"
-                            style={{ color: 'var(--cor-perigo)' }}
-                          >
-                            remover
-                          </button>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            <div
-              className="px-6 py-5 border-t flex flex-col gap-4"
-              style={{ borderColor: 'var(--cor-borda)', background: 'var(--cor-fundo-suave)' }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: 'var(--cor-texto-suave)' }}>
-                  Subtotal ({totalItens} {totalItens === 1 ? 'item' : 'itens'})
-                </span>
-                <span className="text-2xl font-bold" style={{ color: 'var(--cor-texto)' }}>
-                  {formatarMoeda(total)}
-                </span>
-              </div>
-              {!logado && (
-                <p
-                  className="text-xs leading-relaxed rounded-lg px-3 py-2 text-center"
-                  style={{ background: 'var(--cor-fundo-cartao)', color: 'var(--cor-laranja-claro)', border: '1px solid var(--cor-borda)' }}
-                >
-                  Você precisa estar logado em uma conta para finalizar a compra.
-                </p>
-              )}
-              <button
-                onClick={() => (logado ? setEtapa('dados') : onEntrar?.())}
-                className="w-full py-4 rounded-full text-white text-base font-medium cursor-pointer transition-all duration-300 hover:scale-[1.02] border-none"
-                style={{ background: 'var(--cor-primaria)', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
-              >
-                {logado ? 'Finalizar compra' : 'Entrar para finalizar'}
-              </button>
-              <button
-                onClick={onFechar}
-                className="w-full py-3 rounded-full cursor-pointer text-sm font-medium transition-all duration-300 border-none"
-                style={{ background: 'transparent', color: 'var(--cor-texto)', border: '1px solid var(--cor-borda)' }}
-              >
-                Continuar comprando
-              </button>
-            </div>
-          </>
+          <EtapaItens
+            itens={itens}
+            onRemover={onRemover}
+            onAlterar={onAlterar}
+            onRemoverPersonalizacao={onRemoverPersonalizacao}
+            subtotal={subtotal}
+            totalItens={totalItens}
+            logado={logado}
+            onDados={irParaDados}
+            onEntrar={onEntrar}
+            onFechar={onFechar}
+          />
         )}
       </div>
     </div>

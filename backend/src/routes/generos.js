@@ -7,7 +7,7 @@ const router = Router()
 
 router.get('/', async (_req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM generos ORDER BY nome')
+    const { rows } = await pool.query('SELECT * FROM generos ORDER BY ordem NULLS LAST, nome')
     res.json(rows)
   } catch (err) {
     logger.error({ err }, 'Erro ao listar gêneros')
@@ -37,8 +37,8 @@ router.post('/', autenticarAdmin, async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      `INSERT INTO generos (id, nome, tagline, descricao, imagem)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO generos (id, nome, tagline, descricao, imagem, ordem)
+       VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT MAX(ordem) FROM generos), 0) + 1)
        RETURNING *`,
       [id, nome, tagline || '', descricao || '', imagem || '']
     )

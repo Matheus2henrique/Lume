@@ -5,7 +5,9 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // dist: build. .ssrcheck*: diretórios auxiliares sem permissão de leitura
+  // (o ESLint falha com EPERM se tentar varrer).
+  globalIgnores(['dist', '.ssrcheck*']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

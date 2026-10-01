@@ -140,7 +140,8 @@ describe('POST /api/pedidos', () => {
       String(sql).includes('INSERT INTO pedidos')
     )
     expect(insert[0]).toContain('estoque_reservado')
-    expect(insert[0]).toContain('VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)')
+    expect(insert[0]).toContain('VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE)')
+    expect(insert[0]).toContain('frete') // coluna nova do Melhor Envio
 
     const baixa = client.query.mock.calls.find(([sql]) =>
       String(sql).includes('estoque = estoque - v.qtd')
@@ -278,7 +279,8 @@ describe('POST /api/pedidos', () => {
     expect(res.status).toBe(201)
     const update = client.query.mock.calls.find(([sql]) => String(sql).startsWith('UPDATE clientes'))
     expect(update).toBeDefined()
-    expect(update[1][3]).toBe(4)
+    // [nome, telefone, endereco, cep, numero, bairro, cidade, uf, id]
+    expect(update[1][8]).toBe(4)
     expect(update[1][2]).toBe('Rua Z')
   })
 })
@@ -356,6 +358,51 @@ describe('POST /api/pedidos — personalização', () => {
     expect(itensGravados).toContain('personalizacao')
     expect(itensGravados).toContain('frase.pdf')
     expect(itensGravados).toContain('data:application/pdf;base64')
+  })
+})
+
+describe('POST /api/pedidos — cor e tamanho', () => {
+  it('deve recusar cor que não é texto', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [USUARIO] })
+    const res = await request(app)
+      .post('/api/pedidos')
+      .set('Authorization', `Bearer ${token()}`)
+      .send({ ...CORPO, itens: [{ produtoId: 1, quantidade: 1, cor: 123 }] })
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('Cor')
+    expect(mockConnect).not.toHaveBeenCalled() // recusado antes da transação
+  })
+
+  it('deve gravar a cor e o tamanho escolhidos no pedido', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [USUARIO] })
+
+    const client = { release: jest.fn(), query: jest.fn() }
+    const fila = [
+      { rows: [] }, // BEGIN
+      { rows: [] }, // pg_advisory_xact_lock (idempotência)
+      { rows: [] }, // SELECT dedupe (não é repetição)
+      { rows: [{ id: 1, nome: 'Produto', preco: 20, estoque: 10 }] }, // SELECT produtos
+      { rows: [] }, // SELECT clientes
+      { rows: [{ id: 7 }] }, // INSERT clientes
+      { rows: [{ id: 4, total: 20, status: 'pago' }] }, // INSERT pedidos
+      { rows: [] }, // INSERT dedupe
+      { rows: [] }, // baixa de estoque
+      { rows: [] }, // COMMIT
+    ]
+    client.query.mockImplementation(() => Promise.resolve(fila.shift() || { rows: [] }))
+    mockConnect.mockResolvedValue(client)
+
+    const res = await request(app)
+      .post('/api/pedidos')
+      .set('Authorization', `Bearer ${token()}`)
+      .send({ ...CORPO, itens: [{ produtoId: 1, quantidade: 1, cor: 'Preto', tamanho: 'M' }] })
+
+    expect(res.status).toBe(201)
+    const insert = client.query.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO pedidos'))
+    expect(insert).toBeDefined()
+    const itensGravados = JSON.parse(insert[1][4]) // coluna itens (JSONB)
+    expect(itensGravados[0].cor).toBe('Preto')
+    expect(itensGravados[0].tamanho).toBe('M')
   })
 })
 

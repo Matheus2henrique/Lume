@@ -98,3 +98,62 @@ footer {
   from { transform: translateX(-100%); }
   to { transform: translateX(0); }
 }
+
+/* Banner full da home: slideshow de nichos que troca uma imagem por outra
+   com fade — sem zoom. */
+.banner-full {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.banner-full .banner-slide {
+  opacity: 0;
+  transition: opacity 900ms ease;
+  will-change: opacity;
+}
+
+.banner-full .banner-slide.ativo {
+  opacity: 1;
+}
+
+@keyframes bannerFade {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.banner-full .banner-conteudo {
+  animation: bannerFade 600ms ease-out both;
+}
+
+/* Mega-menu do header: lista vertical de produtos alinhada sob o nicho
+   que está sob o mouse (cada item entra logo abaixo do anterior). */
+@keyframes megaMenu {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mega-menu {
+  animation: megaMenu 200ms ease-out both;
+}
+
+.mega-menu .menu-item {
+  color: var(--cor-texto);
+  animation: megaMenu 260ms ease-out both;
+}
+
+.mega-menu .menu-item:hover {
+  color: var(--cor-primaria);
+}

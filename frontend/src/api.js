@@ -114,6 +114,10 @@ export const api = {
   },
   criarPreferencia: (dados) => requisicao('/pagamentos/preferencia', { metodo: 'POST', corpo: dados, autenticado: true }),
   statusPagamento: () => requisicao('/pagamentos/status'),
+  // Melhor Envio: o token mora só no backend — aqui só pedimos a cotação.
+  statusFrete: () => requisicao('/frete/status'),
+  // Rota pública: atende o simulador da home (sem login) e o carrinho.
+  calcularFrete: (dados) => requisicao('/frete/calcular', { metodo: 'POST', corpo: dados }),
   newsletter: (email, aceite) =>
     requisicao('/newsletter', { metodo: 'POST', corpo: { email, aceite } }),
   excluirDados: (confirmacao) =>

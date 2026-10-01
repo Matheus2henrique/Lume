@@ -33,6 +33,16 @@ function validarPersonalizacao(personalizacao) {
   return { ok: true, valor: { nome: nome.trim(), tipo, dados } }
 }
 
+// Variação escolhida na página do produto: cor e tamanho (opcionais).
+// Só texto curto e limpo entra no JSONB do pedido.
+function validarOpcao(valor, rotulo) {
+  if (valor == null || valor === '') return { ok: true, valor: null }
+  if (typeof valor !== 'string') return { ok: false, erro: `${rotulo} do item inválida.` }
+  const limpo = valor.trim()
+  if (!limpo || limpo.length > 40) return { ok: false, erro: `${rotulo} do item inválida.` }
+  return { ok: true, valor: limpo }
+}
+
 // Status que o dono da loja pode definir manualmente no painel.
 const STATUS_PEDIDO = new Set(['novo', 'pendente', 'pago', 'enviado', 'entregue', 'cancelado'])
 
@@ -54,6 +64,10 @@ function hashIdempotencia(usuarioId, email, itens, frete) {
       return [
         idDoItem(item),
         Number(item.quantidade),
+        // Cor/tamanho entram na assinatura: M preto e G preto são checkouts
+        // diferentes e não podem cair no mesmo hash (dedupe).
+        typeof item?.cor === 'string' ? item.cor.trim() : '',
+        typeof item?.tamanho === 'string' ? item.tamanho.trim() : '',
         pessoal?.nome ?? '',
         typeof pessoal?.dados === 'string' ? pessoal.dados.length : 0,
       ].join(':')
@@ -90,6 +104,11 @@ async function confirmarFrete({ frete, itens }) {
   }
 
   const ids = [...new Set(itens.map((item) => Number(idDoItem(item))))]
+  if (ids.some((id) => !Number.isInteger(id) || id <= 0)) {
+    const erro = new Error('Item do carrinho inválido.')
+    erro.status = 400
+    throw erro
+  }
   const { rows: produtos } = await pool.query('SELECT * FROM produtos WHERE id = ANY($1)', ids)
   const porId = new Map(produtos.map((p) => [p.id, p]))
   const products = montarProdutosCotacao(itens, porId)
@@ -124,6 +143,14 @@ router.post('/', autenticar, async (req, res) => {
     const pessoal = validarPersonalizacao(item.personalizacao)
     if (!pessoal.ok) {
       return res.status(400).json({ erro: pessoal.erro })
+    }
+    const cor = validarOpcao(item.cor, 'Cor')
+    if (!cor.ok) {
+      return res.status(400).json({ erro: cor.erro })
+    }
+    const tamanho = validarOpcao(item.tamanho, 'Tamanho')
+    if (!tamanho.ok) {
+      return res.status(400).json({ erro: tamanho.erro })
     }
   }
 
@@ -160,11 +187,11 @@ router.post('/', autenticar, async (req, res) => {
     // Idempotência: mesmo carrinho em janela curta devolve o pedido original.
     // O lock nomeado serializa dois POSTs idênticos que chegam ao mesmo tempo
     // — sem ele, os dois passariam pelo SELECT abaixo e criariam dois pedidos.
-    const hash = hashIdempotencia(req.usuario.id, cliente.email, itens)
+    const hash = hashIdempotencia(req.usuario.id, cliente.email, itens, freteSalvo)
     await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [hash])
 
     const { rows: repetido } = await client.query(
-      `SELECT p.id, p.total, p.status
+      `SELECT p.id, p.total, p.status, p.frete
        FROM dedupe d
        JOIN pedidos p ON p.id = d.pedido_id
        WHERE d.hash = $1
@@ -183,6 +210,7 @@ router.post('/', autenticar, async (req, res) => {
         id: pedido.id,
         total: Number(pedido.total),
         status: pedido.status,
+        frete: pedido.frete ?? null,
         precisaPagamento: gatewayAtivo && pedido.status === 'pendente',
         duplicado: true,
         mensagem: 'Este pedido já foi registrado.',
@@ -222,6 +250,11 @@ router.post('/', autenticar, async (req, res) => {
     for (const item of itens) {
       total += Number(porId.get(idDoItem(item)).preco) * item.quantidade
     }
+    // Frete entra no mesmo total que o Mercado Pago cobra (pedidos.total).
+    // Duas casas: 19.9 * 3 = 59.69999... não pode virar 59.70 errado.
+    if (freteSalvo) {
+      total = Math.round((total + Number(freteSalvo.valor)) * 100) / 100
+    }
 
     const usuarioId = req.usuario.id
     const emailCliente = String(cliente.email).trim()
@@ -233,11 +266,20 @@ router.post('/', autenticar, async (req, res) => {
 
     // Snapshot no pedido: o histórico passa a ser imutável e não depende da
     // tabela clientes, que um novo pedido pode reescrever (PLANO 1.5).
+    // O CEP vem da cotação confirmada (frete) ou do formulário — é o dado
+    // que a etiqueta da fase 2 vai usar.
+    const texto = (valor, max = 200) =>
+      typeof valor === 'string' ? valor.trim().slice(0, max) : ''
     const snapshot = {
       nome: String(cliente.nome).trim(),
       email: emailCliente,
-      telefone: typeof cliente.telefone === 'string' ? cliente.telefone : '',
-      endereco: typeof cliente.endereco === 'string' ? cliente.endereco : '',
+      telefone: texto(cliente.telefone, 40),
+      endereco: texto(cliente.endereco, 300),
+      cep: freteSalvo?.cep ?? normalizarCep(cliente.cep) ?? '',
+      numero: texto(cliente.numero, 20),
+      bairro: texto(cliente.bairro, 120),
+      cidade: texto(cliente.cidade, 120),
+      uf: texto(cliente.uf, 2).toUpperCase(),
     }
 
     let clienteId = null
@@ -249,19 +291,42 @@ router.post('/', autenticar, async (req, res) => {
       clienteId = existentes[0].id
       if (emailProprio) {
         await client.query(
-          'UPDATE clientes SET nome = $1, telefone = $2, endereco = $3 WHERE id = $4',
-          [snapshot.nome, snapshot.telefone, snapshot.endereco, clienteId]
+          `UPDATE clientes
+           SET nome = $1, telefone = $2, endereco = $3,
+               cep = $4, numero = $5, bairro = $6, cidade = $7, uf = $8
+           WHERE id = $9`,
+          [
+            snapshot.nome,
+            snapshot.telefone,
+            snapshot.endereco,
+            snapshot.cep,
+            snapshot.numero,
+            snapshot.bairro,
+            snapshot.cidade,
+            snapshot.uf,
+            clienteId,
+          ]
         )
       }
     } else {
       // ON CONFLICT cobre a corrida de dois checkouts simultâneos com o mesmo
       // e-mail (o SELECT+INSERT antigo devolvia 23505 → 500).
       const { rows: novos } = await client.query(
-        `INSERT INTO clientes (nome, email, telefone, endereco)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO clientes (nome, email, telefone, endereco, cep, numero, bairro, cidade, uf)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          ON CONFLICT (email) DO NOTHING
          RETURNING id`,
-        [snapshot.nome, emailCliente, snapshot.telefone, snapshot.endereco]
+        [
+          snapshot.nome,
+          emailCliente,
+          snapshot.telefone,
+          snapshot.endereco,
+          snapshot.cep,
+          snapshot.numero,
+          snapshot.bairro,
+          snapshot.cidade,
+          snapshot.uf,
+        ]
       )
       if (novos[0]) {
         clienteId = novos[0].id
@@ -285,8 +350,8 @@ router.post('/', autenticar, async (req, res) => {
       : null
 
     const { rows: pedidos } = await client.query(
-      `INSERT INTO pedidos (usuario_id, cliente_id, total, status, itens, pagamento, cliente_dados, estoque_reservado)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
+      `INSERT INTO pedidos (usuario_id, cliente_id, total, status, itens, pagamento, cliente_dados, frete, estoque_reservado)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE)
        RETURNING id, total, status`,
       [
         usuarioId,
@@ -297,17 +362,34 @@ router.post('/', autenticar, async (req, res) => {
           itens.map((item) => {
             const produto = porId.get(idDoItem(item))
             const personalizacao = validarPersonalizacao(item.personalizacao).valor
+            const cor = validarOpcao(item.cor, 'Cor').valor
+            const tamanho = validarOpcao(item.tamanho, 'Tamanho').valor
             return {
               produtoId: produto.id,
               nome: produto.nome,
               preco: Number(produto.preco),
               quantidade: item.quantidade,
+              ...(cor ? { cor } : {}),
+              ...(tamanho ? { tamanho } : {}),
               ...(personalizacao ? { personalizacao } : {}),
             }
           })
         ),
         pagamentoSalvo ? JSON.stringify(pagamentoSalvo) : null,
         JSON.stringify(snapshot),
+        // Prova do que foi cobrado (valor revalidado na API, não o do browser).
+        freteSalvo
+          ? JSON.stringify({
+              servicoId: freteSalvo.servicoId,
+              servico: freteSalvo.servico,
+              transportadora: freteSalvo.transportadora,
+              valor: Number(freteSalvo.valor),
+              prazoMin: freteSalvo.prazoMin,
+              prazoMax: freteSalvo.prazoMax,
+              cep: freteSalvo.cep,
+              cotado_em: new Date().toISOString(),
+            })
+          : null,
       ]
     )
 
@@ -328,12 +410,23 @@ router.post('/', autenticar, async (req, res) => {
     await client.query('COMMIT')
 
     const pedido = pedidos[0]
-    logger.info({ pedidoId: pedido.id, total, status, usuarioId }, 'Pedido criado')
+    logger.info({ pedidoId: pedido.id, total, status, usuarioId, frete: freteSalvo?.servico ?? null }, 'Pedido criado')
     res.status(201).json({
       id: pedido.id,
       total: Number(pedido.total),
       status: pedido.status,
       precisaPagamento: gatewayAtivo,
+      // Frete confirmado no servidor: o frontend mostra o valor COBRADO,
+      // não o que ele mesmo cotou.
+      frete: freteSalvo
+        ? {
+            servicoId: freteSalvo.servicoId,
+            servico: freteSalvo.servico,
+            valor: Number(freteSalvo.valor),
+            prazoMin: freteSalvo.prazoMin,
+            prazoMax: freteSalvo.prazoMax,
+          }
+        : null,
       mensagem: gatewayAtivo
         ? 'Pedido criado. Finalize o pagamento no Mercado Pago.'
         : 'Pedido recebido com sucesso!',
