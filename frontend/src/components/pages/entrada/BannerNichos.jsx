@@ -2,7 +2,9 @@
 // a imagem do nicho nas outras seções continua vindo do cadastro.
 const IMAGENS_BANNER = {
   'brinq-sensorial': `${import.meta.env.BASE_URL}banner_sensorial.jpg`,
-  pacotes: `${import.meta.env.BASE_URL}banner_box.jpg`,
+  'articulados': `${import.meta.env.BASE_URL}banner_articulado.jpeg`,
+  'colecionaveis': `${import.meta.env.BASE_URL}banner_dino2.jpg`,
+  'pacotes': `${import.meta.env.BASE_URL}banner_box.jpg`,
 }
 
 function BannerNichos({
