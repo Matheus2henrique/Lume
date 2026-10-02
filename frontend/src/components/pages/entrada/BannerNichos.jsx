@@ -18,9 +18,11 @@ function BannerNichos({
 }) {
   return (
     <div
-      className="banner-full w-full h-[240px] sm:h-[320px] lg:h-[400px]"
+      className="banner-full w-full h-[240px] sm:h-[320px] lg:h-[400px] cursor-pointer"
       onMouseEnter={onPausar}
       onMouseLeave={onRetomar}
+      // Clique em qualquer lugar do banner leva para o nicho do slide ativo.
+      onClick={() => onSelecionarGenero(nichoBanner.id)}
     >
       {nichos.map((genero, i) => {
         const src = IMAGENS_BANNER[genero.id] ?? genero.imagem
@@ -40,45 +42,41 @@ function BannerNichos({
         )
       })}
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/25" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/25 pointer-events-none" />
 
-      <div key={nichoBanner.id} className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-        <span
-          className="banner-conteudo inline-block px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium bg-white/15 backdrop-blur-sm text-white/90"
-          style={{ animationDelay: '60ms' }}
-        >
-          {nichoBanner.tagline}
-        </span>
-        <h2
-          className="banner-conteudo mt-3 text-3xl sm:text-4xl lg:text-5xl font-[Georgia,serif] text-white"
-          style={{ animationDelay: '160ms' }}
-        >
-          {nichoBanner.nome}
-        </h2>
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
         <button
+          key={nichoBanner.id}
           type="button"
-          onClick={() => onSelecionarGenero(nichoBanner.id)}
-          className="banner-conteudo mt-5 px-6 py-3 rounded-full text-sm font-semibold text-white cursor-pointer border-none transition-transform duration-300 hover:scale-105"
-          style={{ background: 'var(--cor-laranja)', animationDelay: '260ms', boxShadow: '0 10px 25px rgba(0,0,0,0.35)' }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onSelecionarGenero(nichoBanner.id)
+          }}
+          className="banner-conteudo px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold text-white cursor-pointer border-none transition-transform duration-300 hover:scale-105"
+          style={{ background: 'var(--cor-laranja)', animationDelay: '160ms', boxShadow: '0 4px 14px rgba(0,0,0,0.35)' }}
         >
-          Conhecer {nichoBanner.nome} →
+          Explorar
         </button>
-      </div>
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
-        {nichos.map((genero, i) => (
-          <button
-            key={genero.id}
-            type="button"
-            onClick={() => onSelecionarSlide(i)}
-            aria-label={`Mostrar banner ${genero.nome}`}
-            className="h-2.5 rounded-full cursor-pointer border-none transition-all duration-300"
-            style={{
-              width: i === indiceBanner ? '26px' : '10px',
-              background: i === indiceBanner ? 'var(--cor-laranja-claro)' : 'rgba(255,255,255,0.45)',
-            }}
-          />
-        ))}
+        <div className="flex items-center gap-3">
+          {nichos.map((genero, i) => (
+            <button
+              key={genero.id}
+              type="button"
+              onClick={(e) => {
+                // Troca de slide sem navegar para o nicho (clique não sobe pro banner).
+                e.stopPropagation()
+                onSelecionarSlide(i)
+              }}
+              aria-label={`Mostrar banner ${genero.nome}`}
+              className="h-2.5 rounded-full cursor-pointer border-none transition-all duration-300"
+              style={{
+                width: i === indiceBanner ? '26px' : '10px',
+                background: i === indiceBanner ? 'var(--cor-laranja-claro)' : 'rgba(255,255,255,0.45)',
+              }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )
