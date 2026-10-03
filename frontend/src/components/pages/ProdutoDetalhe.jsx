@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { api } from '../../api'
 import { chaveItem } from '../../utils/carrinho'
 import { CORES } from '../../utils/opcoesProduto'
 import BarraSuperior from './produtoDetalhe/BarraSuperior'
@@ -11,6 +12,7 @@ import SelecaoCor from './produtoDetalhe/SelecaoCor'
 import AreaCompra from './produtoDetalhe/AreaCompra'
 import Especificacoes from './produtoDetalhe/Especificacoes'
 import DescricaoPeca from './produtoDetalhe/DescricaoPeca'
+import Avaliacoes from './produtoDetalhe/Avaliacoes'
 import PecasRelacionadas from './produtoDetalhe/PecasRelacionadas'
 
 function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onAdicionarAoCarrinho, chavesNoCarrinho = [], favoritos, onToggleFavorito, admin = false, onEditarProduto }) {
@@ -23,6 +25,8 @@ function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onA
   const [erroArquivo, setErroArquivo] = useState('')
   // Muda a cada clique em "Comprar agora" → reinicia a contagem de 7 segundos.
   const [avisoId, setAvisoId] = useState(0)
+  const [avaliacoes, setAvaliacoes] = useState({ media: 0, total: 0, avaliacoes: [] })
+  const [versaoAvaliacoes, setVersaoAvaliacoes] = useState(0)
 
   // Outro produto na mesma aba: a página é remontada (key={produto.id} no App),
   // então tamanho/cor/arquivo já começam nas opções padrão.
@@ -33,6 +37,19 @@ function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onA
     const tempo = setTimeout(() => setAvisoId(0), 7000)
     return () => clearTimeout(tempo)
   }, [avisoId])
+
+  useEffect(() => {
+    let ativo = true
+    api.avaliacoes
+      .listar(produto.id)
+      .then((resposta) => {
+        if (ativo) setAvaliacoes(resposta)
+      })
+      .catch(() => {})
+    return () => {
+      ativo = false
+    }
+  }, [produto.id, versaoAvaliacoes])
 
   const genero = nichos.find((g) => g.id === produto.genero)
   const relacionados = produtos
@@ -93,7 +110,7 @@ function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onA
           <ImagemProduto produto={produto} />
 
           <div className="lg:w-[400px]">
-            <InfoProduto genero={genero} produto={produto} />
+            <InfoProduto genero={genero} produto={produto} media={avaliacoes.media} total={avaliacoes.total} />
             <Quantidade quantidade={quantidade} produto={produto} onAumentar={aumentar} onDiminuir={diminuir} />
             <PersonalizacaoUpload
               produto={produto}
@@ -119,6 +136,12 @@ function ProdutoDetalhe({ produto, produtos, nichos, onVoltar, onSelecionar, onA
         </div>
 
         <DescricaoPeca produto={produto} />
+
+        <Avaliacoes
+          produto={produto}
+          dados={avaliacoes}
+          onAtualizar={() => setVersaoAvaliacoes((v) => v + 1)}
+        />
 
         <PecasRelacionadas
           genero={genero}

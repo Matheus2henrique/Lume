@@ -104,6 +104,13 @@ export const api = {
     remover: (produtoId) => requisicao(`/favoritos/${produtoId}`, { metodo: 'DELETE', autenticado: true }),
   },
 
+  // Avaliações de produto: leitura pública, escrita com sessão.
+  avaliacoes: {
+    listar: (produtoId) => requisicao(`/avaliacoes/${produtoId}`),
+    criar: (produtoId, dados) =>
+      requisicao(`/avaliacoes/${produtoId}`, { metodo: 'POST', corpo: dados, autenticado: true }),
+  },
+
   criarPedido: (dados) => requisicao('/pedidos', { metodo: 'POST', corpo: dados, autenticado: true }),
   pedidos: {
     buscar: (id) => requisicao(`/pedidos/${id}`, { autenticado: true }),

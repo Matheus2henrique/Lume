@@ -1,7 +1,7 @@
-import { formatarMoeda } from '../../../utils/formatar'
+import { formatarMoeda, formatarNota, formatarTotalAvaliacoes } from '../../../utils/formatar'
 import { Estrela } from '../../ui/Icones'
 
-function InfoProduto({ genero, produto }) {
+function InfoProduto({ genero, produto, media = 0, total = 0 }) {
   return (
     <>
       <nav className="text-sm" style={{ color: 'var(--cor-texto-suave)' }}>
@@ -19,9 +19,9 @@ function InfoProduto({ genero, produto }) {
       <div className="mt-4 flex items-center gap-3 text-sm">
         <Estrela className="w-5 h-5 text-amber-400" />
         <span className="font-semibold" style={{ color: 'var(--cor-texto)' }}>
-          4,8
+          {formatarNota(media)}
         </span>
-        <span style={{ color: 'var(--cor-texto-suave)' }}>(127 avaliações)</span>
+        <span style={{ color: 'var(--cor-texto-suave)' }}>({formatarTotalAvaliacoes(total)})</span>
       </div>
 
       <div className="mt-6 flex items-end gap-3">

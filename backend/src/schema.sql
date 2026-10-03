@@ -338,3 +338,35 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_pedidos_pendente_expirar
   ON pedidos (criado_em)
   WHERE status = 'pendente';
+
+-- ============================================================
+-- Avaliações de produto — estrelas (1–5) + texto.
+-- Uma avaliação por conta por produto (o segundo POST atualiza a
+-- primeira, nunca duplica). O nome exibido vem de usuarios.nome.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS avaliacoes (
+  id SERIAL PRIMARY KEY,
+  produto_id INTEGER NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,
+  usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  nota INTEGER NOT NULL,
+  texto TEXT NOT NULL DEFAULT '',
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+  atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (produto_id, usuario_id)
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'chk_avaliacoes_nota' AND conrelid = 'avaliacoes'::regclass
+  ) THEN
+    IF EXISTS (SELECT 1 FROM avaliacoes WHERE nota < 1 OR nota > 5) THEN
+      RAISE NOTICE 'chk_avaliacoes_nota adiada: existem notas fora de 1..5';
+    ELSE
+      ALTER TABLE avaliacoes ADD CONSTRAINT chk_avaliacoes_nota CHECK (nota BETWEEN 1 AND 5);
+    END IF;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_avaliacoes_produto ON avaliacoes (produto_id, criado_em DESC);

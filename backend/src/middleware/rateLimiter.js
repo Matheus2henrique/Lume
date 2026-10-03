@@ -162,3 +162,16 @@ export const limiterFrete = comLimite(
   }),
   'limiterFrete'
 )
+
+// Avaliação de produto: escrita rara de verdade (1 por produto por conta),
+// então 10/min por IP deixa o spam de comentários caro sem incomodar ninguém.
+export const limiterAvaliacao = comLimite(
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { erro: 'Muitas avaliações em pouco tempo. Tente novamente em 1 minuto.' },
+  }),
+  'limiterAvaliacao'
+)
