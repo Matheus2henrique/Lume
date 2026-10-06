@@ -18,7 +18,7 @@ import { carregarCarrinho, salvarCarrinho, chaveItem, normalizarOpcoes } from '.
 
 const BASE = '/Lume'
 
-function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, mostrarFavoritos, mostrarAdmin, pedidoId }) {
+function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, mostrarFavoritos, mostrarAdmin, pedidoId, subFiltro }) {
   if (mostrarAdmin) return `${BASE}/admin`
   if (mostrarPerfil) return `${BASE}/login`
   if (mostrarFavoritos) return `${BASE}/favoritos`
@@ -26,12 +26,18 @@ function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, most
   if (pagina === 'pedido' && pedidoId) return `${BASE}/pedido/${pedidoId}`
   if (pagina === 'detalhe' && produtoSelecionado && generoId)
     return `${BASE}/${generoId}/produto/${produtoSelecionado.id}`
-  if (pagina === 'genero' && generoId) return `${BASE}/${generoId}`
+  if (pagina === 'genero' && generoId) {
+    // ?sub= guarda a subpasta escolhida no menu: a página do nicho já abre
+    // filtrada e o filtro sobrevive a recarregar e ao voltar/avançar.
+    const query = subFiltro ? `?sub=${encodeURIComponent(subFiltro)}` : ''
+    return `${BASE}/${generoId}${query}`
+  }
   return `${BASE}`
 }
 
 function URLparaEstado(pathname, produtosLista) {
   const partes = pathname.replace(BASE, '').split('/').filter(Boolean)
+  const subFiltro = new URLSearchParams(window.location.search).get('sub')
 
   if (partes[0] === 'admin') return { pagina: 'entrada', mostrarAdmin: true }
   if (partes[0] === 'login') return { pagina: 'entrada', mostrarPerfil: true }
@@ -51,7 +57,7 @@ function URLparaEstado(pathname, produtosLista) {
     const produto = produtosLista.find((p) => p.id === Number(partes[2]) && p.genero === generoId)
     if (produto) return { pagina: 'detalhe', generoId, produtoSelecionado: produto }
   }
-  if (partes[0]) return { pagina: 'genero', generoId: partes[0] }
+  if (partes[0]) return { pagina: 'genero', generoId: partes[0], subFiltro }
 
   return { pagina: 'entrada', generoId: null }
 }
@@ -64,6 +70,8 @@ function App() {
   const [produtos, setProdutos] = useState(produtosPadrao)
   const [nichos, setNichos] = useState(generosPadrao)
   const [generoId, setGeneroId] = useState(null)
+  // Subpasta escolhida no menu (?sub=): o filtro inicial da página do nicho.
+  const [subFiltro, setSubFiltro] = useState(null)
   const [pagina, setPagina] = useState('entrada')
   const [produtoSelecionado, setProdutoSelecionado] = useState(null)
   const [mostrarPerfil, setMostrarPerfil] = useState(false)
@@ -108,6 +116,7 @@ function App() {
     setMostrarFavoritos(Boolean(proximo.mostrarFavoritos))
     setMostrarAdmin(Boolean(proximo.mostrarAdmin))
     setPedidoId(proximo.pedidoId ?? null)
+    setSubFiltro(proximo.subFiltro ?? null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
     window.history.pushState(null, '', rotaParaURL(proximo))
   }
@@ -122,6 +131,7 @@ function App() {
       setMostrarFavoritos(Boolean(estado.mostrarFavoritos))
       setMostrarAdmin(Boolean(estado.mostrarAdmin))
       setPedidoId(estado.pedidoId ?? null)
+      setSubFiltro(estado.subFiltro ?? null)
     }
     sincronizar()
     window.addEventListener('popstate', sincronizar)
@@ -136,8 +146,15 @@ function App() {
       .catch(() => {})
   }, [])
 
-  function handleSelecionarGenero(id) {
-    navegar({ generoId: id, pagina: 'genero' })
+  function handleSelecionarGenero(id, sub = null) {
+    navegar({ generoId: id, pagina: 'genero', subFiltro: sub })
+  }
+
+  // Troca o filtro da vitrine sem sair da página: guarda o estado e a URL
+  // (?sub=) juntos, para o filtro sobreviver a recarregar e ao voltar/avançar.
+  function handleFiltrarGenero(sub) {
+    setSubFiltro(sub)
+    window.history.pushState(null, '', rotaParaURL({ generoId, pagina: 'genero', subFiltro: sub }))
   }
 
   function handleVoltarHome() {
@@ -195,7 +212,8 @@ function App() {
   }
 
   function voltarParaGenero() {
-    navegar({ generoId, pagina: 'genero' })
+    // Volta para o mesmo filtro que estava ativo antes de abrir a peça.
+    navegar({ generoId, pagina: 'genero', subFiltro })
   }
 
   function handleEditarProduto(produto) {
@@ -447,6 +465,8 @@ function App() {
         <Genero
           genero={genero}
           produtos={produtos}
+          subFiltro={subFiltro}
+          onFiltrar={handleFiltrarGenero}
           onSelecionarProduto={handleSelecionarProduto}
           favoritos={favoritos}
           onToggleFavorito={toggleFavorito}

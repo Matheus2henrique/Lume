@@ -1,44 +1,32 @@
-import { useState } from 'react'
 import Card from '../ui/Card'
 import Reveal from '../ui/Reveal'
+import { subcategorias } from '../../data/subcategorias'
 
-const FILTROS = [
-  { id: 'todos', nome: 'Todas as peças' },
-  { id: 'decoracao', nome: 'Decorações avulsas' },
-  { id: 'colecionavel', nome: 'Colecionáveis' },
-]
-
-function Genero({ genero, produtos, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto }) {
-  const [filtroTipo, setFiltroTipo] = useState('todos')
+function Genero({ genero, produtos, subFiltro, onFiltrar, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto }) {
+  const subs = subcategorias[genero.id] || []
+  // Filtro da vitrine vem do App (?sub= vindo do menu ou clique nos botões):
+  // TODOS + as subpastas do nicho. Subpasta que não existe nesse nicho cai em TODOS.
+  const FILTROS = [{ id: 'todos', nome: 'TODOS' }, ...subs.map((sub) => ({ id: sub.id, nome: sub.nome }))]
+  const filtroTipo = subs.some((sub) => sub.id === subFiltro) ? subFiltro : 'todos'
 
   const produtosDoGenero = produtos.filter((p) => p.genero === genero.id)
   const produtosFiltrados =
     filtroTipo === 'todos'
       ? produtosDoGenero
-      : produtosDoGenero.filter((p) => p.tipo === filtroTipo)
+      : produtosDoGenero.filter((p) => p.subcategoria === filtroTipo)
 
-  const opcoes = [
-    {
-      id: 'decoracao',
-      titulo: 'Decorações avulsas',
-      descricao: 'Peças únicas para decorar a sua estante, mesa ou casa.',
-      icone: '🪄',
-      acao: () => {
-        setFiltroTipo('decoracao')
-        document.getElementById('vitrine')?.scrollIntoView({ behavior: 'smooth' })
-      },
+  const opcoes = subs.slice(0, 2).map((sub) => ({
+    id: sub.id,
+    titulo: sub.nome,
+    descricao: sub.descricao,
+    icone: sub.icone,
+    acao: () => {
+      onFiltrar(sub.id)
+      document.getElementById('vitrine')?.scrollIntoView({ behavior: 'smooth' })
     },
-    {
-      id: 'colecionavel',
-      titulo: 'Colecionáveis',
-      descricao: 'Edições especiais e detalhadas para os fãs que colecionam cada pedacinho do universo.',
-      icone: '🏺',
-      acao: () => {
-        setFiltroTipo('colecionavel')
-        document.getElementById('vitrine')?.scrollIntoView({ behavior: 'smooth' })
-      },
-    },
-  ]
+  }))
+
+  const subAtiva = subs.find((sub) => sub.id === filtroTipo)
 
   return (
     <section>
@@ -50,7 +38,8 @@ function Genero({ genero, produtos, onSelecionarProduto, favoritos, onToggleFavo
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[200px] rounded-full opacity-15 blur-[80px]" style={{ background: 'var(--cor-laranja-claro)' }} />
         <div className="relative z-10">
           <h1 className="text-5xl md:text-6xl font-[Georgia,serif]" style={{ color: 'var(--cor-texto)' }}>
-            Universo <span style={{ color: 'var(--cor-laranja-claro)' }}>{genero.nome}</span>
+            {/* Universo  */}
+            <span style={{ color: 'var(--cor-laranja-claro)' }}>{genero.nome}</span>
           </h1>
           <p className="mt-4 text-xl max-w-[620px] mx-auto" style={{ color: 'rgba(255,255,255,0.92)' }}>
             {genero.descricao}
@@ -58,37 +47,39 @@ function Genero({ genero, produtos, onSelecionarProduto, favoritos, onToggleFavo
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-6 -mt-10 relative z-10">
-        <div className="flex flex-wrap justify-center gap-6">
-          {opcoes.map((opcao, i) => (
-            <Reveal key={opcao.id} delay={i * 90} className="h-full">
-              <button
-                onClick={opcao.acao}
-                className="text-left rounded-[20px] p-7 cursor-pointer transition-all duration-700 hover:-translate-y-1 shadow-[0_10px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_18px_40px_rgba(0,0,0,0.2)] h-full w-full flex flex-col"
-                style={{ background: 'var(--cor-fundo-cartao)', border: '1px solid var(--cor-borda)', width: '360px' }}
-              >
-                <span
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-4"
-                  style={{ background: 'var(--cor-primaria-suave)' }}
+      {opcoes.length > 0 && (
+        <div className="max-w-[1200px] mx-auto px-6 -mt-10 relative z-10">
+          <div className="flex flex-wrap justify-center gap-6">
+            {opcoes.map((opcao, i) => (
+              <Reveal key={opcao.id} delay={i * 90} className="h-full">
+                <button
+                  onClick={opcao.acao}
+                  className="text-left rounded-[20px] p-7 cursor-pointer transition-all duration-700 hover:-translate-y-1 shadow-[0_10px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_18px_40px_rgba(0,0,0,0.2)] h-full w-full flex flex-col"
+                  style={{ background: 'var(--cor-fundo-cartao)', border: '1px solid var(--cor-borda)', width: '360px' }}
                 >
-                  {opcao.icone}
-                </span>
-                <h3 className="text-xl font-semibold" style={{ color: 'var(--cor-texto)' }}>
-                  {opcao.titulo}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed flex-1" style={{ color: 'var(--cor-texto-suave)' }}>
-                  {opcao.descricao}
-                </p>
-              </button>
-            </Reveal>
-          ))}
+                  <span
+                    className="w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-4"
+                    style={{ background: 'var(--cor-primaria-suave)' }}
+                  >
+                    {opcao.icone}
+                  </span>
+                  <h3 className="text-xl font-semibold" style={{ color: 'var(--cor-texto)' }}>
+                    {opcao.titulo}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed flex-1" style={{ color: 'var(--cor-texto-suave)' }}>
+                    {opcao.descricao}
+                  </p>
+                </button>
+              </Reveal>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
 <div id="vitrine" className="relative py-[70px]">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
           <h2 className="text-4xl font-[Georgia,serif]" style={{ color: 'var(--cor-texto)' }}>
-            Peças avulsas de {genero.nome}
+            {subAtiva ? subAtiva.nome : `Peças de ${genero.nome}`}
           </h2>
         <p className="mt-4" style={{ color: 'var(--cor-texto-suave)' }}>
           Compre quando quiser, sem precisar assinar. Descrição, quantidade e personalização em cada peça.
@@ -98,7 +89,7 @@ function Genero({ genero, produtos, onSelecionarProduto, favoritos, onToggleFavo
           {FILTROS.map((filtro) => (
             <button
               key={filtro.id}
-              onClick={() => setFiltroTipo(filtro.id)}
+              onClick={() => onFiltrar(filtro.id === 'todos' ? null : filtro.id)}
               className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 cursor-pointer border ${
                 filtroTipo === filtro.id
                   ? 'text-white shadow-[0_8px_20px_rgba(0,0,0,0.2)]'

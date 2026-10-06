@@ -3,7 +3,7 @@ import NichoFormModal from '../ui/NichoFormModal'
 import SimuladorFrete from '../sections/SimuladorFrete'
 import Hero from './entrada/Hero'
 import BannerNichos from './entrada/BannerNichos'
-import SecaoUniversos from './entrada/SecaoUniversos'
+// import SecaoUniversos from './entrada/SecaoUniversos'
 import SecaoPorQueLume from './entrada/SecaoPorQueLume'
 import SecaoDestaques from './entrada/SecaoDestaques'
 import SecaoNewsletter from './entrada/SecaoNewsletter'
@@ -45,13 +45,13 @@ function Entrada({ produtos, nichos, onSelecionarGenero, onSelecionarProduto, fa
       )}
 
       <div className="max-w-[1200px] mx-auto py-[70px] px-6">
-        <SecaoUniversos
+        {/* <SecaoUniversos
           nichos={nichos}
           admin={admin}
           onSelecionarGenero={onSelecionarGenero}
           onNovoNicho={() => setNichoEditando('novo')}
           onEditarNicho={setNichoEditando}
-        />
+        /> */}
 
         <SecaoPorQueLume nichos={nichos} />
 

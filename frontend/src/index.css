@@ -157,3 +157,10 @@ footer {
 .mega-menu .menu-item:hover {
   color: var(--cor-primaria);
 }
+
+/* Título de subpasta dentro do mega-menu: entra na mesma cascata dos itens,
+   mas não muda de cor no hover — não é clicável. */
+.mega-menu .menu-subtitulo {
+  color: var(--cor-texto-suave);
+  animation: megaMenu 260ms ease-out both;
+}

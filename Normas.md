@@ -52,7 +52,7 @@ DB_NAME=lume            # nome do banco
 |---|---|---|
 | `usuarios` | Contas (login/registro) | `email` único, `senha_hash` (bcrypt), `provedor`, `token_version` (sessão revogável) |
 | `clientes` | Dados de entrega por e-mail | `email` único; só é atualizado quando o e-mail é o do próprio usuário |
-| `produtos` | Catálogo | `preco NUMERIC`, `estoque INTEGER`, `permite_upload BOOLEAN` |
+| `produtos` | Catálogo | `preco NUMERIC`, `estoque INTEGER`, `permite_upload BOOLEAN`, `subcategoria TEXT` (subpasta do menu mobile) |
 | `pedidos` | Pedidos/checkout | `itens JSONB`, `pagamento JSONB`, `cliente_dados JSONB` (snapshot imutável), `status` |
 | `favoritos` | Favoritos por usuário | PK `(usuario_id, produto_id)`, `ON DELETE CASCADE` |
 | `newsletter` | Inscritos | `email` único + `aceite`/`aceite_em` (consentimento LGPD) |

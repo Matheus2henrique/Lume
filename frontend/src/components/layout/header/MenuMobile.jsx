@@ -1,4 +1,17 @@
+import { useState } from 'react'
+import { subcategorias } from '../../../data/subcategorias'
+
+// Menu mobile em acordeão de 2 níveis: nicho > subpasta.
+// Clicar na subpasta leva direto para a página do nicho já com o filtro dela
+// (?sub=...); nicho sem subpasta — Coleção Dinossauro e Pacotes — o clique já
+// vai direto para a página do nicho.
 function MenuMobile({ generos, generoId, onEscolherGenero, onFechar }) {
+  const [nichoAberto, setNichoAberto] = useState(null)
+
+  function alternarNicho(id) {
+    setNichoAberto((atual) => (atual === id ? null : id))
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 lg:hidden"
@@ -38,22 +51,45 @@ function MenuMobile({ generos, generoId, onEscolherGenero, onFechar }) {
         </div>
 
         <ul className="flex-1 overflow-y-auto px-4 py-4 list-none flex flex-col gap-1">
-          {generos.map((genero) => (
-            <li key={genero.id}>
-              <button
-                onClick={() => onEscolherGenero(genero.id)}
-                className={`w-full text-left py-3.5 px-3 rounded-xl bg-transparent border-none cursor-pointer text-base transition-colors ${
-                  generoId === genero.id ? 'font-semibold' : ''
-                }`}
-                style={{
-                  color: generoId === genero.id ? 'var(--cor-primaria)' : 'var(--cor-texto)',
-                  background: generoId === genero.id ? 'var(--cor-primaria-suave)' : 'transparent',
-                }}
-              >
-                {genero.nome}
-              </button>
-            </li>
-          ))}
+          {generos.map((genero) => {
+            const aberto = nichoAberto === genero.id
+            const subs = subcategorias[genero.id] || []
+            const ehAtual = generoId === genero.id
+
+            return (
+              <li key={genero.id}>
+                <button
+                  onClick={() => (subs.length > 0 ? alternarNicho(genero.id) : onEscolherGenero(genero.id))}
+                  aria-expanded={subs.length > 0 ? aberto : undefined}
+                  className={`w-full text-left py-3.5 px-3 rounded-xl bg-transparent border-none cursor-pointer text-base transition-colors ${
+                    ehAtual || aberto ? 'font-semibold' : ''
+                  }`}
+                  style={{
+                    color: ehAtual || aberto ? 'var(--cor-primaria)' : 'var(--cor-texto)',
+                    background: ehAtual ? 'var(--cor-primaria-suave)' : 'transparent',
+                  }}
+                >
+                  {genero.nome}
+                </button>
+
+                {aberto && subs.length > 0 && (
+                  <ul className="list-none m-0 p-0 mt-0.5 flex flex-col">
+                    {subs.map((sub) => (
+                      <li key={`sub-${sub.id}`}>
+                        <button
+                          onClick={() => onEscolherGenero(genero.id, sub.id)}
+                          className="w-full text-left py-2.5 pl-8 pr-3 rounded-lg bg-transparent border-none cursor-pointer text-sm transition-colors"
+                          style={{ color: 'var(--cor-texto)' }}
+                        >
+                          {sub.nome}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            )
+          })}
         </ul>
       </div>
     </div>

@@ -3,7 +3,7 @@
 const IMAGENS_BANNER = {
   'brinq-sensorial': `${import.meta.env.BASE_URL}banner_sensorial.jpg`,
   'articulados': `${import.meta.env.BASE_URL}banner_articulado.jpeg`,
-  'colecionaveis': `${import.meta.env.BASE_URL}banner_dino2.jpg`,
+  'dinossauros': `${import.meta.env.BASE_URL}banner_dino2.jpg`,
   'pacotes': `${import.meta.env.BASE_URL}banner_box.jpg`,
 }
 

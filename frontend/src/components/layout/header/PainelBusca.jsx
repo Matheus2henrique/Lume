@@ -19,7 +19,7 @@ function PainelBusca({ containerRef, busca, onMudarBusca, onEnter, onEsc, temRes
           <input
             autoFocus
             type="text"
-            placeholder="Pesquise universos e produtos (ex.: Dinossauros, suporte de livros)"
+            placeholder="Pesquise universos e produtos (ex.: Coleção Dinossauro, suporte de livros)"
             value={busca}
             onChange={(e) => onMudarBusca(e.target.value)}
             onKeyDown={(e) => {

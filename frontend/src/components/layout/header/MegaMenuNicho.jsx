@@ -1,34 +1,39 @@
-function MegaMenuNicho({ genero, produtos, onAbrirNicho, onAdiarFechamento, onEscolherProduto }) {
-  if (!genero) return null
+import { subcategorias } from '../../../data/subcategorias'
 
-  const produtosDoNicho = produtos.filter((p) => p.genero === genero.id).slice(0, 8)
+// Mega-menu de telas maiores: lista só as subpastas do nicho e cada uma leva
+// direto para a página do nicho com o filtro dela. Nicho sem subpasta
+// (Coleção Dinossauro e Pacotes) não abre painel: o clique no nicho já vai
+// para a URL dele.
+function MegaMenuNicho({ genero, onAbrirNicho, onAdiarFechamento, onEscolherSubpasta, alinharDireita = false }) {
+  const subs = subcategorias[genero?.id] || []
+  if (subs.length === 0) return null
+
+  // Cascata da animação original (45ms por elemento), na ordem da tela.
+  let ordem = 0
+  const proximoDelay = () => `${ordem++ * 45}ms`
 
   return (
     <div
       onMouseEnter={() => onAbrirNicho(genero.id)}
       onMouseLeave={onAdiarFechamento}
-      className="mega-menu absolute top-full left-0 mt-3 w-max max-w-[320px] rounded-xl border shadow-xl py-2 z-50"
+      className={`mega-menu absolute top-full mt-3 w-max max-w-[320px] rounded-xl border shadow-xl py-2 z-50 ${
+        alinharDireita ? 'right-0' : 'left-0'
+      }`}
       style={{ background: 'var(--cor-fundo-cartao)', borderColor: 'var(--cor-borda)' }}
     >
-      {produtosDoNicho.length > 0 ? (
-        <ul className="list-none m-0 p-0 flex flex-col">
-          {produtosDoNicho.map((produto, i) => (
-            <li key={`nicho-produto-${produto.id}`}>
-              <button
-                onClick={() => onEscolherProduto(produto)}
-                className="menu-item w-full text-left px-4 py-2 text-sm truncate bg-transparent border-none cursor-pointer"
-                style={{ animationDelay: `${i * 45}ms` }}
-              >
-                {produto.nome}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="px-4 py-2 m-0 text-sm" style={{ color: 'var(--cor-texto-suave)' }}>
-          Nenhum produto neste universo ainda.
-        </p>
-      )}
+      <ul className="list-none m-0 p-0 flex flex-col">
+        {subs.map((sub) => (
+          <li key={`sub-${sub.id}`}>
+            <button
+              onClick={() => onEscolherSubpasta(genero.id, sub.id)}
+              className="menu-item w-full text-left px-4 py-2 text-sm truncate bg-transparent border-none cursor-pointer"
+              style={{ animationDelay: proximoDelay() }}
+            >
+              {sub.nome}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

@@ -98,6 +98,7 @@ Lume/
 │       ├── migrate.js              # Aplica o schema (npm run migrate)
 │       ├── seed.js                 # Produtos (npm run seed)
 │       ├── seed-generos.js         # Universos (npm run seed)
+│       ├── seed-subcategorias.js   # Subpastas do menu + renomes de nicho (npm run seed)
 │       ├── seed-admin.js           # Admin inicial (npm run seed:admin)
 │       ├── middleware/
 │       │   ├── auth.js             # JWT + checkoutToken (convidado) + admin
@@ -149,7 +150,7 @@ DB_NAME=lume
 cd backend
 npm install
 npm run migrate      # cria as tabelas (usuarios, produtos, pedidos, favoritos...)
-npm run seed         # insere os 18 produtos e os universos
+npm run seed         # insere os produtos, os universos e as subpastas do menu
 npm run seed:admin   # cria/eleva o admin (senha via ADMIN_SENHA ou gerada)
 ```
 
@@ -273,9 +274,10 @@ npm run deploy    # build automático (predeploy) + push na branch gh-pages
 | `npm run dev` | Inicia o servidor com hot reload (porta `4000`) |
 | `npm run start` | Inicia o servidor em produção |
 | `npm run migrate` | Aplica o schema no PostgreSQL |
-| `npm run seed` | Popula produtos e universos (só se as tabelas estiverem vazias) |
+| `npm run seed` | Popula produtos, universos e subpastas (idempotente) |
 | `npm run seed:admin` | Cria/eleva o admin inicial (senha via `ADMIN_SENHA` ou gerada) |
 | `npm run seed:generos` | Popula apenas os universos |
+| `npm run seed:subcategorias` | Garante a coluna `subcategoria`, os renomes de nicho e os produtos das subpastas |
 | `npm test` | Roda a suíte Jest (13 suítes / 150 testes) |
 | `npm run backup` | Dump do banco para `backend/backups/` (aceita `--pg-bin "C:\Program Files\PostgreSQL\18\bin"`) |
 | `npm run restore:teste` | Restaura o backup mais recente em `lume_restore_teste` e compara tabelas/índices/CHECKs |

@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS produtos (
   id SERIAL PRIMARY KEY,
   nome TEXT NOT NULL,
   genero TEXT NOT NULL,
+  subcategoria TEXT NOT NULL DEFAULT '',
   tipo TEXT NOT NULL DEFAULT 'decoracao',
   preco NUMERIC(10,2) NOT NULL,
   estoque INTEGER NOT NULL DEFAULT 0,
@@ -75,6 +76,17 @@ BEGIN
     SELECT 1 FROM information_schema.columns WHERE table_name = 'generos' AND column_name = 'ordem'
   ) THEN
     ALTER TABLE generos ADD COLUMN ordem INTEGER;
+  END IF;
+END $$;
+
+-- Migração: subpasta do produto dentro do nicho (menu mobile: nicho > subpasta
+-- > produtos). Vazio = o produto não aparece em nenhuma subpasta.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'produtos' AND column_name = 'subcategoria'
+  ) THEN
+    ALTER TABLE produtos ADD COLUMN subcategoria TEXT NOT NULL DEFAULT '';
   END IF;
 END $$;
 

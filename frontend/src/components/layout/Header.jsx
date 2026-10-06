@@ -121,19 +121,13 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
         <NavDesktop
           generos={generos}
           generoId={generoId}
-          onSelecionarGenero={(id) => {
+          onSelecionarGenero={(id, sub) => {
             fecharNicho()
-            onSelecionarGenero(id)
+            onSelecionarGenero(id, sub)
           }}
           nichoAtivo={nichoAtivo}
           onAbrirNicho={abrirNicho}
           onAdiarFechamento={adiarFechamentoNicho}
-          produtos={produtos}
-          onEscolherProduto={(produto) => {
-            fecharNicho()
-            limparBusca()
-            onSelecionarProduto?.(produto)
-          }}
         />
 
         <BarraAcoes
@@ -172,7 +166,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
         <MenuMobile
           generos={generos}
           generoId={generoId}
-          onEscolherGenero={(id) => navegar(() => onSelecionarGenero(id))}
+          onEscolherGenero={(id, sub) => navegar(() => onSelecionarGenero(id, sub))}
           onFechar={() => setMenuAberto(false)}
         />
       )}

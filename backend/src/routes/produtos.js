@@ -51,7 +51,7 @@ router.get('/:id', async (req, res) => {
 })
 
 router.post('/', autenticarAdmin, async (req, res) => {
-  const { nome, genero, tipo, preco, estoque, permite_upload, permiteUpload, descricao, imagem } = req.body || {}
+  const { nome, genero, subcategoria, tipo, preco, estoque, permite_upload, permiteUpload, descricao, imagem } = req.body || {}
 
   if (!nome || !genero || preco === undefined) {
     return res.status(400).json({ erro: 'Nome, nicho e preço são obrigatórios.' })
@@ -63,12 +63,13 @@ router.post('/', autenticarAdmin, async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      `INSERT INTO produtos (nome, genero, tipo, preco, estoque, permite_upload, descricao, imagem, peso, altura, largura, comprimento)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO produtos (nome, genero, subcategoria, tipo, preco, estoque, permite_upload, descricao, imagem, peso, altura, largura, comprimento)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [
         nome,
         genero,
+        subcategoria || '',
         tipo || 'decoracao',
         preco,
         estoque || 0,
@@ -90,7 +91,7 @@ router.post('/', autenticarAdmin, async (req, res) => {
 })
 
 router.put('/:id', autenticarAdmin, async (req, res) => {
-  const { nome, genero, tipo, preco, estoque, permite_upload, permiteUpload, descricao, imagem } = req.body || {}
+  const { nome, genero, subcategoria, tipo, preco, estoque, permite_upload, permiteUpload, descricao, imagem } = req.body || {}
 
   if (!nome || !genero || preco === undefined) {
     return res.status(400).json({ erro: 'Nome, nicho e preço são obrigatórios.' })
@@ -101,11 +102,14 @@ router.put('/:id', autenticarAdmin, async (req, res) => {
   }
 
   try {
+    // `subcategoria` não vem do formulário do admin: ausente do corpo, mantém
+    // o valor já gravado (COALESCE com null) para não tirar o produto da
+    // subpasta quando o admin editar outro campo.
     const { rows } = await pool.query(
       `UPDATE produtos
        SET nome = $1, genero = $2, tipo = $3, preco = $4, estoque = $5, permite_upload = $6, descricao = $7, imagem = $8,
-           peso = $9, altura = $10, largura = $11, comprimento = $12
-       WHERE id = $13
+           peso = $9, altura = $10, largura = $11, comprimento = $12, subcategoria = COALESCE($13, subcategoria)
+       WHERE id = $14
        RETURNING *`,
       [
         nome,
@@ -120,6 +124,7 @@ router.put('/:id', autenticarAdmin, async (req, res) => {
         dimensoes.valores.altura,
         dimensoes.valores.largura,
         dimensoes.valores.comprimento,
+        subcategoria === undefined || subcategoria === null ? null : String(subcategoria),
         req.params.id,
       ]
     )
