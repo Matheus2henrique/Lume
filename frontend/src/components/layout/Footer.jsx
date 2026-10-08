@@ -3,7 +3,7 @@ import FooterColunas from './footer/FooterColunas'
 import FooterContato from './footer/FooterContato'
 import FooterNewsletter from './footer/FooterNewsletter'
 
-function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, onPrivacidade, nichos }) {
+function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, onPrivacidade, onTrocas, onFaq, nichos }) {
   const generos = nichos?.length ? nichos : generosPadrao
 
   return (
@@ -31,6 +31,8 @@ function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, onPrivacidade, 
           onSelecionarGenero={onSelecionarGenero}
           onIrParaDestaques={onIrParaDestaques}
           onPrivacidade={onPrivacidade}
+          onTrocas={onTrocas}
+          onFaq={onFaq}
         />
 
         <FooterContato />

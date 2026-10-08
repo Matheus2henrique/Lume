@@ -1,5 +1,5 @@
 import MegaMenuNicho from './MegaMenuNicho'
-import { subcategorias } from '../../../data/subcategorias'
+import { subcategorias as subcategoriasPadrao } from '../../../data/subcategorias'
 
 function NavDesktop({
   generos,
@@ -8,6 +8,7 @@ function NavDesktop({
   nichoAtivo,
   onAbrirNicho,
   onAdiarFechamento,
+  subcategorias = subcategoriasPadrao,
 }) {
   return (
     <nav className="hidden lg:block">
@@ -41,6 +42,7 @@ function NavDesktop({
               {subs.length > 0 && nichoAtivo === genero.id && (
                 <MegaMenuNicho
                   genero={genero}
+                  subcategorias={subcategorias}
                   onAbrirNicho={onAbrirNicho}
                   onAdiarFechamento={onAdiarFechamento}
                   onEscolherSubpasta={(id, sub) => onSelecionarGenero(id, sub)}

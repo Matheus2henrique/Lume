@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
 import Entrada from './components/pages/Entrada'
@@ -9,20 +9,34 @@ import Favoritos from './components/pages/Favoritos'
 import CarrinhoDrawer from './components/pages/Carrinho'
 import PedidoStatus from './components/pages/PedidoStatus'
 import Privacidade from './components/pages/Privacidade'
+import TrocasEDevolucoes from './components/pages/TrocasEDevolucoes'
+import PerguntasFrequentes from './components/pages/PerguntasFrequentes'
 import Admin from './components/pages/Admin'
 import ProdutoFormModal from './components/ui/ProdutoFormModal'
-import { generos as generosPadrao, produtos as produtosPadrao } from './data/produtos'
+import { generos as generosPadrao } from './data/produtos'
+import { subcategorias as subcategoriasPadrao } from './data/subcategorias'
 import { api, obterToken, obterUsuario } from './api'
 import { normalizarProduto } from './utils/formatar'
 import { carregarCarrinho, salvarCarrinho, chaveItem, normalizarOpcoes } from './utils/carrinho'
 
 const BASE = '/Lume'
 
-function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, mostrarFavoritos, mostrarAdmin, pedidoId, subFiltro }) {
+// O mapa estático (data/subcategorias.js) vira a mesma forma que a API
+// devolve — lista com `genero` — para menus e admin usarem um formato só.
+function listaDeSubcategoriasEstatica() {
+  return Object.entries(subcategoriasPadrao).flatMap(([genero, subs]) =>
+    subs.map((sub) => ({ ...sub, genero }))
+  )
+}
+
+function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, perfilCriandoConta, mostrarFavoritos, mostrarAdmin, pedidoId, subFiltro }) {
   if (mostrarAdmin) return `${BASE}/admin`
-  if (mostrarPerfil) return `${BASE}/login`
+  // Login e cadastro têm URLs próprias (voltar/avançar do navegador funciona).
+  if (mostrarPerfil) return perfilCriandoConta ? `${BASE}/login/criar-conta` : `${BASE}/login`
   if (mostrarFavoritos) return `${BASE}/favoritos`
   if (pagina === 'privacidade') return `${BASE}/privacidade`
+  if (pagina === 'trocas') return `${BASE}/trocas-e-devolucoes`
+  if (pagina === 'faq') return `${BASE}/perguntas-frequentes`
   if (pagina === 'pedido' && pedidoId) return `${BASE}/pedido/${pedidoId}`
   if (pagina === 'detalhe' && produtoSelecionado && generoId)
     return `${BASE}/${generoId}/produto/${produtoSelecionado.id}`
@@ -40,9 +54,12 @@ function URLparaEstado(pathname, produtosLista) {
   const subFiltro = new URLSearchParams(window.location.search).get('sub')
 
   if (partes[0] === 'admin') return { pagina: 'entrada', mostrarAdmin: true }
-  if (partes[0] === 'login') return { pagina: 'entrada', mostrarPerfil: true }
+  if (partes[0] === 'login')
+    return { pagina: 'entrada', mostrarPerfil: true, perfilCriandoConta: partes[1] === 'criar-conta' }
   if (partes[0] === 'favoritos') return { pagina: 'entrada', mostrarFavoritos: true }
   if (partes[0] === 'privacidade') return { pagina: 'privacidade' }
+  if (partes[0] === 'trocas-e-devolucoes') return { pagina: 'trocas' }
+  if (partes[0] === 'perguntas-frequentes') return { pagina: 'faq' }
   if (partes[0] === 'pedido') {
     const pedidoId = Number(partes[1])
     if (Number.isInteger(pedidoId) && pedidoId > 0) return { pagina: 'pedido', pedidoId }
@@ -67,14 +84,21 @@ function App() {
     const usuario = obterUsuario()
     return Boolean(usuario?.admin)
   })
-  const [produtos, setProdutos] = useState(produtosPadrao)
+  const [produtos, setProdutos] = useState([])
   const [nichos, setNichos] = useState(generosPadrao)
+  // Banners do slideshow da home (imagem + nicho de destino).
+  const [banners, setBanners] = useState([])
   const [generoId, setGeneroId] = useState(null)
   // Subpasta escolhida no menu (?sub=): o filtro inicial da página do nicho.
   const [subFiltro, setSubFiltro] = useState(null)
+  // Subpastas do menu vindas do banco. null = API indisponível (usa o mapa
+  // estático); lista vazia = admin apagou todas de propósito (respeita).
+  const [subcategoriasLista, setSubcategoriasLista] = useState(null)
   const [pagina, setPagina] = useState('entrada')
   const [produtoSelecionado, setProdutoSelecionado] = useState(null)
   const [mostrarPerfil, setMostrarPerfil] = useState(false)
+  // Dentro da tela de perfil, o cadastro tem URL própria (/Lume/login/criar-conta).
+  const [perfilCriandoConta, setPerfilCriandoConta] = useState(false)
   const [mostrarFavoritos, setMostrarFavoritos] = useState(false)
   const [mostrarAdmin, setMostrarAdmin] = useState(false)
   const [favoritos, setFavoritos] = useState([])
@@ -88,12 +112,28 @@ function App() {
 
   const genero = nichos.find((g) => g.id === generoId)
 
+  // nicho → subpastas, no formato que menus e página do nicho já consumiam.
+  const mapaSubcategorias = useMemo(() => {
+    const fonte = subcategoriasLista ?? listaDeSubcategoriasEstatica()
+    return fonte.reduce((mapa, sub) => {
+      if (!mapa[sub.genero]) mapa[sub.genero] = []
+      mapa[sub.genero].push(sub)
+      return mapa
+    }, {})
+  }, [subcategoriasLista])
+
   useEffect(() => {
     api.produtos.listar()
       .then((lista) => setProdutos(lista))
       .catch(() => {})
     api.generos.listar()
       .then((lista) => { if (lista.length > 0) setNichos(lista) })
+      .catch(() => {})
+    api.subcategorias.listar()
+      .then((lista) => setSubcategoriasLista(lista))
+      .catch(() => {})
+    api.banners.listar()
+      .then((lista) => setBanners(lista))
       .catch(() => {})
   }, [])
 
@@ -113,6 +153,7 @@ function App() {
     setPagina(proximo.pagina ?? 'entrada')
     setProdutoSelecionado(proximo.produtoSelecionado ?? null)
     setMostrarPerfil(Boolean(proximo.mostrarPerfil))
+    setPerfilCriandoConta(Boolean(proximo.perfilCriandoConta))
     setMostrarFavoritos(Boolean(proximo.mostrarFavoritos))
     setMostrarAdmin(Boolean(proximo.mostrarAdmin))
     setPedidoId(proximo.pedidoId ?? null)
@@ -128,6 +169,7 @@ function App() {
       setPagina(estado.pagina ?? 'entrada')
       setProdutoSelecionado(estado.produtoSelecionado ?? null)
       setMostrarPerfil(Boolean(estado.mostrarPerfil))
+      setPerfilCriandoConta(Boolean(estado.perfilCriandoConta))
       setMostrarFavoritos(Boolean(estado.mostrarFavoritos))
       setMostrarAdmin(Boolean(estado.mostrarAdmin))
       setPedidoId(estado.pedidoId ?? null)
@@ -167,6 +209,19 @@ function App() {
 
   function handleMostrarPerfil() {
     navegar({ pagina: 'entrada', mostrarPerfil: true })
+  }
+
+  // O Perfil avisa quando troca de formulário: registrar fica em
+  // /Lume/login/criar-conta; login e demais modos ficam em /Lume/login.
+  function handlePerfilMudarModo(modo) {
+    const destino = rotaParaURL({
+      pagina: 'entrada',
+      mostrarPerfil: true,
+      perfilCriandoConta: modo === 'registrar',
+    })
+    // URL já é a destino: não empilha histórico duplicado.
+    if (destino === window.location.pathname) return
+    navegar({ pagina: 'entrada', mostrarPerfil: true, perfilCriandoConta: modo === 'registrar' })
   }
 
   function handleMostrarFavoritos() {
@@ -226,6 +281,7 @@ function App() {
       const corpo = {
         nome: dados.nome,
         genero: dados.genero,
+        subcategoria: dados.subcategoria || '',
         tipo: dados.tipo,
         preco: dados.preco,
         estoque: dados.estoque,
@@ -287,9 +343,69 @@ function App() {
       await api.generos.excluir(id)
       setNichos((atual) => atual.filter((n) => n.id !== id))
       setProdutos((atual) => atual.map((p) => (p.genero === id ? { ...p, genero: '' } : p)))
+      // As subpastas do nicho caem junto (ON DELETE CASCADE no banco).
+      setSubcategoriasLista((atual) => atual?.filter((s) => s.genero !== id) ?? atual)
+      // Banners do nicho também caem junto (ON DELETE CASCADE).
+      setBanners((atual) => atual.filter((b) => b.genero !== id))
       mostrarMensagem('Nichos excluído!')
     } catch (err) {
       mostrarMensagem(err.message || 'Erro ao excluir nicho.')
+    }
+  }
+
+  async function handleSalvarSubcategoria(dados) {
+    try {
+      const fonte = subcategoriasLista ?? listaDeSubcategoriasEstatica()
+      const existente = fonte.some((s) => s.id === dados.id)
+      if (existente) {
+        const atualizado = await api.subcategorias.atualizar(dados.id, dados)
+        setSubcategoriasLista(fonte.map((s) => (s.id === dados.id ? atualizado : s)))
+        mostrarMensagem('Subpasta atualizada!')
+      } else {
+        const criada = await api.subcategorias.criar(dados)
+        setSubcategoriasLista([...fonte, criada])
+        mostrarMensagem('Subpasta criada!')
+      }
+    } catch (err) {
+      mostrarMensagem(err.message || 'Erro ao salvar subpasta.')
+    }
+  }
+
+  async function handleExcluirSubcategoria(id) {
+    try {
+      await api.subcategorias.excluir(id)
+      setSubcategoriasLista((atual) => (atual ?? []).filter((s) => s.id !== id))
+      // O backend limpou produtos.subcategoria: ressincroniza a loja.
+      api.produtos.listar().then((lista) => setProdutos(lista)).catch(() => {})
+      mostrarMensagem('Subpasta excluída!')
+    } catch (err) {
+      mostrarMensagem(err.message || 'Erro ao excluir subpasta.')
+    }
+  }
+
+  async function handleSalvarBanner(dados) {
+    try {
+      if (dados.id) {
+        const atualizado = await api.banners.atualizar(dados.id, dados)
+        setBanners((atual) => atual.map((b) => (b.id === dados.id ? atualizado : b)))
+        mostrarMensagem('Banner atualizado!')
+      } else {
+        const criado = await api.banners.criar(dados)
+        setBanners((atual) => [...atual, criado])
+        mostrarMensagem('Banner adicionado!')
+      }
+    } catch (err) {
+      mostrarMensagem(err.message || 'Erro ao salvar banner.')
+    }
+  }
+
+  async function handleExcluirBanner(id) {
+    try {
+      await api.banners.excluir(id)
+      setBanners((atual) => atual.filter((b) => b.id !== id))
+      mostrarMensagem('Banner excluído!')
+    } catch (err) {
+      mostrarMensagem(err.message || 'Erro ao excluir banner.')
     }
   }
 
@@ -403,6 +519,7 @@ function App() {
         onMostrarFavoritos={handleMostrarFavoritos}
         nichos={nichos}
         produtos={produtos}
+        subcategorias={mapaSubcategorias}
       />
 
       {sucesso && (
@@ -416,8 +533,11 @@ function App() {
           onVoltar={handleVoltarDoAdmin}
           produtos={produtos}
           nichos={nichos}
+          subcategorias={mapaSubcategorias}
           onSalvarNichos={handleSalvarNichos}
           onExcluirNichos={handleExcluirNichos}
+          onSalvarSubcategoria={handleSalvarSubcategoria}
+          onExcluirSubcategoria={handleExcluirSubcategoria}
           onSalvarProduto={handleSalvarProduto}
           onExcluirProduto={handleExcluirProduto}
           onEditarProduto={handleEditarProduto}
@@ -437,6 +557,8 @@ function App() {
           onMostrarAdmin={handleMostrarAdmin}
           onAdminLogin={handleAdminLogin}
           onAdminLogout={handleAdminLogout}
+          modoInicial={perfilCriandoConta ? 'registrar' : 'login'}
+          onMudarModo={handlePerfilMudarModo}
         />
       ) : pagina === 'pedido' && pedidoId ? (
         <PedidoStatus
@@ -446,6 +568,10 @@ function App() {
         />
       ) : pagina === 'privacidade' ? (
         <Privacidade onVoltar={handleVoltarHome} />
+      ) : pagina === 'trocas' ? (
+        <TrocasEDevolucoes onVoltar={handleVoltarHome} />
+      ) : pagina === 'faq' ? (
+        <PerguntasFrequentes onVoltar={handleVoltarHome} />
       ) : pagina === 'detalhe' && produtoSelecionado ? (
         <ProdutoDetalhe
           key={produtoSelecionado.id}
@@ -465,6 +591,7 @@ function App() {
         <Genero
           genero={genero}
           produtos={produtos}
+          subcategorias={mapaSubcategorias}
           subFiltro={subFiltro}
           onFiltrar={handleFiltrarGenero}
           onSelecionarProduto={handleSelecionarProduto}
@@ -477,6 +604,7 @@ function App() {
         <Entrada
           produtos={produtos}
           nichos={nichos}
+          banners={banners}
           onSelecionarGenero={handleSelecionarGenero}
           onSelecionarProduto={handleSelecionarProduto}
           favoritos={favoritos}
@@ -485,6 +613,8 @@ function App() {
           onEditarProduto={handleEditarProduto}
           onSalvarNichos={handleSalvarNichos}
           onExcluirNichos={handleExcluirNichos}
+          onSalvarBanner={handleSalvarBanner}
+          onExcluirBanner={handleExcluirBanner}
         />
       )}
 
@@ -510,6 +640,8 @@ function App() {
           onSelecionarGenero={handleSelecionarGenero}
           onIrParaDestaques={handleIrParaDestaques}
           onPrivacidade={() => navegar({ pagina: 'privacidade' })}
+          onTrocas={() => navegar({ pagina: 'trocas' })}
+          onFaq={() => navegar({ pagina: 'faq' })}
           nichos={nichos}
         />
       )}
@@ -518,6 +650,7 @@ function App() {
         <ProdutoFormModal
           produto={produtoEditando}
           nichos={nichos}
+          subcategorias={mapaSubcategorias}
           onSalvar={handleSalvarProduto}
           onFechar={() => { setMostrarFormProduto(false); setProdutoEditando(null) }}
           onExcluir={handleExcluirProduto}

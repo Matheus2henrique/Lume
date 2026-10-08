@@ -77,11 +77,17 @@ async function requisicao(caminho, { metodo = 'GET', corpo, autenticado = false 
 export const api = {
   registrar: (dados) => requisicao('/auth/registrar', { metodo: 'POST', corpo: dados }),
   login: (dados) => requisicao('/auth/login', { metodo: 'POST', corpo: dados }),
+  // ID token do Google Identity Services — validado no backend.
+  googleLogin: (dados) => requisicao('/auth/google', { metodo: 'POST', corpo: dados }),
   verificarCodigo: (dados) => requisicao('/auth/verificar', { metodo: 'POST', corpo: dados }),
   reenviarVerificacao: (dados) => requisicao('/auth/reenviar-verificacao', { metodo: 'POST', corpo: dados }),
   esqueciSenha: (dados) => requisicao('/auth/esqueci-senha', { metodo: 'POST', corpo: dados }),
   redefinirSenha: (dados) => requisicao('/auth/redefinir-senha', { metodo: 'POST', corpo: dados }),
   perfil: () => requisicao('/auth/perfil', { autenticado: true }),
+  atualizarNome: (nome) =>
+    requisicao('/auth/perfil', { metodo: 'PUT', corpo: { nome }, autenticado: true }),
+  alterarSenha: (dados) =>
+    requisicao('/auth/senha', { metodo: 'PUT', corpo: dados, autenticado: true }),
 
   produtos: {
     listar: () => requisicao('/produtos'),
@@ -96,6 +102,22 @@ export const api = {
     criar: (dados) => requisicao('/generos', { metodo: 'POST', corpo: dados, autenticado: true }),
     atualizar: (id, dados) => requisicao(`/generos/${id}`, { metodo: 'PUT', corpo: dados, autenticado: true }),
     excluir: (id) => requisicao(`/generos/${id}`, { metodo: 'DELETE', autenticado: true }),
+  },
+
+  // Subpastas de cada nicho (menu e filtros da página do nicho).
+  subcategorias: {
+    listar: () => requisicao('/subcategorias'),
+    criar: (dados) => requisicao('/subcategorias', { metodo: 'POST', corpo: dados, autenticado: true }),
+    atualizar: (id, dados) => requisicao(`/subcategorias/${id}`, { metodo: 'PUT', corpo: dados, autenticado: true }),
+    excluir: (id) => requisicao(`/subcategorias/${id}`, { metodo: 'DELETE', autenticado: true }),
+  },
+
+  // Banners do slideshow da home (imagem + nicho de destino do clique).
+  banners: {
+    listar: () => requisicao('/banners'),
+    criar: (dados) => requisicao('/banners', { metodo: 'POST', corpo: dados, autenticado: true }),
+    atualizar: (id, dados) => requisicao(`/banners/${id}`, { metodo: 'PUT', corpo: dados, autenticado: true }),
+    excluir: (id) => requisicao(`/banners/${id}`, { metodo: 'DELETE', autenticado: true }),
   },
 
   favoritos: {

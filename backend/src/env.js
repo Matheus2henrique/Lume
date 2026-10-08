@@ -52,6 +52,9 @@ const env = cleanEnv(process.env, {
   // extra confiável localmente (ex.: antivírus que intercepta TLS).
   // Em produção normalmente fica vazio — validação de certificado continua ativa.
   EMAIL_SMTP_EXTRA_CA: str({ default: '' }),
+  // Google Identity Services: Client ID (tipo Web) criado no Google Cloud
+  // Console. Vazio = rota /auth/google responde 503 (login com Google off).
+  GOOGLE_CLIENT_ID: str({ default: '' }),
 })
 
 // ---------------------------------------------------------------------------

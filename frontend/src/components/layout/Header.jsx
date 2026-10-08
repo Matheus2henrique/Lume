@@ -9,7 +9,7 @@ import MenuMobile from './header/MenuMobile'
 
 const ATRASO_FECHO_NICHO = 200
 
-function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCarrinho = 0, onMostrarCarrinho, totalFavoritos = 0, onMostrarFavoritos, nichos, produtos = [], onSelecionarProduto }) {
+function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCarrinho = 0, onMostrarCarrinho, totalFavoritos = 0, onMostrarFavoritos, nichos, produtos = [], onSelecionarProduto, subcategorias = undefined }) {
   const [menuAberto, setMenuAberto] = useState(false)
   const [buscando, setBuscando] = useState(false)
   const [busca, setBusca] = useState('')
@@ -128,6 +128,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
           nichoAtivo={nichoAtivo}
           onAbrirNicho={abrirNicho}
           onAdiarFechamento={adiarFechamentoNicho}
+          subcategorias={subcategorias}
         />
 
         <BarraAcoes
@@ -166,6 +167,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
         <MenuMobile
           generos={generos}
           generoId={generoId}
+          subcategorias={subcategorias}
           onEscolherGenero={(id, sub) => navegar(() => onSelecionarGenero(id, sub))}
           onFechar={() => setMenuAberto(false)}
         />

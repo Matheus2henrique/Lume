@@ -9,6 +9,7 @@ function SecaoDestaques({
   admin,
   onEditarProduto,
 }) {
+  if (!destaque.length) return null
   return (
     <div id="destaques" className="mt-[100px]">
       <div className="flex items-end justify-between">

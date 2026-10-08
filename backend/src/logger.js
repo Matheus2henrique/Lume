@@ -16,6 +16,11 @@ const CAMINHOS_SENSIVEIS = [
   '*.token',
   'password',
   '*.password',
+  // ID token do Google (login social): vale como sessão, jamais loga.
+  'credential',
+  '*.credential',
+  'idToken',
+  '*.idToken',
   'req.headers.authorization',
   'req.headers.cookie',
   'headers.authorization',

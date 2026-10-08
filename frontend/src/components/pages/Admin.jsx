@@ -5,15 +5,19 @@ import NichoFormModal from '../ui/NichoFormModal'
 import NichosSidebar from './admin/NichosSidebar'
 import ListaProdutos from './admin/ListaProdutos'
 import AbaPedidos from './admin/AbaPedidos'
+import AbaSubpastas from './admin/AbaSubpastas'
+import SubpastaFormModal from './admin/SubpastaFormModal'
 import ConfirmarExclusao from './admin/ConfirmarExclusao'
 
-function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, onSalvarProduto, onExcluirProduto }) {
+function Admin({ onVoltar, produtos, nichos, subcategorias = {}, onSalvarNichos, onExcluirNichos, onSalvarSubcategoria, onExcluirSubcategoria, onSalvarProduto, onExcluirProduto }) {
   const [filtroNichos, setFiltroNichos] = useState('todos')
   const [mostrarForm, setMostrarForm] = useState(false)
   const [produtoEditando, setProdutoEditando] = useState(null)
   const [confirmarExcluir, setConfirmarExcluir] = useState(null)
   const [nichoEditando, setNichoEditando] = useState(null)
-  const [aba, setAba] = useState('produtos') // produtos | pedidos
+  // null = formulário de subpasta fechado; { subpasta, nichoPadrao } = aberto.
+  const [formSubpasta, setFormSubpasta] = useState(null)
+  const [aba, setAba] = useState('produtos') // produtos | pedidos | subpastas
   const [pedidos, setPedidos] = useState(null) // null = ainda não carregou
   const [carregandoPedidos, setCarregandoPedidos] = useState(false)
   const [erroPedidos, setErroPedidos] = useState('')
@@ -104,7 +108,7 @@ function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, on
         </div>
 
         <div className="flex gap-2 mb-6">
-          {[{ id: 'produtos', nome: 'Produtos' }, { id: 'pedidos', nome: 'Pedidos' }].map((t) => (
+          {[{ id: 'produtos', nome: 'Produtos' }, { id: 'subpastas', nome: 'Subpastas' }, { id: 'pedidos', nome: 'Pedidos' }].map((t) => (
             <button
               key={t.id}
               onClick={() => setAba(t.id)}
@@ -144,7 +148,7 @@ function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, on
             onExcluirProduto={setConfirmarExcluir}
           />
         </div>
-        ) : (
+        ) : aba === 'pedidos' ? (
         <AbaPedidos
           pedidos={pedidos}
           carregandoPedidos={carregandoPedidos}
@@ -153,6 +157,14 @@ function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, on
           onAtualizar={carregarPedidos}
           onStatus={handleStatus}
         />
+        ) : (
+        <AbaSubpastas
+          nichos={nichos}
+          produtos={produtos}
+          subcategorias={subcategorias}
+          onNovo={(nichoId = null) => setFormSubpasta({ subpasta: null, nichoPadrao: nichoId })}
+          onEditar={(subpasta) => setFormSubpasta({ subpasta, nichoPadrao: null })}
+        />
         )}
       </div>
 
@@ -160,6 +172,7 @@ function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, on
         <ProdutoFormModal
           produto={produtoEditando}
           nichos={nichos}
+          subcategorias={subcategorias}
           onSalvar={(dados) => {
             setMostrarForm(false)
             setProdutoEditando(null)
@@ -191,6 +204,23 @@ function Admin({ onVoltar, produtos, nichos, onSalvarNichos, onExcluirNichos, on
           onExcluir={(id) => {
             onExcluirNichos(id)
             setNichoEditando(null)
+          }}
+        />
+      )}
+
+      {formSubpasta !== null && (
+        <SubpastaFormModal
+          subpasta={formSubpasta.subpasta}
+          nichoPadrao={formSubpasta.nichoPadrao}
+          nichos={nichos}
+          onSalvar={(dados) => {
+            onSalvarSubcategoria(dados)
+            setFormSubpasta(null)
+          }}
+          onFechar={() => setFormSubpasta(null)}
+          onExcluir={(id) => {
+            onExcluirSubcategoria(id)
+            setFormSubpasta(null)
           }}
         />
       )}

@@ -19,6 +19,7 @@ import {
   templateCodigoVerificacao,
   templateRedefinicaoSenha,
 } from '../services/email.js'
+import { verificarIdTokenGoogle } from '../services/google.js'
 import { removerContaPendente } from '../services/limpeza.js'
 import logger from '../logger.js'
 
@@ -130,31 +131,16 @@ router.post('/registrar', limiterAuth, async (req, res) => {
 
     res.status(201).json({
       requerVerificacao: true,
+      novaConta: true,
       email: usuario.email,
       emailEnviado: envio.enviado,
       expiraEmMinutos: EXPIRA_MINUTOS,
     })
   } catch (err) {
     if (err.code === '23505') {
-      // Conta já existe: se ainda não verificou, emite um código novo
-      // (quem tentou registrar de novo após falha de envio não fica preso).
-      try {
-        const { rows } = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email])
-        const existente = rows[0]
-        if (existente && !existente.email_verificado) {
-          const envio = await emitirCodigoVerificacao(existente)
-          logger.info({ userId: existente.id }, 'Reemissão de código para conta não verificada')
-          return res.status(201).json({
-            requerVerificacao: true,
-            email: existente.email,
-            emailEnviado: envio.enviado,
-            expiraEmMinutos: EXPIRA_MINUTOS,
-          })
-        }
-      } catch (erroInterno) {
-        logger.error({ err: erroInterno }, 'Erro ao reemitir código de verificação')
-      }
-      return res.status(409).json({ erro: 'Já existe uma conta com este e-mail.' })
+      // Conta já existe (verificada ou pendente): só avisa. A conta pendente
+      // continua acessível pelo login, que reemite o código de verificação.
+      return res.status(409).json({ erro: 'Este e-mail já foi cadastrado.' })
     }
     logger.error({ err }, 'Erro ao registrar usuário')
     res.status(500).json({ erro: 'Não foi possível criar a conta.' })
@@ -253,47 +239,22 @@ router.post('/login', limiterLogin, limiterConta, async (req, res) => {
   if (!email || !senha) {
     return res.status(400).json({ erro: 'Informe e-mail e senha.' })
   }
+  if (!email.includes('@')) {
+    return res.status(400).json({ erro: 'Informe um e-mail válido.' })
+  }
 
   try {
-    let { rows } = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email])
-    let usuario = rows[0]
-    let contaNova = false
-    let codigoNovo = null
+    const { rows } = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email])
+    const usuario = rows[0]
 
-    // E-mail ainda cadastrado: cria a conta como PENDENTE e envia o código.
-    // Ela só passa a existir de fato quando o código enviado for confirmado.
+    // O login só entra em conta que já existe: quem não tem cadastro precisa
+    // criar a conta na tela /criar-conta (nada de criar conta pendente aqui).
     if (!usuario) {
-      if (!email.includes('@')) {
-        return res.status(400).json({ erro: 'Informe um e-mail válido.' })
-      }
-      if (String(senha).length < 6) {
-        return res.status(400).json({ erro: 'A senha deve ter pelo menos 6 caracteres.' })
-      }
-
-      const senhaHash = bcrypt.hashSync(String(senha), 10)
-      codigoNovo = gerarCodigo()
-      const expiraEm = new Date(Date.now() + EXPIRA_MINUTOS * 60 * 1000)
-      try {
-        const criado = await pool.query(
-          `INSERT INTO usuarios (nome, email, senha_hash, email_verificado, codigo_verificacao_hash, codigo_expira_em, codigo_tentativas)
-           VALUES ($1, $2, $3, FALSE, $4, $5, 0)
-           RETURNING *`,
-          [String(email).split('@')[0], email, senhaHash, hashCodigo(codigoNovo), expiraEm]
-        )
-        usuario = criado.rows[0]
-        contaNova = true
-        logger.info({ userId: usuario.id }, 'Conta criada pela tela de Entrar (aguardando código)')
-      } catch (erroInsert) {
-        if (erroInsert.code !== '23505') throw erroInsert
-        // Corrida: outra requisição criou a conta instantes atrás — segue o fluxo normal.
-        const deNovo = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email])
-        usuario = deNovo.rows[0]
-        codigoNovo = null
-        if (!usuario) throw erroInsert
-      }
+      return res.status(401).json({ erro: 'Esta conta não existe. Crie sua conta para entrar.' })
     }
 
-    if (!bcrypt.compareSync(String(senha), usuario.senha_hash)) {
+    // Conta Google não tem senha local (senha_hash NULL): nunca compara.
+    if (!usuario.senha_hash || !bcrypt.compareSync(String(senha), usuario.senha_hash)) {
       registrarFalhaDeConta(email)
       if (contaBloqueada(email)) {
         logger.warn({ userId: usuario.id }, 'Conta bloqueada após tentativas de login')
@@ -308,20 +269,19 @@ router.post('/login', limiterLogin, limiterConta, async (req, res) => {
       // Prazo dos 10 min estourado: conta some do banco e o front manda pra home.
       const expirado =
         !usuario.codigo_expira_em || new Date() > new Date(usuario.codigo_expira_em)
-      if (expirado && !contaNova) {
+      if (expirado) {
         await removerContaPendente(usuario.id)
         logger.info({ userId: usuario.id }, 'Conta pendente removida no login (prazo expirado)')
         return res.status(410).json(contaExpirada())
       }
 
-      // Conta pendente: garante um código válido no e-mail antes de liberar.
-      const envio = contaNova && codigoNovo
-        ? await enviarCodigoEmail(usuario, codigoNovo)
-        : await emitirCodigoVerificacao(usuario)
-      return res.status(contaNova ? 201 : 403).json({
+      // Conta pendente (criada no /registrar): reemite um código válido no
+      // e-mail antes de liberar a entrada.
+      const envio = await emitirCodigoVerificacao(usuario)
+      return res.status(403).json({
         erro: 'Confirme o código enviado para o seu e-mail antes de entrar.',
         requerVerificacao: true,
-        novaConta: contaNova,
+        novaConta: false,
         email: usuario.email,
         emailEnviado: envio.enviado,
         expiraEmMinutos: EXPIRA_MINUTOS,
@@ -334,6 +294,85 @@ router.post('/login', limiterLogin, limiterConta, async (req, res) => {
   } catch (err) {
     logger.error({ err }, 'Erro ao fazer login')
     res.status(500).json({ erro: 'Não foi possível entrar.' })
+  }
+})
+
+// Login/registro com Google: o front manda o ID token do Google Identity
+// Services e a gente só cria sessão depois de validar assinatura e audiência.
+// Conta nova nasce SEM senha (senha_hash NULL) e já verificada; conta local
+// existente e verificada com o mesmo e-mail é AVENTADA (vínculo decidido).
+router.post('/google', limiterAuth, async (req, res) => {
+  const credential = req.body?.credential
+  if (!credential) {
+    return res.status(400).json({ erro: 'Credencial do Google ausente.' })
+  }
+
+  let payload
+  try {
+    payload = await verificarIdTokenGoogle(credential)
+  } catch (err) {
+    if (err.naoConfigurado) {
+      return res.status(503).json({ erro: 'Login com Google não configurado no servidor.' })
+    }
+    // Nunca logar o credential — só o fato da recusa.
+    logger.warn('ID token do Google recusado')
+    return res.status(401).json({ erro: 'Não foi possível validar o login com Google.' })
+  }
+
+  const email = String(payload?.email || '').trim().toLowerCase()
+  const nomeGoogle = String(payload?.name || '').trim()
+  if (!email || !email.includes('@')) {
+    return res.status(401).json({ erro: 'O Google não devolveu um e-mail válido.' })
+  }
+  if (!payload?.email_verified) {
+    return res.status(403).json({ erro: 'O Google não confirmou a verificação deste e-mail.' })
+  }
+
+  try {
+    const { rows } = await pool.query('SELECT * FROM usuarios WHERE lower(email) = lower($1)', [
+      email,
+    ])
+    let usuario = rows[0]
+
+    if (usuario && !usuario.email_verificado) {
+      // Conta pendente: pode ter sido cadastrada por terceiro com o e-mail
+      // desta pessoa — não adota. Quem é dono confirma o código no próprio
+      // e-mail e aí sim o Google passa a entrar normalmente.
+      return res.status(403).json({
+        erro:
+          'Existe uma conta para este e-mail aguardando verificação. ' +
+          'Confirme o código enviado a ele antes de entrar com Google.',
+      })
+    }
+
+    if (!usuario) {
+      try {
+        const criado = await pool.query(
+          `INSERT INTO usuarios (nome, email, senha_hash, provedor, email_verificado)
+           VALUES ($1, $2, NULL, 'google', TRUE)
+           RETURNING *`,
+          [nomeGoogle || email.split('@')[0], email]
+        )
+        usuario = criado.rows[0]
+        logger.info({ userId: usuario.id }, 'Conta criada via Google')
+      } catch (erroInsert) {
+        if (erroInsert.code !== '23505') throw erroInsert
+        // Corrida: outra requisição criou a conta instantes atrás.
+        const deNovo = await pool.query(
+          'SELECT * FROM usuarios WHERE lower(email) = lower($1)',
+          [email]
+        )
+        usuario = deNovo.rows[0]
+        if (!usuario) throw erroInsert
+      }
+    } else {
+      logger.info({ userId: usuario.id }, 'Login com Google em conta existente (vínculo)')
+    }
+
+    res.json({ usuario: publico(usuario), token: tokenPara(usuario) })
+  } catch (err) {
+    logger.error({ err }, 'Erro no login com Google')
+    res.status(500).json({ erro: 'Não foi possível entrar com o Google.' })
   }
 })
 
@@ -525,6 +564,72 @@ router.delete('/dados', autenticar, async (req, res) => {
 
 router.get('/perfil', autenticar, (req, res) => {
   res.json({ usuario: publico(req.usuario) })
+})
+
+// Altera o nome de quem está logado (tela de conta).
+router.put('/perfil', autenticar, async (req, res) => {
+  const nome = String(req.body?.nome ?? '').trim()
+
+  if (!nome) {
+    return res.status(400).json({ erro: 'Informe seu nome.' })
+  }
+  if (nome.length > 80) {
+    return res.status(400).json({ erro: 'O nome pode ter no máximo 80 caracteres.' })
+  }
+
+  try {
+    const { rows } = await pool.query(
+      'UPDATE usuarios SET nome = $1 WHERE id = $2 RETURNING *',
+      [nome, req.usuario.id]
+    )
+    logger.info({ userId: req.usuario.id }, 'Nome alterado pela conta logada')
+    res.json({ usuario: publico(rows[0]) })
+  } catch (err) {
+    logger.error({ err }, 'Erro ao alterar nome')
+    res.status(500).json({ erro: 'Não foi possível atualizar o nome.' })
+  }
+})
+
+// Troca a senha de quem está logado: exige a senha atual e incrementa
+// token_version (derruba as outras sessões), devolvendo um token novo para a
+// sessão atual continuar conectada.
+router.put('/senha', limiterAuth, autenticar, async (req, res) => {
+  const { senhaAtual, novaSenha } = req.body || {}
+
+  if (!senhaAtual || !novaSenha) {
+    return res.status(400).json({ erro: 'Informe a senha atual e a nova senha.' })
+  }
+  if (String(novaSenha).length < 6) {
+    return res.status(400).json({ erro: 'A nova senha deve ter pelo menos 6 caracteres.' })
+  }
+  if (String(senhaAtual) === String(novaSenha)) {
+    return res.status(400).json({ erro: 'A nova senha deve ser diferente da atual.' })
+  }
+
+  try {
+    const usuario = req.usuario
+    const confere =
+      Boolean(usuario.senha_hash) && bcrypt.compareSync(String(senhaAtual), usuario.senha_hash)
+    if (!confere) {
+      return res.status(400).json({ erro: 'A senha atual está incorreta.' })
+    }
+
+    const senhaHash = bcrypt.hashSync(String(novaSenha), 10)
+    const { rows } = await pool.query(
+      `UPDATE usuarios
+       SET senha_hash = $1,
+           token_version = token_version + 1
+       WHERE id = $2
+       RETURNING *`,
+      [senhaHash, usuario.id]
+    )
+    const atualizado = rows[0]
+    logger.info({ userId: usuario.id }, 'Senha alterada pela conta logada')
+    res.json({ token: tokenPara(atualizado), usuario: publico(atualizado) })
+  } catch (err) {
+    logger.error({ err }, 'Erro ao alterar senha')
+    res.status(500).json({ erro: 'Não foi possível alterar a senha.' })
+  }
 })
 
 export default router

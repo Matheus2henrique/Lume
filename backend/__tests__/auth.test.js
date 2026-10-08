@@ -17,6 +17,11 @@ jest.unstable_mockModule('../src/services/email.js', () => ({
   templateRedefinicaoSenha: jest.fn(() => ({ texto: 'reset', html: '<p>reset</p>' })),
 }))
 
+const mockVerificarGoogle = jest.fn()
+jest.unstable_mockModule('../src/services/google.js', () => ({
+  verificarIdTokenGoogle: mockVerificarGoogle,
+}))
+
 const { default: app } = await import('../src/server.js')
 const { limiterAuth, limiterReenvio, limiterLogin, resetarFalhasDeConta } = await import(
   '../src/middleware/rateLimiter.js'
@@ -55,6 +60,7 @@ beforeEach(() => {
   mockQuery.mockReset()
   mockEnviarEmail.mockReset()
   mockEnviarEmail.mockResolvedValue({ enviado: true, simulado: false })
+  mockVerificarGoogle.mockReset()
   resetarFalhasDeConta()
   for (const ip of ['127.0.0.1', '::1', '::ffff:127.0.0.1']) {
     limiterAuth.resetKey(ip)
@@ -92,26 +98,25 @@ describe('POST /api/auth/registrar', () => {
     expect(mockEnviarEmail).toHaveBeenCalledTimes(1)
   })
 
-  it('deve retornar 409 para email duplicado já verificado', async () => {
+  it('deve retornar 409 para email já cadastrado', async () => {
     mockQuery.mockRejectedValueOnce({ code: '23505' })
-    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true })] })
     const res = await request(app)
       .post('/api/auth/registrar')
       .send({ nome: 'Teste', email: 'dup@test.com', senha: '123456' })
     expect(res.status).toBe(409)
-    expect(res.body.erro).toContain('Já existe')
+    expect(res.body.erro).toContain('cadastrado')
     expect(mockEnviarEmail).not.toHaveBeenCalled()
   })
 
-  it('deve reemitir código quando a conta existe mas não foi verificada', async () => {
+  it('deve retornar 409 (sem reemitir código) quando a conta existe e não foi verificada', async () => {
     mockQuery.mockRejectedValueOnce({ code: '23505' })
-    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: false })] })
     const res = await request(app)
       .post('/api/auth/registrar')
       .send({ nome: 'Teste', email: 'dup@test.com', senha: '123456' })
-    expect(res.status).toBe(201)
-    expect(res.body.requerVerificacao).toBe(true)
-    expect(mockEnviarEmail).toHaveBeenCalledTimes(1)
+    expect(res.status).toBe(409)
+    expect(res.body.erro).toContain('cadastrado')
+    expect(res.body.requerVerificacao).toBeUndefined()
+    expect(mockEnviarEmail).not.toHaveBeenCalled()
   })
 })
 
@@ -237,32 +242,27 @@ describe('POST /api/auth/login', () => {
     expect(res.status).toBe(400)
   })
 
-  it('deve criar conta pendente e enviar código quando o e-mail não existe', async () => {
+  it('deve recusar login com e-mail inexistente, sem criar conta', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [] }) // SELECT: não existe
-    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: false })] }) // INSERT
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'teste@test.com', senha: '123456' })
-    expect(res.status).toBe(201)
-    expect(res.body.requerVerificacao).toBe(true)
-    expect(res.body.novaConta).toBe(true)
-    expect(res.body.email).toBe('teste@test.com')
+    expect(res.status).toBe(401)
+    expect(res.body.erro).toContain('não existe')
     expect(res.body.token).toBeUndefined()
-    expect(mockEnviarEmail).toHaveBeenCalledTimes(1)
+    expect(mockEnviarEmail).not.toHaveBeenCalled()
     const insert = mockQuery.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO usuarios'))
-    expect(insert).toBeDefined()
-    expect(String(insert[0])).toContain('email_verificado, codigo_verificacao_hash')
-    expect(String(insert[0])).toContain('FALSE') // conta nasce não verificada
-    expect(insert[1][1]).toBe('teste@test.com')
+    expect(insert).toBeUndefined() // login não cria conta
+    expect(mockQuery).toHaveBeenCalledTimes(1) // só o SELECT
   })
 
-  it('deve exigir senha de 6 caracteres ao criar conta pela tela de Entrar', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] })
+  it('deve rejeitar e-mail sem @ no login antes de consultar o banco', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'novo@test.com', senha: '123' })
+      .send({ email: 'sem-arroba', senha: '123456' })
     expect(res.status).toBe(400)
-    expect(res.body.erro).toContain('6 caracteres')
+    expect(res.body.erro).toContain('e-mail válido')
+    expect(mockQuery).not.toHaveBeenCalled()
     expect(mockEnviarEmail).not.toHaveBeenCalled()
   })
 
@@ -309,6 +309,15 @@ describe('POST /api/auth/login', () => {
       .post('/api/auth/login')
       .send({ email: 'teste@test.com', senha: 'errada' })
     expect(res.status).toBe(401)
+  })
+
+  it('deve recusar qualquer senha em conta criada pelo Google (sem senha local)', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true, senha_hash: null })] })
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'google@test.com', senha: '123456' })
+    expect(res.status).toBe(401)
+    expect(res.body.erro).toContain('incorretos')
   })
 
   it('bloqueia a conta após 5 senhas erradas mesmo trocando de IP', async () => {
@@ -575,5 +584,199 @@ describe('GET /api/auth/perfil', () => {
   it('deve retornar 401 sem token', async () => {
     const res = await request(app).get('/api/auth/perfil')
     expect(res.status).toBe(401)
+  })
+})
+
+describe('PUT /api/auth/perfil (alterar nome)', () => {
+  it('deve exigir token', async () => {
+    const res = await request(app).put('/api/auth/perfil').send({ nome: 'Nome Novo' })
+    expect(res.status).toBe(401)
+  })
+
+  it('deve rejeitar nome vazio sem atualizar', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true })] }) // sessão
+    const res = await request(app)
+      .put('/api/auth/perfil')
+      .set('Authorization', `Bearer ${tokenDoUsuario()}`)
+      .send({ nome: '   ' })
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('Informe seu nome')
+    expect(mockQuery).toHaveBeenCalledTimes(1) // só a sessão, sem UPDATE
+  })
+
+  it('deve atualizar o nome (sem espaços nas pontas) e devolver o usuário', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true })] }) // sessão
+    mockQuery.mockResolvedValueOnce({ rows: [base({ nome: 'Nome Novo' })] }) // UPDATE
+    const res = await request(app)
+      .put('/api/auth/perfil')
+      .set('Authorization', `Bearer ${tokenDoUsuario()}`)
+      .send({ nome: '  Nome Novo  ' })
+    expect(res.status).toBe(200)
+    expect(res.body.usuario.nome).toBe('Nome Novo')
+    const update = mockQuery.mock.calls.find(([sql]) => String(sql).includes('SET nome'))
+    expect(update).toBeDefined()
+    expect(update[1]).toEqual(['Nome Novo', 1])
+  })
+})
+
+describe('PUT /api/auth/senha (trocar estando logado)', () => {
+  it('deve exigir token', async () => {
+    const res = await request(app)
+      .put('/api/auth/senha')
+      .send({ senhaAtual: '123456', novaSenha: '654321' })
+    expect(res.status).toBe(401)
+  })
+
+  it('deve rejeitar a senha atual incorreta sem alterar nada', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true })] }) // sessão
+    const res = await request(app)
+      .put('/api/auth/senha')
+      .set('Authorization', `Bearer ${tokenDoUsuario()}`)
+      .send({ senhaAtual: 'errada', novaSenha: '654321abc' })
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('senha atual')
+    const update = mockQuery.mock.calls.find(([sql]) => String(sql).includes('senha_hash = $1'))
+    expect(update).toBeUndefined()
+  })
+
+  it('deve rejeitar nova senha curta ou igual à atual', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true })] }) // sessão
+    const curta = await request(app)
+      .put('/api/auth/senha')
+      .set('Authorization', `Bearer ${tokenDoUsuario()}`)
+      .send({ senhaAtual: '123456', novaSenha: '123' })
+    expect(curta.status).toBe(400)
+    expect(curta.body.erro).toContain('6 caracteres')
+
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true })] }) // sessão
+    const igual = await request(app)
+      .put('/api/auth/senha')
+      .set('Authorization', `Bearer ${tokenDoUsuario()}`)
+      .send({ senhaAtual: '123456', novaSenha: '123456' })
+    expect(igual.status).toBe(400)
+    expect(igual.body.erro).toContain('diferente')
+  })
+
+  it('deve trocar a senha, derrubar as sessões antigas e devolver token novo', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email_verificado: true })] }) // sessão (tv 0)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        base({
+          email_verificado: true,
+          token_version: 1,
+          senha_hash: bcrypt.hashSync('senha-nova-999', 10),
+        }),
+      ],
+    }) // UPDATE ... RETURNING
+    const res = await request(app)
+      .put('/api/auth/senha')
+      .set('Authorization', `Bearer ${tokenDoUsuario()}`)
+      .send({ senhaAtual: '123456', novaSenha: 'senha-nova-999' })
+    expect(res.status).toBe(200)
+    expect(res.body.usuario.email).toBe('teste@test.com')
+    expect(res.body.token).toBeDefined()
+
+    const update = mockQuery.mock.calls.find(([sql]) => String(sql).includes('senha_hash = $1'))
+    expect(update).toBeDefined()
+    expect(String(update[0])).toContain('token_version = token_version + 1')
+    expect(update[1][0]).not.toBe('senha-nova-999') // grava o HASH
+
+    // O token devolvido já carrega a versão nova: a sessão atual segue viva,
+    // enquanto os tokens antigos (tv 0) morrem na próxima requisição.
+    const payload = JSON.parse(Buffer.from(res.body.token.split('.')[1], 'base64url').toString())
+    expect(payload.tv).toBe(1)
+  })
+})
+
+describe('POST /api/auth/google', () => {
+  const PAYLOAD = {
+    sub: 'google-123',
+    email: 'google@test.com',
+    name: 'Google Teste',
+    email_verified: true,
+  }
+
+  it('deve rejeitar requisição sem credential', async () => {
+    const res = await request(app).post('/api/auth/google').send({})
+    expect(res.status).toBe(400)
+    expect(res.body.erro).toContain('Credencial')
+    expect(mockVerificarGoogle).not.toHaveBeenCalled()
+    expect(mockQuery).not.toHaveBeenCalled()
+  })
+
+  it('deve recusar credential inválida com 401', async () => {
+    mockVerificarGoogle.mockRejectedValueOnce(new Error('token inválido'))
+    const res = await request(app).post('/api/auth/google').send({ credential: 'abc' })
+    expect(res.status).toBe(401)
+    expect(res.body.erro).toContain('Google')
+    expect(mockQuery).not.toHaveBeenCalled()
+  })
+
+  it('deve responder 503 quando o servidor não tem GOOGLE_CLIENT_ID', async () => {
+    const erro = new Error('Login com Google não configurado.')
+    erro.naoConfigurado = true
+    mockVerificarGoogle.mockRejectedValueOnce(erro)
+    const res = await request(app).post('/api/auth/google').send({ credential: 'abc' })
+    expect(res.status).toBe(503)
+    expect(res.body.erro).toContain('não configurado')
+  })
+
+  it('deve recusar e-mail que o Google não verificou', async () => {
+    mockVerificarGoogle.mockResolvedValueOnce({ ...PAYLOAD, email_verified: false })
+    const res = await request(app).post('/api/auth/google').send({ credential: 'abc' })
+    expect(res.status).toBe(403)
+    expect(mockQuery).not.toHaveBeenCalled()
+  })
+
+  it('deve criar a conta nova SEM senha (provedor google, já verificada)', async () => {
+    mockVerificarGoogle.mockResolvedValueOnce(PAYLOAD)
+    mockQuery.mockResolvedValueOnce({ rows: [] }) // SELECT: não existe
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        base({
+          email: 'google@test.com',
+          nome: 'Google Teste',
+          provedor: 'google',
+          email_verificado: true,
+          senha_hash: null,
+        }),
+      ],
+    }) // INSERT
+    const res = await request(app).post('/api/auth/google').send({ credential: 'jwt-valido' })
+    expect(res.status).toBe(200)
+    expect(res.body.token).toBeDefined()
+    expect(res.body.usuario.email).toBe('google@test.com')
+    expect(res.body.usuario.provedor).toBe('google')
+    expect(res.body.usuario.emailVerificado).toBe(true)
+
+    const insert = mockQuery.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO usuarios'))
+    expect(insert).toBeDefined()
+    expect(String(insert[0])).toContain("'google'")
+    expect(String(insert[0])).toContain('NULL') // nasce sem senha
+    expect(insert[1][1]).toBe('google@test.com')
+    expect(mockEnviarEmail).not.toHaveBeenCalled() // sem código: já verificado
+  })
+
+  it('deve logar na conta verificada existente (vínculo) sem criar outra linha', async () => {
+    mockVerificarGoogle.mockResolvedValueOnce(PAYLOAD)
+    mockQuery.mockResolvedValueOnce({ rows: [base({ email: 'google@test.com', email_verificado: true })] })
+    const res = await request(app).post('/api/auth/google').send({ credential: 'jwt-valido' })
+    expect(res.status).toBe(200)
+    expect(res.body.usuario.id).toBe(1)
+    expect(res.body.token).toBeDefined()
+    expect(mockQuery).toHaveBeenCalledTimes(1) // só o SELECT
+    const insert = mockQuery.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO usuarios'))
+    expect(insert).toBeUndefined()
+  })
+
+  it('deve recusar conta pendente (aguardando código) em vez de adotá-la', async () => {
+    mockVerificarGoogle.mockResolvedValueOnce(PAYLOAD)
+    mockQuery.mockResolvedValueOnce({
+      rows: [base({ email: 'google@test.com', email_verificado: false })],
+    })
+    const res = await request(app).post('/api/auth/google').send({ credential: 'jwt-valido' })
+    expect(res.status).toBe(403)
+    expect(res.body.erro).toContain('verificação')
+    expect(mockQuery).toHaveBeenCalledTimes(1) // não faz INSERT nem UPDATE
   })
 })

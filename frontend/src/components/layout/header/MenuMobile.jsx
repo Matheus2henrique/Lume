@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { subcategorias } from '../../../data/subcategorias'
+import { subcategorias as subcategoriasPadrao } from '../../../data/subcategorias'
 
 // Menu mobile em acordeão de 2 níveis: nicho > subpasta.
 // Clicar na subpasta leva direto para a página do nicho já com o filtro dela
 // (?sub=...); nicho sem subpasta — Coleção Dinossauro e Pacotes — o clique já
 // vai direto para a página do nicho.
-function MenuMobile({ generos, generoId, onEscolherGenero, onFechar }) {
+function MenuMobile({ generos, generoId, onEscolherGenero, onFechar, subcategorias = subcategoriasPadrao }) {
   const [nichoAberto, setNichoAberto] = useState(null)
 
   function alternarNicho(id) {

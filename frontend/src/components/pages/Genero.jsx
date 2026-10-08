@@ -1,8 +1,8 @@
 import Card from '../ui/Card'
 import Reveal from '../ui/Reveal'
-import { subcategorias } from '../../data/subcategorias'
+import { subcategorias as subcategoriasPadrao } from '../../data/subcategorias'
 
-function Genero({ genero, produtos, subFiltro, onFiltrar, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto }) {
+function Genero({ genero, produtos, subcategorias = subcategoriasPadrao, subFiltro, onFiltrar, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto }) {
   const subs = subcategorias[genero.id] || []
   // Filtro da vitrine vem do App (?sub= vindo do menu ou clique nos botões):
   // TODOS + as subpastas do nicho. Subpasta que não existe nesse nicho cai em TODOS.

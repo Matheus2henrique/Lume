@@ -11,6 +11,8 @@ import pedidosRouter from './routes/pedidos.js'
 import authRouter from './routes/auth.js'
 import produtosRouter from './routes/produtos.js'
 import generosRouter from './routes/generos.js'
+import subcategoriasRouter from './routes/subcategorias.js'
+import bannersRouter from './routes/banners.js'
 import favoritosRouter from './routes/favoritos.js'
 import pagamentosRouter from './routes/pagamentos.js'
 import freteRouter from './routes/frete.js'
@@ -92,6 +94,8 @@ app.use('/api/pedidos', pedidosRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/produtos', produtosRouter)
 app.use('/api/generos', generosRouter)
+app.use('/api/subcategorias', subcategoriasRouter)
+app.use('/api/banners', bannersRouter)
 app.use('/api/favoritos', favoritosRouter)
 app.use('/api/pagamentos', pagamentosRouter)
 app.use('/api/frete', freteRouter)

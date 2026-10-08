@@ -8,10 +8,10 @@ import FormRedefinir from './perfil/FormRedefinir'
 import FormVerificar from './perfil/FormVerificar'
 import LoginGoogle from './perfil/LoginGoogle'
 
-// Crie um Client ID OAuth no Google Cloud Console
-// (APIs e serviços > Credenciais > Criar credenciais > ID do cliente OAuth > App da Web)
-// e cole aqui. Redirect URI configurada: origem = http://localhost:5173
-const GOOGLE_CLIENT_ID = 'SEU_CLIENT_ID_AQUI.apps.googleusercontent.com'
+// Client ID OAuth (tipo Web) do Google Cloud Console — APIs e serviços >
+// Credenciais. Fica em frontend/.env como VITE_GOOGLE_CLIENT_ID; a MESMA
+// origem autorizada precisa estar no console (ex.: http://localhost:5173).
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 function carregarGoogleIdentity() {
   return new Promise((resolve, reject) => {
@@ -26,8 +26,11 @@ function carregarGoogleIdentity() {
   })
 }
 
-function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
-  const [modo, setModo] = useState('login') // login | registrar | verificar | recuperar | redefinir
+function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout, modoInicial = 'login', onMudarModo }) {
+  // Verificar/recuperar/redefinir são internos desta tela; login e registrar
+  // vêm da URL que o App controla (/Lume/login e /Lume/login/criar-conta).
+  const [modoInterno, setModoInterno] = useState(null) // verificar | recuperar | redefinir
+  const modo = modoInterno ?? (modoInicial === 'registrar' ? 'registrar' : 'login')
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -44,6 +47,14 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
 
   // Modos com formulário próprio (sem troca para registro/login nem Google).
   const modoComCodigo = modo === 'verificar' || modo === 'recuperar' || modo === 'redefinir'
+
+  // Toda troca de modo passa por aqui: login/registrar são ditados pela URL
+  // (o App leva para /Lume/login/criar-conta ou /Lume/login); os demais modos
+  // ficam internos e sobrevivem ao voltar/avançar do navegador.
+  function mudarModo(novo) {
+    setModoInterno(novo === 'login' || novo === 'registrar' ? null : novo)
+    onMudarModo?.(novo)
+  }
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -73,12 +84,13 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Sucesso: fica nesta tela mostrando o perfil (ContaLogada) com os dados
+  // da pessoa — sem redirecionar para a home.
   function concluirLogin(resposta) {
     salvarSessao(resposta)
-    setUsuario(resposta.usuario)
-    setSucesso(`Bem-vindo(a), ${resposta.usuario.nome || resposta.usuario.email}!`)
     setErro('')
-    setTimeout(() => onVoltar(), 900)
+    setSucesso('')
+    setUsuario(resposta.usuario)
   }
 
   async function handleLogin(e) {
@@ -135,7 +147,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
 
   function iniciarVerificacao(resposta) {
     setCodigo('')
-    setModo('verificar')
+    mudarModo('verificar')
     setCooldown(60)
     setEnvioPendente(resposta.emailEnviado === false)
     setErro('')
@@ -155,7 +167,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     setSucesso(
       'O prazo de verificação expirou e a conta foi removida. Você será redirecionado para a página inicial…'
     )
-    setModo('login')
+    mudarModo('login')
     setNome('')
     setEmail('')
     setSenha('')
@@ -207,6 +219,8 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     setUsuario(null)
     setSucesso('')
     setErro('')
+    // Volta pro formulário de login (o modo anterior podia ser 'verificar').
+    mudarModo('login')
     onAdminLogout?.()
   }
 
@@ -260,7 +274,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
       const resposta = await api.esqueciSenha({ email: email.trim() })
       setCodigo('')
       setSenha('')
-      setModo('redefinir')
+      mudarModo('redefinir')
       setCooldown(60)
       setSucesso(resposta.mensagem || 'Se existir uma conta, enviamos um código para o seu e-mail.')
     } catch (err) {
@@ -307,7 +321,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
         codigo: codigo.trim(),
         senha,
       })
-      setModo('login')
+      mudarModo('login')
       setCodigo('')
       setSenha('')
       setSucesso(resposta.mensagem || 'Senha alterada com sucesso. Faça login com a nova senha.')
@@ -322,8 +336,8 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
     try {
       const accounts = await carregarGoogleIdentity()
 
-      if (GOOGLE_CLIENT_ID.startsWith('SEU_CLIENT_ID')) {
-        setErro('Configure o GOOGLE_CLIENT_ID no código para habilitar o login com o Google.')
+      if (!GOOGLE_CLIENT_ID) {
+        setErro('Configure VITE_GOOGLE_CLIENT_ID no frontend/.env para habilitar o login com o Google.')
         return
       }
 
@@ -331,13 +345,25 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
       const client = accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: 'email profile openid',
-        callback: (resposta) => {
+        callback: async (resposta) => {
           if (resposta?.error) {
             if (resposta.error === 'user_cancelled' || resposta.error === 'access_denied') return
             setErro('Não foi possível entrar com o Google. Tente novamente.')
             return
           }
-          setSucesso('Login com o Google ainda requer integração no backend.')
+          // O backend valida assinatura e audiência do ID token antes de criar
+          // a sessão — nunca confiamos no e-mail entregue pelo navegador.
+          const credential = resposta.id_token || resposta.credential
+          if (!credential) {
+            setErro('O Google não devolveu uma credencial de identificação.')
+            return
+          }
+          try {
+            const sessao = await api.googleLogin({ credential })
+            concluirLogin(sessao)
+          } catch (err) {
+            setErro(err.message)
+          }
         },
       })
 
@@ -349,20 +375,20 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
 
   // Trocas de modo embutidas no rodapé do formulário.
   function voltarAoLogin() {
-    setModo('login')
+    mudarModo('login')
     setErro('')
     setSucesso('')
     setCodigo('')
   }
 
   function voltarAoLoginSemCodigo() {
-    setModo('login')
+    mudarModo('login')
     setErro('')
     setSucesso('')
   }
 
   function voltarAoLoginLimpandoSenha() {
-    setModo('login')
+    mudarModo('login')
     setErro('')
     setSucesso('')
     setCodigo('')
@@ -370,19 +396,33 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
   }
 
   function irParaRecuperar() {
-    setModo('recuperar')
+    mudarModo('recuperar')
     setErro('')
     setSucesso('')
   }
 
   function irParaRegistrar() {
-    setModo('registrar')
+    mudarModo('registrar')
     setErro('')
   }
 
   function irParaLogin() {
-    setModo('login')
+    mudarModo('login')
     setErro('')
+  }
+
+  // Alterações da conta logada: os erros sobem para a ContaLogada exibir.
+  async function handleAlterarNome(novoNome) {
+    const resposta = await api.atualizarNome(novoNome)
+    salvarSessao({ token: obterToken(), usuario: resposta.usuario })
+    setUsuario(resposta.usuario)
+  }
+
+  async function handleAlterarSenha({ senhaAtual, novaSenha }) {
+    // O backend devolve um token novo (as outras sessões caem, esta fica).
+    const resposta = await api.alterarSenha({ senhaAtual, novaSenha })
+    salvarSessao(resposta)
+    setUsuario(resposta.usuario)
   }
 
   const alternarSenha = () => setMostrarSenha(!mostrarSenha)
@@ -399,6 +439,8 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
         onIniciarExclusao={iniciarExclusao}
         onCancelarExclusao={cancelarExclusao}
         onExcluirConta={handleExcluirConta}
+        onAlterarNome={handleAlterarNome}
+        onAlterarSenha={handleAlterarSenha}
         onSair={handleSair}
         onVoltar={onVoltar}
         onMostrarAdmin={onMostrarAdmin}
@@ -422,7 +464,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout }) {
         </h2>
         <p className="text-center mb-8" style={{ color: 'var(--cor-texto-suave)' }}>
           {modo === 'login'
-            ? 'Acesse sua conta Lume. Se o e-mail ainda não tiver cadastro, enviaremos um código para criar a conta.'
+            ? 'Acesse sua conta Lume. Se ainda não tiver cadastro, clique em Crie Sua Conta.'
             : modo === 'registrar'
               ? 'Crie sua conta para começar a comprar.'
               : modo === 'recuperar'

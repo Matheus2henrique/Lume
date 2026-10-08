@@ -9,7 +9,7 @@ import ExtrasFormulario from './produtoFormModal/ExtrasFormulario'
 import BotoesFormulario from './produtoFormModal/BotoesFormulario'
 import ConfirmarExclusao from './produtoFormModal/ConfirmarExclusao'
 
-function ProdutoFormModal({ produto, nichos, onSalvar, onFechar, onExcluir }) {
+function ProdutoFormModal({ produto, nichos, subcategorias, onSalvar, onFechar, onExcluir }) {
   const [form, setForm] = useState(() => {
     if (!produto) return PRODUTO_VAZIO
     const ehBase64 = produto.imagem?.startsWith('data:')
@@ -63,7 +63,7 @@ function ProdutoFormModal({ produto, nichos, onSalvar, onFechar, onExcluir }) {
         <CabecalhoModal produto={produto} onFechar={onFechar} />
 
         <form onSubmit={handleSalvar} className="flex flex-col gap-4">
-          <CamposBasicos form={form} setForm={setForm} nichos={nichos} />
+          <CamposBasicos form={form} setForm={setForm} nichos={nichos} subcategorias={subcategorias} />
           <CamposPreco form={form} setForm={setForm} />
           <CamposDimensao form={form} setForm={setForm} />
           <CampoImagem form={form} setForm={setForm} erroImagem={erroImagem} />

@@ -45,12 +45,6 @@ function FormRegistrar({
         minLength={6}
       />
 
-      {erro && (
-        <p className="text-sm" style={{ color: 'var(--cor-perigo)' }}>
-          {erro}
-        </p>
-      )}
-
       <button
         type="submit"
         disabled={carregando || !nome.trim() || !email.trim() || !senha.trim()}
@@ -59,6 +53,12 @@ function FormRegistrar({
       >
         {carregando ? 'Criando…' : 'Criar conta'}
       </button>
+
+      {erro && (
+        <p className="text-sm text-center" style={{ color: 'var(--cor-perigo)' }}>
+          {erro}
+        </p>
+      )}
     </form>
   )
 }

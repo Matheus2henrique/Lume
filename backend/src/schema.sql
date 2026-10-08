@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   id SERIAL PRIMARY KEY,
   nome TEXT NOT NULL DEFAULT '',
   email TEXT NOT NULL UNIQUE,
-  senha_hash TEXT NOT NULL,
+  senha_hash TEXT,
   provedor TEXT NOT NULL DEFAULT 'email',
   admin BOOLEAN NOT NULL DEFAULT FALSE,
   criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -90,6 +90,21 @@ BEGIN
   END IF;
 END $$;
 
+-- Subpastas de cada nicho (menu: nicho > subpasta > produtos; filtros da
+-- página do nicho). O `id` é o valor gravado em produtos.subcategoria e, por
+-- isso, nunca muda depois de criado (renomear = mudar só o nome).
+CREATE TABLE IF NOT EXISTS subcategorias (
+  id TEXT PRIMARY KEY,
+  genero TEXT NOT NULL REFERENCES generos(id) ON DELETE CASCADE,
+  nome TEXT NOT NULL,
+  icone TEXT NOT NULL DEFAULT '',
+  descricao TEXT NOT NULL DEFAULT '',
+  ordem INTEGER NOT NULL DEFAULT 0,
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_subcategorias_genero ON subcategorias (genero);
+
 CREATE TABLE IF NOT EXISTS newsletter (
   id SERIAL PRIMARY KEY,
   email TEXT NOT NULL UNIQUE,
@@ -156,6 +171,18 @@ BEGIN
     SELECT 1 FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'reset_tentativas'
   ) THEN
     ALTER TABLE usuarios ADD COLUMN reset_tentativas INTEGER NOT NULL DEFAULT 0;
+  END IF;
+END $$;
+
+-- Login com Google: a conta criada pelo provedor NASCE SEM SENHA
+-- (ver src/routes/auth.js — POST /auth/google). Deixa senha_hash anulável.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'usuarios' AND column_name = 'senha_hash' AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE usuarios ALTER COLUMN senha_hash DROP NOT NULL;
   END IF;
 END $$;
 
@@ -382,3 +409,17 @@ BEGIN
 END $$;
 
 CREATE INDEX IF NOT EXISTS idx_avaliacoes_produto ON avaliacoes (produto_id, criado_em DESC);
+
+-- ============================================================
+-- Banners do slideshow da home — cada banner aponta para um nicho;
+-- o clique leva para a página desse nicho. Admin adiciona/edita/exclui.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS banners (
+  id SERIAL PRIMARY KEY,
+  genero TEXT NOT NULL REFERENCES generos(id) ON DELETE CASCADE,
+  imagem TEXT NOT NULL DEFAULT '',
+  ordem INTEGER NOT NULL DEFAULT 0,
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_banners_genero ON banners (genero);

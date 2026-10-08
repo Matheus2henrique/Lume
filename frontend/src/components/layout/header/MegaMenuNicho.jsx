@@ -1,10 +1,10 @@
-import { subcategorias } from '../../../data/subcategorias'
+import { subcategorias as subcategoriasPadrao } from '../../../data/subcategorias'
 
 // Mega-menu de telas maiores: lista só as subpastas do nicho e cada uma leva
 // direto para a página do nicho com o filtro dela. Nicho sem subpasta
 // (Coleção Dinossauro e Pacotes) não abre painel: o clique no nicho já vai
 // para a URL dele.
-function MegaMenuNicho({ genero, onAbrirNicho, onAdiarFechamento, onEscolherSubpasta, alinharDireita = false }) {
+function MegaMenuNicho({ genero, onAbrirNicho, onAdiarFechamento, onEscolherSubpasta, alinharDireita = false, subcategorias = subcategoriasPadrao }) {
   const subs = subcategorias[genero?.id] || []
   if (subs.length === 0) return null
 

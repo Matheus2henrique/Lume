@@ -1,4 +1,4 @@
-function FooterColunas({ generos, onSelecionarGenero, onIrParaDestaques, onPrivacidade }) {
+function FooterColunas({ generos, onSelecionarGenero, onIrParaDestaques, onPrivacidade, onTrocas, onFaq }) {
   return (
     <>
       <div className="order-2">
@@ -38,23 +38,33 @@ function FooterColunas({ generos, onSelecionarGenero, onIrParaDestaques, onPriva
           Ajuda
         </h4>
         <ul className="flex flex-col gap-3 list-none">
-          {['Perguntas frequentes', 'Trocas e devoluções', 'Política de privacidade'].map((ajuda) => (
-            <li key={ajuda}>
-              {ajuda === 'Política de privacidade' ? (
-                <button
-                  onClick={onPrivacidade}
-                  className="bg-transparent border-none cursor-pointer text-sm p-0"
-                  style={{ color: 'var(--cor-texto-suave)' }}
-                >
-                  {ajuda}
-                </button>
-              ) : (
-                <a href="#" className="text-sm" style={{ color: 'var(--cor-texto-suave)' }}>
-                  {ajuda}
-                </a>
-              )}
-            </li>
-          ))}
+          <li>
+            <button
+              onClick={onFaq}
+              className="bg-transparent border-none cursor-pointer text-sm p-0"
+              style={{ color: 'var(--cor-texto-suave)' }}
+            >
+              Perguntas frequentes
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={onTrocas}
+              className="bg-transparent border-none cursor-pointer text-sm p-0"
+              style={{ color: 'var(--cor-texto-suave)' }}
+            >
+              Trocas e devoluções
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={onPrivacidade}
+              className="bg-transparent border-none cursor-pointer text-sm p-0"
+              style={{ color: 'var(--cor-texto-suave)' }}
+            >
+              Política de privacidade
+            </button>
+          </li>
         </ul>
       </div>
     </>

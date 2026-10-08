@@ -7,6 +7,7 @@ export const ESTILO_INPUT = {
 export const PRODUTO_VAZIO = {
   nome: '',
   genero: '',
+  subcategoria: '',
   tipo: 'decoracao',
   preco: '',
   estoque: '',

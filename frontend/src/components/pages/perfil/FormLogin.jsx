@@ -32,12 +32,6 @@ function FormLogin({
         onAlternar={onAlternarSenha}
       />
 
-      {erro && (
-        <p className="text-sm" style={{ color: 'var(--cor-perigo)' }}>
-          {erro}
-        </p>
-      )}
-
       <div className="flex items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--cor-texto-suave)' }}>
           <input type="checkbox" className="accent-[var(--cor-primaria)] w-4 h-4" />
@@ -61,6 +55,12 @@ function FormLogin({
       >
         {carregando ? 'Entrando…' : 'Entrar'}
       </button>
+
+      {erro && (
+        <p className="text-sm text-center" style={{ color: 'var(--cor-perigo)' }}>
+          {erro}
+        </p>
+      )}
     </form>
   )
 }

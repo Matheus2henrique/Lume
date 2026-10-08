@@ -17,7 +17,7 @@ function FooterContato() {
         Contato
       </h4>
       <ul className="flex flex-col gap-3 text-sm list-none" style={{ color: 'var(--cor-texto-suave)' }}>
-        <li>ola@lume.com</li>
+        <li>3dlumebrasil@gmail.com</li>
         <li>(73) 99866-3011</li>
         <li>Atendemos todo o Brasil</li>
       </ul>

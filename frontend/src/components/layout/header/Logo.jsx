@@ -6,14 +6,11 @@ function Logo({ onHome }) {
       aria-label="Lume — início"
     >
       <span
-        className="flex items-center leading-none"
-        style={{ fontFamily: 'Cinzel, Georgia, serif', color: 'var(--cor-texto)' }}
+        className="flex items-center leading-none gap-1"
+        style={{ fontFamily: 'Cinzel, Georgia, serif' }}
       >
-        <img
-          src={`${import.meta.env.BASE_URL}nome.jpeg`}
-          alt=""
-          className="h-15 w-15 md:h-24 md:w-24 rounded-full object-cover mx-0.5"
-        />
+        <h1 className="m-0 text-5xl md:text-7xl font-bold" style={{ color: 'var(--cor-laranja-claro)' }}>L</h1>
+        <h1 className="m-0 text-3xl md:text-5xl font-semibold" style={{ color: 'var(--cor-texto)' }}>ume</h1>
       </span>
     </button>
   )

@@ -1,6 +1,9 @@
 import { ESTILO_INPUT } from './estilos'
 
-function CamposBasicos({ form, setForm, nichos }) {
+function CamposBasicos({ form, setForm, nichos, subcategorias = {} }) {
+  // Subpasta só existe dentro do nicho escolhido: trocar de nicho limpa o campo.
+  const subsDoNicho = form.genero ? subcategorias[form.genero] || [] : []
+
   return (
     <>
       <div>
@@ -20,7 +23,7 @@ function CamposBasicos({ form, setForm, nichos }) {
           <label className="text-xs mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>Nicho*</label>
           <select
             value={form.genero}
-            onChange={(e) => setForm({ ...form, genero: e.target.value })}
+            onChange={(e) => setForm({ ...form, genero: e.target.value, subcategoria: '' })}
             className="w-full border rounded-lg px-4 py-2.5 text-sm outline-none appearance-none cursor-pointer"
             style={ESTILO_INPUT}
             required
@@ -44,6 +47,28 @@ function CamposBasicos({ form, setForm, nichos }) {
           </select>
         </div>
       </div>
+
+      {form.genero && (
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: 'var(--cor-texto-suave)' }}>Subpasta do nicho</label>
+          <select
+            value={form.subcategoria || ''}
+            onChange={(e) => setForm({ ...form, subcategoria: e.target.value })}
+            className="w-full border rounded-lg px-4 py-2.5 text-sm outline-none appearance-none cursor-pointer"
+            style={ESTILO_INPUT}
+          >
+            <option value="">— Sem subpasta (aparece só em TODOS) —</option>
+            {subsDoNicho.map((s) => (
+              <option key={s.id} value={s.id}>{s.nome}</option>
+            ))}
+          </select>
+          {subsDoNicho.length === 0 && (
+            <p className="text-xs mt-1" style={{ color: 'var(--cor-texto-suave)' }}>
+              Este nicho ainda não tem subpastas — crie na aba Subpastas do painel.
+            </p>
+          )}
+        </div>
+      )}
     </>
   )
 }
