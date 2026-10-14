@@ -20,7 +20,7 @@ function FooterContato() {
         <li>3dlumebrasil@gmail.com</li>
         <li>(73) 99866-3011</li>
         <li>Atendemos todo o Brasil</li>
-      </ul>
+      </ul> 
 
       <div className="mt-5 flex items-center gap-3">
         <a
