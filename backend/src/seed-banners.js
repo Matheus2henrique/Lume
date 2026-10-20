@@ -11,10 +11,10 @@ if (rows[0].total > 0) {
   // Caminhos sob /Lume/ — o Vite serve public/ com base '/Lume/'
   // (frontend/vite.config.js); sem o prefixo a imagem dá 404.
   const banners = [
-    { genero: 'brinq-sensorial', imagem: '/Lume/banner_sensorial.jpg' },
+    { genero: 'brinq-sensorial', imagem: '/Lume/banner_sensorial1.jpeg' },
     { genero: 'articulados', imagem: '/Lume/banner_articulado.jpeg' },
-    { genero: 'dinossauros', imagem: '/Lume/banner_dino2.jpg' },
-    { genero: 'livro', imagem: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShUpIIvldF_e2CicERkNYox_nbvwKSvsa9mN47sEu4WwzF5QnBTPP2tQY&s=10' },
+    { genero: 'dinossauros', imagem: '/Lume/banner_dinossauro.jpeg' },
+    { genero: 'livro', imagem: '/Lume/banner_livro.jpeg' },
     { genero: 'pacotes', imagem: '/Lume/banner_box.jpg' },
   ]
   for (let i = 0; i < banners.length; i += 1) {

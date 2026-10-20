@@ -100,11 +100,31 @@ footer {
 }
 
 /* Banner full da home: slideshow de nichos que troca uma imagem por outra
-   com fade — sem zoom. */
+   com fade — sem zoom. A altura acompanha a largura na proporção da arte
+   (~3:1) pra preencher a tela toda sem cortar os lados. */
 .banner-full {
   position: relative;
   overflow: hidden;
   background: #000;
+  height: 33vw;
+  min-height: 130px;
+}
+
+/* Tablet/desktop: mesma proporção da arte, só muda o mínimo de altura. */
+@media screen and (min-width: 641px) {
+  .banner-full {
+    height: 33vw;
+    min-height: 220px;
+  }
+}
+
+/* Desktop largo: continua na proporção da arte (sem cortar em cima/embaixo),
+   só limita a altura máxima pra não ocupar a tela inteira em janelas 2K. */
+@media screen and (min-width: 1280px) {
+  .banner-full {
+    height: 33vw;
+    max-height: 500px;
+  }
 }
 
 .banner-full .banner-slide {

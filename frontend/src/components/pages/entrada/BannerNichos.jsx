@@ -4,10 +4,18 @@ import { useState } from 'react'
 // Imagens próprias do banner (pasta public/), usadas só quando o admin ainda
 // não cadastrou banners no banco — aí o slideshow monta 1 slide por nicho.
 const IMAGENS_BANNER = {
-  'brinq-sensorial': `${import.meta.env.BASE_URL}banner_sensorial.jpg`,
+  'brinq-sensorial': `${import.meta.env.BASE_URL}banner_sensorial1.jpeg`,
   'articulados': `${import.meta.env.BASE_URL}banner_articulado.jpeg`,
-  'dinossauros': `${import.meta.env.BASE_URL}banner_dino2.jpg`,
+  'dinossauros': `${import.meta.env.BASE_URL}banner_dinossauro.jpeg`,
+  'livro': `${import.meta.env.BASE_URL}banner_livro.jpeg`,
   'pacotes': `${import.meta.env.BASE_URL}banner_box.jpg`,
+}
+
+// Versão mobile (900px) gerada a partir do arquivo original — serve só em
+// telas estreitas, onde o arquivo full (até 2,7MB) é desnecessário.
+function versaoMobile(src) {
+  if (!src || !src.startsWith('/')) return null
+  return src.replace(/\.(\w+)$/, '-mobile.$1')
 }
 
 // Slides do slideshow: banners do banco (imagem + nicho de destino) ou,
@@ -53,7 +61,7 @@ function BannerNichos({
 
   return (
     <div
-      className="banner-full w-full h-[240px] sm:h-[320px] lg:h-[400px] cursor-pointer relative"
+      className="banner-full w-full cursor-pointer relative"
       onMouseEnter={onPausar}
       onMouseLeave={onRetomar}
       // Clique em qualquer lugar do banner leva para o nicho do slide ativo.
@@ -61,17 +69,23 @@ function BannerNichos({
     >
       {slides.map((slide, i) => {
         const ativo = i === indiceBanner
+        const mobile = versaoMobile(slide.src)
         return (
           <div
             key={slide.id}
             aria-hidden={!ativo}
             className={`banner-slide absolute inset-0${ativo ? ' ativo' : ''}`}
           >
-            <img
-              src={slide.src}
-              alt={slide.nome}
-              className="block h-full w-full object-cover"
-            />
+            {/* A altura (CSS @media) já acompanha a proporção da arte, então
+                object-cover preenche tudo sem cortar os lados. */}
+            <picture>
+              {mobile && <source media="(max-width: 640px)" srcSet={mobile} />}
+              <img
+                src={slide.src}
+                alt={slide.nome}
+                className="block h-full w-full object-cover"
+              />
+            </picture>
           </div>
         )
       })}
