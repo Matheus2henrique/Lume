@@ -106,8 +106,10 @@ footer {
   position: relative;
   overflow: hidden;
   background: #000;
-  height: 33vw;
-  min-height: 130px;
+  /* Celular: banner mais alto (48vw), com corte pequeno dos lados */
+  height: 48vw;
+  min-height: 180px;
+  max-height: 240px;
 }
 
 /* Tablet/desktop: mesma proporção da arte, só muda o mínimo de altura. */
@@ -115,6 +117,7 @@ footer {
   .banner-full {
     height: 33vw;
     min-height: 220px;
+    max-height: 500px;
   }
 }
 
