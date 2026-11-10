@@ -37,7 +37,7 @@ function MenuMobile({ generos, generoId, onEscolherGenero, onFechar, subcategori
             className="flex items-center leading-none"
             style={{ fontFamily: 'Cinzel, Georgia, serif', color: 'var(--cor-texto)' }}
           >
-            <span className="font-bold" style={{ fontSize: '32px' }}>Lume</span>
+            <span className="font-bold" style={{ fontSize: '32px' }}>Locus</span>
             <img src={`${import.meta.env.BASE_URL}logo.jpeg`} alt="" className="h-8 w-8 rounded-full object-cover mx-0.5" />
           </span>
           <button

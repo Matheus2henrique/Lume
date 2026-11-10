@@ -71,14 +71,14 @@ function FooterNewsletter() {
               required
               className="mt-0.5"
             />
-            Aceito receber novidades e ofertas da Lume por e-mail. Posso cancelar a inscrição a
+            Aceito receber novidades e ofertas da Locus por e-mail. Posso cancelar a inscrição a
             qualquer momento.
           </label>
           {erro && <p className="text-xs mt-2" style={{ color: '#ef4444' }}>{erro}</p>}
         </>
       )}
       <p className="mt-8 text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
-        © {new Date().getFullYear()} Lume. Todos os direitos reservados.
+        © {new Date().getFullYear()} Locus. Todos os direitos reservados.
       </p>
     </div>
   )

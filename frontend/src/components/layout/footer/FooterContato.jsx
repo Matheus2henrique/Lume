@@ -27,7 +27,7 @@ function FooterContato() {
           href={LINK_INSTAGRAM}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Instagram da Lume"
+          aria-label="Instagram da Locus"
           title="Instagram"
           className="flex items-center justify-center w-10 h-10 rounded-full border transition-all duration-300 hover:scale-110"
           style={estiloRede}
@@ -36,7 +36,7 @@ function FooterContato() {
         </a>
         <a
           href={WHATSAPP_LINK}
-          aria-label="WhatsApp da Lume"
+          aria-label="WhatsApp da Locus"
           title="WhatsApp"
           {...(WHATSAPP_LINK !== '#' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
           className="flex items-center justify-center w-10 h-10 rounded-full border transition-all duration-300 hover:scale-110"
