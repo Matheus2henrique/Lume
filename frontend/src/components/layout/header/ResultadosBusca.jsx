@@ -43,7 +43,7 @@ function ResultadosBusca({ busca, temResultado, produtosEncontrados, nichosEncon
                       {nomeGenero(produto.genero) || 'Sem universo'}
                     </span>
                   </span>
-                  <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--cor-laranja-claro)' }}>
+                  <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--cor-esviado)' }}>
                     {formatarMoeda(produto.preco)}
                   </span>
                 </button>

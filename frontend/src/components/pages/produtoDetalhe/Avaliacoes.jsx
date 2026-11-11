@@ -33,7 +33,7 @@ function Estrelas({ nota, onChange, tamanho = 20 }) {
             padding: 0,
             fontSize: `${tamanho}px`,
             cursor: onChange ? 'pointer' : 'default',
-            color: n <= ativa ? 'var(--cor-laranja)' : 'rgba(140,140,140,0.45)',
+            color: n <= ativa ? 'var(--cor-esverdiado-bts)' : 'rgba(140,140,140,0.45)',
             textShadow: n <= ativa ? '0 1px 2px rgba(0,0,0,0.35)' : 'none',
             transform: onChange && passe === n ? 'scale(1.15)' : 'none',
           }}
@@ -123,12 +123,12 @@ function Avaliacoes({ produto, dados = { media: 0, total: 0, avaliacoes: [] }, o
         </div>
       </div>
 
-      {/* Formulário: estrelas + texto, com borda tracejada laranja para
+      {/* Formulário: estrelas + texto, com borda tracejada esverdiado-bts para
           separar "sua opinião" das avaliações já publicadas. */}
       <form
         onSubmit={enviar}
         className="mt-6 rounded-2xl p-5"
-        style={{ background: 'var(--cor-fundo-suave)', border: '1px dashed var(--cor-laranja)' }}
+        style={{ background: 'var(--cor-fundo-suave)', border: '1px dashed var(--cor-esverdiado-bts)' }}
       >
         <p className="text-sm font-semibold" style={{ color: 'var(--cor-texto)' }}>
           Deixe a sua avaliação
@@ -163,7 +163,7 @@ function Avaliacoes({ produto, dados = { media: 0, total: 0, avaliacoes: [] }, o
             type="submit"
             disabled={enviando}
             className="rounded-full px-5 py-2 text-sm font-semibold text-white border-none transition-transform duration-300 hover:scale-105 disabled:opacity-60 disabled:hover:scale-100"
-            style={{ background: 'var(--cor-laranja)', cursor: enviando ? 'wait' : 'pointer' }}
+            style={{ background: 'var(--cor-esverdiado-bts)', cursor: enviando ? 'wait' : 'pointer' }}
           >
             {enviando ? 'Enviando…' : 'Enviar avaliação'}
           </button>
@@ -201,7 +201,7 @@ function Avaliacoes({ produto, dados = { media: 0, total: 0, avaliacoes: [] }, o
           >
             <div
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-              style={{ background: 'var(--cor-laranja)' }}
+              style={{ background: 'var(--cor-esverdiado-bts)' }}
               aria-hidden="true"
             >
               {(avaliacao.nome || '?').trim().charAt(0).toUpperCase()}

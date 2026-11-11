@@ -11,7 +11,7 @@ function PecasRelacionadas({ genero, relacionados, onVoltar, onSelecionar, favor
         <button
           onClick={onVoltar}
           className="text-sm underline cursor-pointer border-none bg-transparent"
-          style={{ color: 'var(--cor-laranja-claro)' }}
+          style={{ color: 'var(--cor-esverdiado)' }}
         >
           Ver todas
         </button>

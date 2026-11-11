@@ -15,6 +15,7 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
   const [busca, setBusca] = useState('')
   const [nichoAtivo, setNichoAtivo] = useState(null)
   const buscaRef = useRef(null)
+  const buscaFormRef = useRef(null)
   const nichoTimerRef = useRef(null)
   const generos = nichos?.length ? nichos : generosPadrao
 
@@ -52,7 +53,9 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
   useEffect(() => {
     if (!buscando) return
     function fechar(e) {
-      if (buscaRef.current && !buscaRef.current.contains(e.target)) setBuscando(false)
+      const dentroPainel = buscaRef.current && buscaRef.current.contains(e.target)
+      const dentroForm = buscaFormRef.current && buscaFormRef.current.contains(e.target)
+      if (!dentroPainel && !dentroForm) setBuscando(false)
     }
     document.addEventListener('mousedown', fechar)
     return () => document.removeEventListener('mousedown', fechar)
@@ -109,9 +112,8 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
 
   return (
     <header
-      className="h-[64px] md:h-[90px] border-b fixed top-0 left-0 right-0 z-40 header-tema"
+      className="h-[64px] md:h-[90px] border-b fixed top-0 left-0 right-0 z-40 header-tema header-vidro"
       style={{
-        background: 'var(--cor-fundo-cartao)',
         borderColor: 'var(--cor-borda)',
       }}
     >
@@ -130,6 +132,47 @@ function Header({ generoId, onSelecionarGenero, onHome, onMostrarPerfil, totalCa
           onAdiarFechamento={adiarFechamentoNicho}
           subcategorias={subcategorias}
         />
+
+        {/* Busca fixa no desktop (estilo .header-search do modelo).
+            Abre o mesmo PainelBusca com os resultados embaixo. */}
+        <form
+          ref={buscaFormRef}
+          className="header-search"
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault()
+            confirmarPrimeiro()
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="search"
+            aria-label="Buscar produtos"
+            placeholder="Qual universo você procura?"
+            value={busca}
+            onChange={(e) => {
+              setBusca(e.target.value)
+              setBuscando(true)
+            }}
+            onFocus={() => {
+              fecharNicho()
+              setBuscando(true)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') confirmarPrimeiro()
+              if (e.key === 'Escape') setBuscando(false)
+            }}
+          />
+          <button type="submit" aria-label="Buscar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+        </form>
 
         <BarraAcoes
           buscando={buscando}

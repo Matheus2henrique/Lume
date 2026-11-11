@@ -9,7 +9,7 @@ function Favoritos({ favoritos, onVoltar, onSelecionarProduto, onToggleFavorito,
         <button
           onClick={onVoltar}
           className="flex items-center gap-2 text-base font-medium cursor-pointer hover:underline border-none bg-transparent"
-          style={{ color: 'var(--cor-laranja-claro)' }}
+          style={{ color: 'var(--cor-esverdiado)' }}
         >
           <SetaEsquerda className="w-5 h-5" />
           Voltar
@@ -41,7 +41,7 @@ function Favoritos({ favoritos, onVoltar, onSelecionarProduto, onToggleFavorito,
             <button
               onClick={onVoltar}
               className="mt-6 px-7 py-3.5 rounded-xl text-white font-medium cursor-pointer transition-all duration-300 hover:scale-[1.02] border-none"
-              style={{ background: 'var(--cor-laranja)' }}
+              style={{ background: 'var(--cor-esverdiado-bts)' }}
             >
               Explorar os mundos
             </button>

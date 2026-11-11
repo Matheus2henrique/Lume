@@ -124,7 +124,7 @@ function SubpastaFormModal({ subpasta, nichoPadrao, nichos, onSalvar, onFechar, 
             <button
               type="submit"
               className="flex-1 py-3 rounded-full border-none cursor-pointer text-white font-medium text-base transition-transform hover:scale-105"
-              style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)' }}
+              style={{ background: 'var(--cor-esverdiado-bts)', color: 'var(--cor-texto)' }}
             >
               {subpasta ? 'Salvar Alterações' : 'Criar Subpasta'}
             </button>

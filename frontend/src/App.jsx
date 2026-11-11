@@ -19,7 +19,7 @@ import { api, obterToken, obterUsuario } from './api'
 import { normalizarProduto } from './utils/formatar'
 import { carregarCarrinho, salvarCarrinho, chaveItem, normalizarOpcoes } from './utils/carrinho'
 
-const BASE = '/Lume'
+const BASE = '/Locus'
 
 // O mapa estático (data/subcategorias.js) vira a mesma forma que a API
 // devolve — lista com `genero` — para menus e admin usarem um formato só.
@@ -109,6 +109,9 @@ function App() {
   const [produtoEditando, setProdutoEditando] = useState(null)
   const [mostrarFormProduto, setMostrarFormProduto] = useState(false)
   const [sucesso, setSucesso] = useState('')
+  // Tema claro "Locus por Leitura": ativado pelo botão da home, vale para
+  // a aplicação inteira sem mudar de página.
+  const [temaLeitura, setTemaLeitura] = useState(false)
 
   const genero = nichos.find((g) => g.id === generoId)
 
@@ -506,7 +509,15 @@ function App() {
   })
 
   return (
-    <div className="w-full min-h-screen flex flex-col pt-[64px] md:pt-[90px]" style={{ background: 'var(--cor-fundo)' }}>
+    <div
+      className="w-full min-h-screen flex flex-col pt-[64px] md:pt-[90px]"
+      data-theme={temaLeitura ? 'reading' : undefined}
+      style={{
+        background: 'var(--cor-fundo)',
+        color: 'var(--cor-texto)',
+        transition: 'background-color 0.25s, color 0.25s',
+      }}
+    >
       <Header
         generoId={generoId}
         onSelecionarGenero={handleSelecionarGenero}
@@ -523,7 +534,7 @@ function App() {
       />
 
       {sucesso && (
-        <div className="fixed top-[100px] left-1/2 -translate-x-1/2 z-[100] py-3 px-6 rounded-lg text-sm font-medium shadow-lg" style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)', border: '1px solid var(--cor-laranja)' }}>
+        <div className="fixed top-[100px] left-1/2 -translate-x-1/2 z-[100] py-3 px-6 rounded-lg text-sm font-medium shadow-lg" style={{ background: 'var(--esverdiado-bts)', color: 'var(--cor-texto)', border: '1px solid var(--esverdiado-bts)' }}>
           {sucesso}
         </div>
       )}
@@ -615,6 +626,8 @@ function App() {
           onExcluirNichos={handleExcluirNichos}
           onSalvarBanner={handleSalvarBanner}
           onExcluirBanner={handleExcluirBanner}
+          onAlternarTemaLeitura={() => setTemaLeitura((atual) => !atual)}
+          temaLeitura={temaLeitura}
         />
       )}
 

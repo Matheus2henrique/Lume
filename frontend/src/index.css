@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&family=Cinzel:wght@400..900&family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Montserrat:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -15,10 +15,12 @@
   --cor-laranja: #925b2c;
   --cor-laranja-claro: #E8A93B;
   --cor-badge-primaria: #925b2c;
+  --cor-esverdiado: #c4e500;
+  --cor-esverdiado-bts: #4b5510;
 }
 
 .filtro-botoes {
-  --cor-filtro-primaria: #925b2c;
+  --cor-filtro-primaria: #4b5510;
   --cor-filtro-suave: #12100a;
   --cor-filtro-texto: #e0e0e0;
   --cor-filtro-borda: #2a1f15;
@@ -29,7 +31,7 @@
 }
 
 .header-tema {
-  --cor-primaria: #d67f33;
+  --cor-primaria: #6a7a0d;
   --cor-primaria-suave: #2a1a0a;
   --cor-fundo-suave: #11100a;
   --cor-borda: #2a2015;
@@ -37,13 +39,52 @@
   --cor-texto-suave: #888888;
 }
 
+/* Tema claro "Locus por Leitura" — mesmo efeito do data-theme='reading'
+   do modelo: redefinindo as variáveis para papel/verde-escuro e o site
+   inteiro (fundo, cards, bordas, texto) muda com transição suave. */
+[data-theme='reading'] {
+  --cor-fundo: #f2ede3;
+  --cor-fundo-suave: #fbf7f0;
+  --cor-fundo-cartao: #fbf7f0;
+  --cor-texto: #2e3a2e;
+  --cor-texto-suave: #5b6653;
+  --cor-borda: #2e3a2e26;
+  --cor-primaria: #2e3a2e;
+  --cor-primaria-suave: #46543f;
+  /* Verdes do modo claro: cada um equivalente ao seu par no modo escuro.
+     -bts (fundos/botões) fica claro #dce2d1; o de destaque/texto é mais
+     escuro para ter contraste sobre o papel. */
+  --cor-verde-modo-claro-bts: #dce2d1;
+  --cor-ver-modo-claro: #5f7048;
+  --cor-esverdiado: var(--cor-ver-modo-claro);
+  --cor-esverdiado-bts: var(--cor-verde-modo-claro-bts);
+}
+
+/* O header tem o próprio jogo de variáveis (.header-tema) — no tema
+   claro elas também precisam virar papel, senão o topo fica escuro. */
+[data-theme='reading'] .header-tema {
+  --cor-primaria: #2e3a2e;
+  --cor-primaria-suave: #46543f;
+  --cor-fundo-suave: #f8f5ef;
+  --cor-borda: #2e3a2e26;
+  --cor-texto: #2e3a2e;
+  --cor-texto-suave: #5b6653;
+}
+
+/* Header translúcido igual ao modelo: 94% do fundo da página + blur. */
+.header-vidro {
+  background: color-mix(in srgb, var(--cor-fundo) 94%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
 .carrinho-drawer {
-  --cor-primaria: #d67f33;
-  --cor-primaria-suave: #2a1a0a;
+  --cor-primaria: #4b5510;
+  --cor-primaria-suave: #707b32;
   --cor-fundo: #0b0805;
   --cor-fundo-suave: #11100a;
-  --cor-fundo-cartao: #1a1510;
-  --cor-borda: #2a2015;
+  --cor-fundo-cartao: #131410f4;
+  --cor-borda: #8a8a8a;
   --cor-texto: #e0e0e0;
   --cor-texto-suave: #888888;
   --cor-perigo: #ef4444;
@@ -86,6 +127,16 @@ footer {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
   }
 }
 
@@ -186,4 +237,159 @@ footer {
 .mega-menu .menu-subtitulo {
   color: var(--cor-texto-suave);
   animation: megaMenu 260ms ease-out both;
+}
+
+/* Busca fixa no header (telas grandes), igual ao modelo: a borda muda
+   para o verde-acido quando o campo ganha foco (:focus-within). */
+.header-search {
+  display: none;
+  align-items: center;
+  gap: 11px;
+  width: 400px;
+  height: 43px;
+  background: var(--cor-fundo-suave);
+  border: 1px solid var(--cor-borda);
+  border-radius: 7px;
+  padding: 0 13px;
+  color: var(--cor-texto-suave);
+  margin-left: auto;
+}
+
+.header-search input {
+  width: 100%;
+  border: 0;
+  color: var(--cor-texto);
+  background: none;
+  font-size: 11px;
+  outline: none;
+  font-family: inherit;
+}
+
+.header-search input::placeholder {
+  color: var(--cor-texto-suave);
+}
+
+.header-search:focus-within {
+  border-color: var(--cor-esverdiado);
+}
+
+.header-search button {
+  display: flex;
+  background: none;
+  border: none;
+  padding: 3px;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+}
+
+@media (min-width: 1024px) {
+  .header-search {
+    display: flex;
+  }
+}
+
+@media (max-width: 1100px) {
+  .header-search {
+    max-width: 350px;
+  }
+}
+
+/* Seção "Um respiro" (convite à leitura) — card claro com arte à direita. */
+.reading-invitation {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+  min-height: 390px;
+  border-radius: 14px;
+  background: #f2ede3;
+  color: #2e3a2e;
+  padding: 45px 30px;
+  margin-block: 35px 10px;
+}
+
+@media (min-width: 768px) {
+  .reading-invitation {
+    grid-template-columns: 1fr 1fr;
+    padding: 45px 60px;
+  }
+}
+
+.reading-mini-brand {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 21px;
+  letter-spacing: 0.06em;
+}
+
+.reading-mini-brand i {
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+.reading-invitation h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(40px, 8vw, 58px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  margin: 20px 0 16px;
+}
+
+.reading-invitation h2 em {
+  font-weight: 500;
+  font-style: italic;
+}
+
+.reading-invitation p {
+  font-size: 11px;
+  max-width: 320px;
+  line-height: 1.9;
+  color: #68715e;
+}
+
+/* Assinatura do modo claro ("Seu lugar para criar..."). */
+.reading-hero-signature {
+  display: block;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 17px;
+  letter-spacing: 0.015em;
+  color: #6e765f;
+  margin-top: 24px;
+}
+
+.reading-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 17px;
+  background: #2e3a2e;
+  color: #f2ede3;
+  font-family: Montserrat, Inter, sans-serif;
+  border: none;
+  border-radius: 3px;
+  font-size: 11px;
+  padding: 13px 23px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.reading-button:hover {
+  background: #46543f;
+}
+
+.reading-invitation-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.reading-invitation-art img {
+  width: 115%;
+  max-width: 115%;
+  margin-top: -25px;
+  object-fit: contain;
 }

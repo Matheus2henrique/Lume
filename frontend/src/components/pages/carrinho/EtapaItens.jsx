@@ -43,7 +43,7 @@ function EtapaItens({
         {!logado && (
           <p
             className="text-xs leading-relaxed rounded-lg px-3 py-2 text-center"
-            style={{ background: 'var(--cor-fundo-cartao)', color: 'var(--cor-laranja-claro)', border: '1px solid var(--cor-borda)' }}
+            style={{ background: 'var(--cor-fundo-cartao)', color: 'var(--cor-esverdiado)', border: '1px solid var(--cor-borda)' }}
           >
             Você precisa estar logado em uma conta para finalizar a compra.
           </p>

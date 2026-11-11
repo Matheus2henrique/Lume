@@ -25,7 +25,7 @@ function InfoProduto({ genero, produto, media = 0, total = 0 }) {
       </div>
 
       <div className="mt-6 flex items-end gap-3">
-        <p className="text-4xl font-bold" style={{ color: 'var(--cor-laranja-claro)' }}>
+        <p className="text-4xl font-bold" style={{ color: 'var(--cor-esverdiado)' }}>
           {formatarMoeda(produto.preco)}
         </p>
         <p className="text-xs mb-2" style={{ color: 'var(--cor-texto-suave)' }}>

@@ -6,7 +6,7 @@ function BarraSuperior({ genero, onVoltar, admin, produto, onEditarProduto }) {
       <button
         onClick={onVoltar}
         className="flex items-center gap-2 text-base font-medium cursor-pointer hover:underline border-none bg-transparent"
-        style={{ color: 'var(--cor-laranja-claro)' }}
+        style={{ color: 'var(--cor-esverdiado)' }}
       >
         <SetaEsquerda className="w-5 h-5" />
         Voltar para {genero?.nome}
@@ -15,7 +15,7 @@ function BarraSuperior({ genero, onVoltar, admin, produto, onEditarProduto }) {
         <button
           onClick={() => onEditarProduto(produto)}
           className="flex items-center gap-2 px-4 py-2 rounded-full border-none cursor-pointer text-sm font-medium transition-all duration-300 hover:scale-105"
-          style={{ background: 'var(--cor-laranja)', color: '#fff' }}
+          style={{ background: 'var(--cor-esverdiado-bts)', color: '#fff' }}
         >
           <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />

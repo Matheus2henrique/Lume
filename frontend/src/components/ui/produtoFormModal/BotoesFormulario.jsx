@@ -4,7 +4,7 @@ function BotoesFormulario({ produto, onFechar, onPedirExclusao }) {
       <button
         type="submit"
         className="flex-1 py-3 rounded-full border-none cursor-pointer text-white font-medium text-base transition-transform hover:scale-105"
-        style={{ background: 'var(--cor-laranja)' }}
+        style={{ background: 'var(--cor-esverdiado-bts)' }}
       >
         {produto ? 'Salvar Alterações' : 'Criar Produto'}
       </button>

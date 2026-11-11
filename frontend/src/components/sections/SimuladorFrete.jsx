@@ -146,7 +146,7 @@ function SimuladorFrete() {
         <div>
           <span
             className="inline-block px-4 py-1.5 rounded-full text-sm font-medium"
-            style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)' }}
+            style={{ background: 'var(--cor-esverdiado-bts)', color: 'var(--cor-texto)' }}
           >
             Entrega para todo o Brasil
           </span>
@@ -169,7 +169,7 @@ function SimuladorFrete() {
                   placeholder="00000-000"
                   value={cep}
                   onChange={(e) => alterarCep(e.target.value)}
-                  className="w-full border rounded-lg px-4 py-3 text-sm outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-laranja)]"
+                  className="w-full border rounded-lg px-4 py-3 text-sm outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-esverdiado-bts)]"
                   style={estiloCampo}
                 />
               </div>
@@ -182,7 +182,7 @@ function SimuladorFrete() {
                   placeholder="123"
                   value={endereco.numero}
                   onChange={(e) => setEndereco((atual) => ({ ...atual, numero: e.target.value }))}
-                  className="w-full border rounded-lg px-4 py-3 text-sm outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-laranja)]"
+                  className="w-full border rounded-lg px-4 py-3 text-sm outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-esverdiado-bts)]"
                   style={estiloCampo}
                 />
               </div>
@@ -197,7 +197,7 @@ function SimuladorFrete() {
                 placeholder="Rua, avenida…"
                 value={endereco.rua}
                 onChange={(e) => setEndereco((atual) => ({ ...atual, rua: e.target.value }))}
-                className="w-full border rounded-lg px-4 py-3 text-sm outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-laranja)]"
+                className="w-full border rounded-lg px-4 py-3 text-sm outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-esverdiado-bts)]"
                 style={estiloCampo}
               />
             </div>
@@ -211,7 +211,7 @@ function SimuladorFrete() {
                   maxLength={60}
                   value={endereco.bairro}
                   onChange={(e) => setEndereco((atual) => ({ ...atual, bairro: e.target.value }))}
-                  className="w-full border rounded-lg px-4 py-3 text-sm outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-laranja)]"
+                  className="w-full border rounded-lg px-4 py-3 text-sm outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-esverdiado-bts)]"
                   style={estiloCampo}
                 />
               </div>
@@ -223,7 +223,7 @@ function SimuladorFrete() {
                   maxLength={60}
                   value={endereco.cidade}
                   onChange={(e) => setEndereco((atual) => ({ ...atual, cidade: e.target.value }))}
-                  className="w-full border rounded-lg px-4 py-3 text-sm outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-laranja)]"
+                  className="w-full border rounded-lg px-4 py-3 text-sm outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-esverdiado-bts)]"
                   style={estiloCampo}
                 />
               </div>
@@ -238,7 +238,7 @@ function SimuladorFrete() {
                   onChange={(e) =>
                     setEndereco((atual) => ({ ...atual, uf: e.target.value.toUpperCase() }))
                   }
-                  className="w-full border rounded-lg px-4 py-3 text-sm uppercase outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-laranja)]"
+                  className="w-full border rounded-lg px-4 py-3 text-sm uppercase outline-none transition-colors focus:shadow-[0_0_0_2px_var(--cor-esverdiado-bts)]"
                   style={estiloCampo}
                 />
               </div>
@@ -248,7 +248,7 @@ function SimuladorFrete() {
               type="submit"
               disabled={calculando}
               className="self-start px-8 py-3.5 rounded-lg font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)' }}
+              style={{ background: 'var(--cor-esverdiado-bts)', color: 'var(--cor-texto)' }}
             >
               {calculando ? 'Calculando…' : 'Calcular frete'}
             </button>
@@ -294,7 +294,7 @@ function SimuladorFrete() {
                   <p className="text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
                     A partir de
                   </p>
-                  <p className="text-2xl font-bold" style={{ color: 'var(--cor-laranja)' }}>
+                  <p className="text-2xl font-bold" style={{ color: 'var(--cor-esverdiado-bts)' }}>
                     {formatarMoeda(opcoes[0].valor)}
                   </p>
                 </div>
@@ -309,7 +309,7 @@ function SimuladorFrete() {
                       background: 'var(--cor-fundo-cartao)',
                       border:
                         indice === 0
-                          ? '1px solid var(--cor-laranja)'
+                          ? '1px solid var(--cor-esverdiado-bts)'
                           : '1px solid var(--cor-borda)',
                     }}
                   >
@@ -340,7 +340,7 @@ function SimuladorFrete() {
                         {indice === 0 && ' · mais barato'}
                       </span>
                     </span>
-                    <span className="text-sm font-bold whitespace-nowrap" style={{ color: 'var(--cor-laranja)' }}>
+                    <span className="text-sm font-bold whitespace-nowrap" style={{ color: 'var(--cor-esverdiado-bts)' }}>
                       {formatarMoeda(op.valor)}
                     </span>
                   </div>
@@ -362,7 +362,7 @@ function SimuladorFrete() {
                 stroke="currentColor"
                 strokeWidth="1.5"
                 aria-hidden="true"
-                style={{ color: 'var(--cor-laranja)' }}
+                style={{ color: 'var(--cor-esverdiado-bts)' }}
               >
                 <path
                   strokeLinecap="round"

@@ -3,13 +3,19 @@ import NichoFormModal from '../ui/NichoFormModal'
 import BannerFormModal from '../ui/BannerFormModal'
 import SimuladorFrete from '../sections/SimuladorFrete'
 import Hero from './entrada/Hero'
-import BannerNichos, { montarSlidesBanner } from './entrada/BannerNichos'
+import BannerNichos from './entrada/BannerNichos'
+import { montarSlidesBanner } from './entrada/bannerSlides'
 // import SecaoUniversos from './entrada/SecaoUniversos'
 import SecaoPorQueLume from './entrada/SecaoPorQueLume'
 import SecaoDestaques from './entrada/SecaoDestaques'
+import SecaoConviteLeitura from './entrada/SecaoConviteLeitura'
 import SecaoNewsletter from './entrada/SecaoNewsletter'
 
-function Entrada({ produtos, nichos, banners = [], onSelecionarGenero, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto, onSalvarNichos, onExcluirNichos, onSalvarBanner, onExcluirBanner }) {
+// Banner full da home: desativado temporariamente (código preservado).
+// Para reativar, basta trocar para true.
+const BANNERS_ATIVOS = false
+
+function Entrada({ produtos, nichos, banners = [], onSelecionarGenero, onSelecionarProduto, favoritos, onToggleFavorito, admin = false, onEditarProduto, onSalvarNichos, onExcluirNichos, onSalvarBanner, onExcluirBanner, onAlternarTemaLeitura, temaLeitura = false }) {
   const [nichoEditando, setNichoEditando] = useState(null)
   // Formulário de novo banner (admin): null = fechado.
   const [novoBanner, setNovoBanner] = useState(false)
@@ -33,9 +39,9 @@ function Entrada({ produtos, nichos, banners = [], onSelecionarGenero, onSelecio
 
   return (
     <section>
-      <Hero />
+      <Hero temaLeitura={temaLeitura} />
 
-      {totalSlides > 0 && (
+      {BANNERS_ATIVOS && totalSlides > 0 && (
         <BannerNichos
           banners={banners}
           nichos={nichos}
@@ -70,6 +76,8 @@ function Entrada({ produtos, nichos, banners = [], onSelecionarGenero, onSelecio
           admin={admin}
           onEditarProduto={onEditarProduto}
         />
+
+        <SecaoConviteLeitura onExplorar={onAlternarTemaLeitura} temaLeitura={temaLeitura} />
 
         <SimuladorFrete />
       </div>

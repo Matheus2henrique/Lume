@@ -104,8 +104,8 @@ function NichoFormModal({ nicho, onSalvar, onFechar, onExcluir }) {
             <label className="text-xs mb-2 block" style={{ color: 'var(--cor-texto-suave)' }}>Imagem do nicho*</label>
 
             <label
-              className="flex flex-col items-center justify-center w-full h-[120px] rounded-lg border-2 border-dashed cursor-pointer transition-colors hover:border-[var(--cor-laranja)]"
-              style={{ borderColor: form.imagem ? 'var(--cor-laranja)' : 'var(--cor-borda)', background: 'var(--cor-fundo)' }}
+              className="flex flex-col items-center justify-center w-full h-[120px] rounded-lg border-2 border-dashed cursor-pointer transition-colors hover:border-[var(--cor-esverdiado-bts)]"
+              style={{ borderColor: form.imagem ? 'var(--cor-esverdiado-bts)' : 'var(--cor-borda)', background: 'var(--cor-fundo)' }}
             >
               <input
                 type="file"
@@ -167,7 +167,7 @@ function NichoFormModal({ nicho, onSalvar, onFechar, onExcluir }) {
             <button
               type="submit"
               className="flex-1 py-3 rounded-full border-none cursor-pointer text-white font-medium text-base transition-transform hover:scale-105"
-              style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)' }}
+              style={{ background: 'var(--cor-esverdiado-bts)', color: 'var(--cor-texto)' }}
             >
               {nicho ? 'Salvar Alterações' : 'Criar Nicho'}
             </button>

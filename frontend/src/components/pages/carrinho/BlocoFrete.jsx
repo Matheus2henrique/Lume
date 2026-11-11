@@ -78,7 +78,7 @@ function BlocoFrete({
               <input
                 type="radio"
                 name="frete"
-                className="accent-[var(--cor-laranja)] w-4 h-4 shrink-0"
+                className="accent-[var(--cor-esverdiado-bts)] w-4 h-4 shrink-0"
                 checked={selecionada}
                 onChange={() => setFreteEscolhido(op)}
               />

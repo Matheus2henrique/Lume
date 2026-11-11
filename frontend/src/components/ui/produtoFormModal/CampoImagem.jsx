@@ -6,8 +6,8 @@ function CampoImagem({ form, setForm, erroImagem }) {
       <label className="text-xs mb-2 block" style={{ color: 'var(--cor-texto-suave)' }}>Imagem do produto*</label>
 
       <label
-        className="flex flex-col items-center justify-center w-full h-[120px] rounded-lg border-2 border-dashed cursor-pointer transition-colors hover:border-[var(--cor-laranja)]"
-        style={{ borderColor: form.imagem ? 'var(--cor-laranja)' : 'var(--cor-borda)', background: 'var(--cor-fundo)' }}
+        className="flex flex-col items-center justify-center w-full h-[120px] rounded-lg border-2 border-dashed cursor-pointer transition-colors hover:border-[var(--cor-esverdiado-bts)]"
+        style={{ borderColor: form.imagem ? 'var(--cor-esverdiado-bts)' : 'var(--cor-borda)', background: 'var(--cor-fundo)' }}
       >
         <input
           type="file"

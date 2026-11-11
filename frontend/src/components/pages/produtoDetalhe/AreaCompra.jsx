@@ -12,7 +12,7 @@ function AreaCompra({ precoTotal, tamanho, cor, esgotado, noCarrinho, avisoId, a
           }}
           disabled={esgotado}
           className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl text-white text-lg font-medium cursor-pointer transition-all duration-300 hover:scale-[1.02] border-none disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ background: 'var(--cor-laranja)', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
+          style={{ background: 'var(--cor-esverdiado-bts)', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
         >
           {noCarrinho ? <Check className="w-5 h-5" /> : <Carrinho className="w-5 h-5" />}
           {noCarrinho ? `Adicionado — ${formatarMoeda(precoTotal)}` : 'Comprar agora'}
@@ -22,7 +22,7 @@ function AreaCompra({ precoTotal, tamanho, cor, esgotado, noCarrinho, avisoId, a
       {noCarrinho && avisoId > 0 && (
         <p
           className="mt-3 text-sm py-2 px-4 text-center rounded-lg"
-          style={{ background: 'var(--cor-fundo-cartao)', color: 'var(--cor-laranja-claro)' }}
+          style={{ background: 'var(--cor-fundo-cartao)', color: 'var(--cor-esverdiado)' }}
         >
           Item adicionado ao carrinho! Tamanho {tamanho} · Cor {cor}
         </p>

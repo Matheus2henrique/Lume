@@ -19,7 +19,7 @@ function ExtrasFormulario({ form, setForm }) {
           type="checkbox"
           checked={form.permiteUpload}
           onChange={(e) => setForm({ ...form, permiteUpload: e.target.checked })}
-          className="accent-[var(--cor-laranja)] w-4 h-4"
+          className="accent-[var(--cor-esverdiado-bts)] w-4 h-4"
         />
         Permite personalização (upload)
       </label>

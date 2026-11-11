@@ -16,7 +16,7 @@ function Especificacoes({ permiteUpload }) {
           className="flex items-center gap-3 rounded-xl px-4 py-3"
           style={{ background: 'var(--cor-fundo-suave)' }}
         >
-          <span style={{ color: 'var(--cor-laranja-claro)' }}>{spec.icone}</span>
+          <span style={{ color: 'var(--cor-esverdiado)' }}>{spec.icone}</span>
           <div>
             <p className="text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
               {spec.label}

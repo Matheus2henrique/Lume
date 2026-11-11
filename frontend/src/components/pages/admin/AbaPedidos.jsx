@@ -82,7 +82,7 @@ function AbaPedidos({
                 )}
               </div>
               <div className="flex flex-col items-end gap-2">
-                <p className="font-bold" style={{ color: 'var(--cor-laranja-claro)' }}>
+                <p className="font-bold" style={{ color: 'var(--cor-esverdiado)' }}>
                   {formatarMoeda(pedido.total)}
                 </p>
                 {pedido.frete && (

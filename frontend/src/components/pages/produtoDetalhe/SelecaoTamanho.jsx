@@ -23,9 +23,9 @@ function SelecaoTamanho({ tamanho, onSelecionar }) {
               aria-label={`Tamanho ${t}`}
               className="w-11 h-11 rounded-full text-sm font-semibold cursor-pointer transition-all duration-200 hover:scale-105"
               style={{
-                background: ativo ? 'var(--cor-laranja)' : 'var(--cor-fundo-cartao)',
+                background: ativo ? 'var(--cor-esverdiado-bts)' : 'var(--cor-fundo-cartao)',
                 color: ativo ? '#fff' : 'var(--cor-texto)',
-                border: `1px solid ${ativo ? 'var(--cor-laranja-claro)' : 'var(--cor-borda)'}`,
+                border: `1px solid ${ativo ? 'var(--cor-esverdiado)' : 'var(--cor-borda)'}`,
                 boxShadow: ativo ? '0 6px 14px rgba(0,0,0,0.3)' : 'none',
               }}
             >

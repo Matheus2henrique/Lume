@@ -67,14 +67,14 @@ function Card({ nome, imagem, preco, estoque, tipo, permiteUpload, onClick, favo
         <div className="absolute bottom-3 left-3 flex gap-2">
           <span
             className="text-xs font-semibold px-3 py-1 rounded-full shadow"
-            style={{ background: 'var(--cor-badge-primaria)', color: '#fff' }}
+            style={{ background: 'var(--cor-esverdiado-bts)', color: '#fff' }}
           >
             {tipoLabel}
           </span>
           {permiteUpload && (
             <span
               className="text-xs font-semibold px-3 py-1 rounded-full shadow"
-              style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)' }}
+              style={{ background: 'var(--cor-esverdiado-bts)', color: 'var(--cor-texto)' }}
             >
               Personalizável
             </span>
@@ -96,7 +96,7 @@ function Card({ nome, imagem, preco, estoque, tipo, permiteUpload, onClick, favo
         </h3>
 
         <div className="mt-3 flex items-center justify-between">
-          <p className="text-base font-bold" style={{ color: 'var(--cor-laranja-claro)' }}>
+          <p className="text-base font-bold" style={{ color: 'var(--cor-esverdiado)' }}>
             {formatarMoeda(preco)}
           </p>
           <span className="text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
@@ -110,7 +110,7 @@ function Card({ nome, imagem, preco, estoque, tipo, permiteUpload, onClick, favo
             onClick()
           }}
           className="mt-4 w-full py-2 rounded-lg text-white cursor-pointer transition-colors duration-300 border-none"
-          style={{ background: 'var(--cor-laranja)' }}
+          style={{ background: 'var(--cor-esverdiado-bts)' }}
         >
           Ver detalhes
         </button>

@@ -2,7 +2,7 @@ function BarraAcoes({ buscando, onAbrirBusca, totalFavoritos, onMostrarFavoritos
   return (
     <div className="flex gap-3 md:gap-4 items-center">
 <button
-        className="bg-transparent border-none p-0 cursor-pointer"
+        className="lg:hidden bg-transparent border-none p-0 cursor-pointer"
         onClick={onAbrirBusca}
         aria-label="Buscar"
         aria-expanded={buscando}

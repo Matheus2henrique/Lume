@@ -9,7 +9,7 @@ function BlocoContato({ className = '' }) {
         Entre em contato
         <br />
         <span className="inline-flex items-center gap-2.5">
-          <span style={{ color: 'var(--cor-laranja-claro)' }}>personalize</span>
+          <span style={{ color: 'var(--cor-esverdiado)' }}>personalize</span>
           <a
             href={WHATSAPP_LINK}
             target="_blank"

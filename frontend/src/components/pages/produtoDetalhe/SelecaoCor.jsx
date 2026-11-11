@@ -25,8 +25,8 @@ function SelecaoCor({ cor, onSelecionar }) {
               className="w-9 h-9 rounded-full cursor-pointer transition-transform duration-200 hover:scale-110"
               style={{
                 background: c.hex,
-                border: `1px solid ${ativo ? 'var(--cor-laranja-claro)' : 'var(--cor-borda)'}`,
-                outline: ativo ? '2px solid var(--cor-laranja-claro)' : 'none',
+                border: `1px solid ${ativo ? 'var(--cor-esverdiado)' : 'var(--cor-borda)'}`,
+                outline: ativo ? '2px solid var(--cor-esverdiado)' : 'none',
                 outlineOffset: '2px',
               }}
             />

@@ -4,6 +4,6 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
-  base: '/Lume/',
+  base: '/Locus/',
   build: { emptyOutDir: false },
 })

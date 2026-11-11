@@ -1,5 +1,9 @@
 {
-    "cSpell.words": [
-        "produtos"
-    ]
+  // Code Spell Checker: dicionário brasileiro via CDN (sem npm install).
+  // Palavras em português nos comentários/código param de aparecer
+  // como "Unknown word".
+  "cSpell.import": [
+    "https://cdn.jsdelivr.net/npm/@cspell/dict-pt-br@2/cspell-ext.json"
+  ],
+  "cSpell.language": "en, pt, pt_BR"
 }

@@ -42,7 +42,7 @@ function FormRedefinir({
         type="submit"
         disabled={carregando || codigo.length < 4}
         className="mt-2 border-none px-[30px] py-3 rounded-full text-white cursor-pointer text-lg transition-all duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
-        style={{ background: 'var(--cor-laranja)' }}
+        style={{ background: 'var(--cor-esverdiado-bts)' }}
       >
         {carregando ? 'Salvando…' : 'Redefinir senha'}
       </button>
@@ -53,7 +53,7 @@ function FormRedefinir({
           onClick={onReenviar}
           disabled={cooldown > 0 || carregando}
           className="bg-transparent border-none cursor-pointer text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ color: 'var(--cor-laranja)' }}
+          style={{ color: 'var(--cor-esverdiado-bts)' }}
         >
           {cooldown > 0 ? `Reenviar em ${cooldown}s` : 'Reenviar código'}
         </button>

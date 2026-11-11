@@ -9,7 +9,7 @@ function colunasDesktop(total) {
 function SecaoUniversos({ nichos, admin, onSelecionarGenero, onNovoNicho, onEditarNicho }) {
   return (
     <>
-      <h2 className="text-center text-4xl font-[Georgia,serif]" style={{ color: 'var(--cor-laranja-claro)' }}>
+      <h2 className="text-center text-4xl font-[Georgia,serif]" style={{ color: 'var(--cor-esverdiado)' }}>
         Escolha o seu universo
       </h2>
       <p className="mt-4 text-center" style={{ color: 'var(--cor-texto-suave)' }}>
@@ -20,7 +20,7 @@ function SecaoUniversos({ nichos, admin, onSelecionarGenero, onNovoNicho, onEdit
           <button
             onClick={onNovoNicho}
             className="flex items-center gap-2 px-6 py-2.5 rounded-full border-none cursor-pointer text-sm font-medium transition-transform hover:scale-105"
-            style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)' }}
+            style={{ background: 'var(--cor-esverdiado-bts)', color: 'var(--cor-texto)' }}
           >
             <span className="text-lg leading-none">+</span> Novo nicho
           </button>

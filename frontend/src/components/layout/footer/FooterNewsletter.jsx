@@ -55,7 +55,7 @@ function FooterNewsletter() {
             <button
               type="submit"
               className="px-4 py-2 rounded-lg text-white text-sm font-semibold cursor-pointer transition-all duration-300 hover:scale-105 border-none"
-              style={{ background: 'var(--cor-laranja)' }}
+              style={{ background: 'var(--cor-esverdiado-bts)' }}
             >
               Enviar
             </button>

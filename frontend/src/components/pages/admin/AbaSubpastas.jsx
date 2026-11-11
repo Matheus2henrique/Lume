@@ -18,7 +18,7 @@ function AbaSubpastas({ nichos, produtos, subcategorias, onNovo, onEditar }) {
         <button
           onClick={() => onNovo()}
           className="px-5 py-2 rounded-full border-none cursor-pointer text-sm font-medium transition-transform hover:scale-105"
-          style={{ background: 'var(--cor-laranja)', color: '#fff' }}
+          style={{ background: 'var(--cor-esverdiado-bts)', color: '#fff' }}
         >
           + Nova subpasta
         </button>
@@ -40,7 +40,7 @@ function AbaSubpastas({ nichos, produtos, subcategorias, onNovo, onEditar }) {
                 <button
                   onClick={() => onNovo(nicho.id)}
                   className="w-7 h-7 rounded-full flex items-center justify-center border-none cursor-pointer text-white text-lg leading-none"
-                  style={{ background: 'var(--cor-laranja)' }}
+                  style={{ background: 'var(--cor-esverdiado-bts)' }}
                   title={`Criar subpasta em ${nicho.nome}`}
                 >
                   +

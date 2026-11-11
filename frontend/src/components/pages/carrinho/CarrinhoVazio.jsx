@@ -5,11 +5,12 @@ function CarrinhoVazio({ onFechar }) {
         className="w-30 h-30 rounded-full flex items-center justify-center"
         style={{ background: 'var(--cor-primaria-suave)', color: 'var(--cor-primaria)' }}
       >
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg viewBox="0 0 24 24" className="w-15 h-15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
           <circle cx="9" cy="21" r="1" fill="currentColor" />
           <circle cx="20" cy="21" r="1" fill="currentColor" />
         </svg>
+        
       </span>
       <h3 className="text-lg font-semibold" style={{ color: 'var(--cor-texto)' }}>
         Seu carrinho está vazio

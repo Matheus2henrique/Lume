@@ -18,7 +18,7 @@ function Footer({ onHome, onSelecionarGenero, onIrParaDestaques, onPrivacidade, 
               className="flex items-center leading-none"
               style={{ fontFamily: 'Cinzel, Georgia, serif', color: 'var(--cor-texto)' }}
             >
-              <img src={`${import.meta.env.BASE_URL}nome.jpeg`} alt="logo" className="h-9 w-9 rounded-full object-cover mx-0.5" />
+              <img src={`${import.meta.env.BASE_URL}./public/IDENTIDADE VISUAL LOCUS/locus-png.png`} alt="logo" className="h-15 w-40 rounded-full object-cover mx-0.5" />
             </span>
           </button>
           <p className="mt-4 text-sm leading-relaxed" style={{ color: 'var(--cor-texto-suave)' }}>

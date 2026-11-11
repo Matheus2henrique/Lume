@@ -12,7 +12,7 @@ function NichosSidebar({ nichos, produtos, filtroNichos, onFiltrar, onNovo, onEd
           <button
             onClick={onNovo}
             className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer border-none text-white text-xl font-bold transition-transform hover:scale-110"
-            style={{ background: 'var(--cor-laranja)' }}
+            style={{ background: 'var(--cor-esverdiado-bts)' }}
             title="Criar novo nicho"
           >
             +
@@ -24,7 +24,7 @@ function NichosSidebar({ nichos, produtos, filtroNichos, onFiltrar, onNovo, onEd
             onClick={() => onFiltrar('todos')}
             className="text-left px-3 py-2 rounded-lg border-none cursor-pointer text-sm transition-colors"
             style={{
-              background: filtroNichos === 'todos' ? 'var(--cor-laranja)' : 'transparent',
+              background: filtroNichos === 'todos' ? 'var(--cor-esverdiado-bts)' : 'transparent',
               color: filtroNichos === 'todos' ? '#fff' : 'var(--cor-texto-suave)',
             }}
           >
@@ -44,7 +44,7 @@ function NichosSidebar({ nichos, produtos, filtroNichos, onFiltrar, onNovo, onEd
                   onClick={() => onFiltrar(n.id)}
                   className="flex-1 text-left px-3 py-2 rounded-lg border-none cursor-pointer text-sm transition-colors"
                   style={{
-                    background: filtroNichos === n.id ? 'var(--cor-laranja)' : 'transparent',
+                    background: filtroNichos === n.id ? 'var(--cor-esverdiado-bts)' : 'transparent',
                     color: filtroNichos === n.id ? '#fff' : 'var(--cor-texto-suave)',
                   }}
                 >

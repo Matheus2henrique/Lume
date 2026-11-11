@@ -9,8 +9,7 @@ function Logo({ onHome }) {
         className="flex items-center leading-none gap-1"
         style={{ fontFamily: 'Cinzel, Georgia, serif' }}
       >
-        <h1 className="m-0 text-5xl md:text-7xl font-bold" style={{ color: 'var(--cor-laranja-claro)' }}>L</h1>
-        <h1 className="m-0 text-3xl md:text-5xl font-semibold" style={{ color: 'var(--cor-texto)' }}>ume</h1>
+        <img src={`${import.meta.env.BASE_URL}./public/IDENTIDADE VISUAL LOCUS/locus-png.png`} alt="Locus" className="h-20 w-60 object-cover" />
       </span>
     </button>
   )

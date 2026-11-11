@@ -1,45 +1,6 @@
 import BannerFormModal from '../../ui/BannerFormModal'
 import { useState } from 'react'
-
-// Imagens próprias do banner (pasta public/), usadas só quando o admin ainda
-// não cadastrou banners no banco — aí o slideshow monta 1 slide por nicho.
-const IMAGENS_BANNER = {
-  'brinq-sensorial': `${import.meta.env.BASE_URL}banner_sensorial1.jpeg`,
-  'articulados': `${import.meta.env.BASE_URL}banner_articulado.jpeg`,
-  'dinossauros': `${import.meta.env.BASE_URL}banner_dinossauro.jpeg`,
-  'livro': `${import.meta.env.BASE_URL}banner_livro.jpeg`,
-  'pacotes': `${import.meta.env.BASE_URL}banner_box.jpg`,
-}
-
-// Versão mobile (900px) gerada a partir do arquivo original — serve só em
-// telas estreitas, onde o arquivo full (até 2,7MB) é desnecessário.
-function versaoMobile(src) {
-  if (!src || !src.startsWith('/')) return null
-  return src.replace(/\.(\w+)$/, '-mobile.$1')
-}
-
-// Slides do slideshow: banners do banco (imagem + nicho de destino) ou,
-// se o admin ainda não cadastrou nenhum, um fallback por nicho.
-export function montarSlidesBanner(banners, nichos) {
-  if (banners.length > 0) {
-    return banners.map((b) => ({
-      id: b.id,
-      src: b.imagem,
-      genero: b.genero,
-      nome: nichos.find((n) => n.id === b.genero)?.nome ?? '',
-      real: true,
-      banner: b,
-    }))
-  }
-  return nichos.map((genero) => ({
-    id: `nicho-${genero.id}`,
-    src: IMAGENS_BANNER[genero.id] ?? genero.imagem,
-    genero: genero.id,
-    nome: genero.nome,
-    real: false,
-    banner: null,
-  }))
-}
+import { montarSlidesBanner, versaoMobile } from './bannerSlides'
 
 function BannerNichos({
   banners,
@@ -112,7 +73,7 @@ function BannerNichos({
             type="button"
             onClick={onAdicionarBanner}
             className="px-3 py-1.5 rounded-full text-xs font-semibold text-white cursor-pointer border-none transition-transform duration-300 hover:scale-105"
-            style={{ background: 'var(--cor-laranja)' }}
+            style={{ background: 'var(--cor-esverdiado-bts)' }}
             title="Adicionar banner ao slideshow"
           >
             + Banner
@@ -129,7 +90,7 @@ function BannerNichos({
             onSelecionarGenero(slideAtivo.genero)
           }}
           className="banner-conteudo px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold text-white cursor-pointer border-none transition-transform duration-300 hover:scale-105"
-          style={{ background: 'var(--cor-laranja)', animationDelay: '160ms', boxShadow: '0 4px 14px rgba(0,0,0,0.35)' }}
+          style={{ background: 'var(--cor-esverdiado-bts)', animationDelay: '160ms', boxShadow: '0 4px 14px rgba(0,0,0,0.35)' }}
         >
           Explorar
         </button>
@@ -148,7 +109,7 @@ function BannerNichos({
               className="h-2.5 rounded-full cursor-pointer border-none transition-all duration-300"
               style={{
                 width: i === indiceBanner ? '26px' : '10px',
-                background: i === indiceBanner ? 'var(--cor-laranja-claro)' : 'rgba(255,255,255,0.45)',
+                background: i === indiceBanner ? 'var(--cor-esverdiado)' : 'rgba(255,255,255,0.45)',
               }}
             />
           ))}

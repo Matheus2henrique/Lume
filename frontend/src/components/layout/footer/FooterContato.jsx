@@ -1,8 +1,8 @@
 import { Instagram, WhatsApp } from '../../ui/Icones'
 
 const LINK_INSTAGRAM = 'https://www.instagram.com/3d_.lume/'
-const WHATSAPP_NUMERO = '5573998663011'
-const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent('Olá! Vim pelo site da Lume e quero personalizar uma peça.')}`
+const WHATSAPP_NUMERO = '5573999238860'
+const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent('Olá! Vim pelo site da Locus e quero personalizar uma peça.')}`
 
 const estiloRede = {
   background: 'var(--cor-fundo-cartao)',
@@ -18,7 +18,7 @@ function FooterContato() {
       </h4>
       <ul className="flex flex-col gap-3 text-sm list-none" style={{ color: 'var(--cor-texto-suave)' }}>
         <li>3dlumebrasil@gmail.com</li>
-        <li>(73) 99866-3011</li>
+        <li>(73) 99923-8860</li>
         <li>Atendemos todo o Brasil</li>
       </ul> 
 

@@ -32,16 +32,16 @@ function Genero({ genero, produtos, subcategorias = subcategoriasPadrao, subFilt
     <section>
       <div
         className="relative min-h-[300px] md:min-h-[460px] flex flex-col items-center justify-center text-center px-6 py-16 overflow-hidden"
-        style={{ background: '#0a0a0a' }}
+        style={{ background: 'var(--cor-fundo)', transition: 'background-color 0.25s' }}
       >
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full opacity-30 blur-[120px]" style={{ background: 'var(--cor-laranja)' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[200px] rounded-full opacity-15 blur-[80px]" style={{ background: 'var(--cor-laranja-claro)' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full opacity-30 blur-[120px]" style={{ background: 'var(--cor-esverdiado-bts)' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[200px] rounded-full opacity-15 blur-[80px]" style={{ background: 'var(--cor-esverdiado)' }} />
         <div className="relative z-10">
           <h1 className="text-5xl md:text-6xl font-[Georgia,serif]" style={{ color: 'var(--cor-texto)' }}>
             {/* Universo  */}
-            <span style={{ color: 'var(--cor-laranja-claro)' }}>{genero.nome}</span>
+            <span style={{ color: 'var(--cor-esverdiado)' }}>{genero.nome}</span>
           </h1>
-          <p className="mt-4 text-xl max-w-[620px] mx-auto" style={{ color: 'rgba(255,255,255,0.92)' }}>
+          <p className="mt-4 text-xl max-w-[620px] mx-auto" style={{ color: 'var(--cor-texto-suave)' }}>
             {genero.descricao}
           </p>
         </div>

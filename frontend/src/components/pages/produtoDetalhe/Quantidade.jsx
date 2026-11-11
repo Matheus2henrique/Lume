@@ -12,7 +12,7 @@ function Quantidade({ quantidade, produto, onAumentar, onDiminuir }) {
           onClick={onDiminuir}
           disabled={quantidade <= 1}
           className="w-7 h-7 rounded-full cursor-pointer border-none text-lg font-bold disabled:opacity-40"
-          style={{ background: 'var(--cor-laranja)', color: '#fff' }}
+          style={{ background: 'var(--cor-lesverdiado-btsaranja)', color: '#fff' }}
         >
           −
         </button>
@@ -23,7 +23,7 @@ function Quantidade({ quantidade, produto, onAumentar, onDiminuir }) {
           onClick={onAumentar}
           disabled={quantidade >= produto.estoque}
           className="w-7 h-7 rounded-full cursor-pointer border-none text-lg font-bold disabled:opacity-40"
-          style={{ background: 'var(--cor-laranja)', color: '#fff' }}
+          style={{ background: 'var(--cor-esverdiado-bts)', color: '#fff' }}
         >
           +
         </button>

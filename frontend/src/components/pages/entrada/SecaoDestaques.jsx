@@ -16,7 +16,7 @@ function SecaoDestaques({
         <div>
           <span
             className="inline-block px-4 py-1.5 rounded-full text-sm font-medium"
-            style={{ background: 'var(--cor-laranja)', color: 'var(--cor-texto)' }}
+            style={{ background: 'var(--cor-esverdiado-bts)', color: 'var(--cor-texto)' }}
           >
             Destaques da loja
           </span>

@@ -479,7 +479,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout, modoIni
             className="mb-6 text-center text-sm py-2 px-4 rounded-lg"
             style={{
               background: 'var(--cor-fundo-cartao)',
-              color: 'var(--cor-laranja-claro)',
+              color: 'var(--cor-esverdiado)',
               border: '1px solid var(--cor-borda)',
             }}
           >
@@ -563,7 +563,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout, modoIni
                 type="button"
                 onClick={irParaRegistrar}
                 className="bg-transparent border-none cursor-pointer font-semibold hover:underline"
-                style={{ color: 'var(--cor-laranja)' }}
+                style={{ color: 'var(--cor-esverdiado-bts)' }}
               >
                 Crie Sua Conta
               </button>
@@ -575,7 +575,7 @@ function Perfil({ onVoltar, onMostrarAdmin, onAdminLogin, onAdminLogout, modoIni
                 type="button"
                 onClick={irParaLogin}
                 className="bg-transparent border-none cursor-pointer font-semibold hover:underline"
-                style={{ color: 'var(--cor-laranja)' }}
+                style={{ color: 'var(--cor-esverdiado-bts)' }}
               >
                 Faça Login Agora
               </button>

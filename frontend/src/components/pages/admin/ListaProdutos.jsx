@@ -10,7 +10,7 @@ function ListaProdutos({ produtosFiltrados, nichos, onNovoProduto, onEditarProdu
         <button
           onClick={onNovoProduto}
           className="flex items-center gap-2 px-5 py-2.5 rounded-full border-none cursor-pointer text-white text-sm font-medium transition-transform hover:scale-105"
-          style={{ background: 'var(--cor-laranja)' }}
+          style={{ background: 'var(--cor-esverdiado-bts)' }}
         >
           <span className="text-lg leading-none">+</span> Novo Produto
         </button>
@@ -45,7 +45,7 @@ function ListaProdutos({ produtosFiltrados, nichos, onNovoProduto, onEditarProdu
                   {produto.nome}
                 </h3>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-base font-bold" style={{ color: 'var(--cor-laranja-claro)' }}>
+                  <span className="text-base font-bold" style={{ color: 'var(--cor-esverdiado)' }}>
                     {formatarMoeda(produto.preco)}
                   </span>
                   <span className="text-xs" style={{ color: 'var(--cor-texto-suave)' }}>
@@ -56,7 +56,7 @@ function ListaProdutos({ produtosFiltrados, nichos, onNovoProduto, onEditarProdu
                   <button
                     onClick={() => onEditarProduto(produto)}
                     className="flex-1 py-2 rounded-lg border-none cursor-pointer text-xs font-medium text-white transition-opacity hover:opacity-80"
-                    style={{ background: 'var(--cor-laranja)' }}
+                    style={{ background: 'var(--cor-esverdiado-bts)' }}
                   >
                     Editar
                   </button>

@@ -26,7 +26,7 @@ function CamposCliente({ cliente, setCliente }) {
       ))}
       {[
         { label: 'E-mail', tipo: 'email', placeholder: 'seu@email.com', chave: 'email' },
-        { label: 'Telefone', tipo: 'tel', placeholder: '(73) 99866-3011', chave: 'telefone' },
+        { label: 'Telefone', tipo: 'tel', placeholder: '(73) 99923-8860', chave: 'telefone' },
         { label: 'Endereço', tipo: 'text', placeholder: 'Rua, número, bairro, cidade', chave: 'endereco' },
       ].map((c) => (
         <div key={c.chave} className="text-left">

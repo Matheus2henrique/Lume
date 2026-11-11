@@ -107,6 +107,7 @@ function ContaLogada({
   return (
     <section className="py-[70px] flex justify-center px-6" style={{ background: 'var(--cor-fundo)' }}>
       <div className="w-full max-w-md">
+        <img src={`${import.meta.env.BASE_URL}./public/IDENTIDADE VISUAL LOCUS/perfil.png`} alt="Lume 3D" className="w-32 h-auto mx-auto mb-6" />
         <h2 className="text-4xl font-[Georgia,serif] mb-2 text-center" style={{ color: 'var(--cor-texto)' }}>
           Olá, {usuario.nome || 'leitor(a)'}!
         </h2>
@@ -123,7 +124,7 @@ function ContaLogada({
                   type="button"
                   onClick={iniciarEdicaoNome}
                   className="bg-transparent border-none cursor-pointer text-xs hover:underline p-0"
-                  style={{ color: 'var(--cor-laranja)' }}
+                  style={{ color: 'var(--cor-esverdiado-bts)' }}
                 >
                   Editar
                 </button>
@@ -148,7 +149,7 @@ function ContaLogada({
                     onClick={salvarNome}
                     disabled={salvandoNome || !nomeTemp.trim()}
                     className="px-4 py-2 rounded-full text-sm text-white cursor-pointer border-none disabled:opacity-60"
-                    style={{ background: 'var(--cor-laranja)' }}
+                    style={{ background: 'var(--cor-esverdiado-bts)' }}
                   >
                     {salvandoNome ? 'Salvando…' : 'Salvar'}
                   </button>
@@ -166,7 +167,7 @@ function ContaLogada({
               <p className="font-medium" style={{ color: 'var(--cor-texto)' }}>{usuario.nome || '—'}</p>
             )}
             {sucessoNome && (
-              <p className="text-xs mt-1" style={{ color: 'var(--cor-laranja-claro)' }}>{sucessoNome}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--cor-esverdiado)' }}>{sucessoNome}</p>
             )}
           </div>
 
@@ -186,14 +187,14 @@ function ContaLogada({
               type="button"
               onClick={alternarFormSenha}
               className="bg-transparent border-none cursor-pointer text-xs hover:underline p-0"
-              style={{ color: 'var(--cor-laranja)' }}
+              style={{ color: 'var(--cor-esverdiado-bts)' }}
             >
               {formSenhaAberto ? 'Fechar' : 'Alterar senha'}
             </button>
           </div>
 
           {sucessoSenha && (
-            <p className="text-xs" style={{ color: 'var(--cor-laranja-claro)' }}>{sucessoSenha}</p>
+            <p className="text-xs" style={{ color: 'var(--cor-esverdiado)' }}>{sucessoSenha}</p>
           )}
 
           {formSenhaAberto && (
@@ -237,7 +238,7 @@ function ContaLogada({
                 onClick={salvarSenha}
                 disabled={salvandoSenha}
                 className="px-4 py-2 rounded-full text-sm text-white cursor-pointer border-none disabled:opacity-60"
-                style={{ background: 'var(--cor-laranja)' }}
+                style={{ background: 'var(--cor-esverdiado-bts)' }}
               >
                 {salvandoSenha ? 'Salvando…' : 'Salvar nova senha'}
               </button>
@@ -251,7 +252,7 @@ function ContaLogada({
             <button
               onClick={() => onMostrarAdmin?.()}
               className="border-none px-[30px] py-3 rounded-full text-white cursor-pointer text-lg transition-all duration-300 hover:scale-105"
-              style={{ background: 'var(--cor-laranja)' }}
+              style={{ background: 'var(--cor-esverdiado-bts)' }}
             >
               Painel Admin
             </button>
@@ -259,7 +260,7 @@ function ContaLogada({
           <button
             onClick={onSair}
             className="border-none px-[30px] py-3 rounded-full bg-transparent cursor-pointer text-base transition-all duration-300 hover:underline"
-            style={{ color: 'var(--cor-texto)', border: '1px solid var(--cor-laranja)' , background: 'var(--cor-laranja)' }}
+            style={{ color: 'var(--cor-texto)', border: '1px solid var(--cor-esverdiado-bts)' , background: 'var(--cor-esverdiado-bts)' }}
           >
             Sair da conta
           </button>

@@ -115,7 +115,7 @@ function Admin({ onVoltar, produtos, nichos, subcategorias = {}, onSalvarNichos,
               className="px-5 py-2 rounded-full border-none cursor-pointer text-sm font-medium transition-colors"
               style={
                 aba === t.id
-                  ? { background: 'var(--cor-laranja)', color: '#fff' }
+                  ? { background: 'var(--cor-esverdiado-bts)', color: '#fff' }
                   : {
                       background: 'var(--cor-fundo-cartao)',
                       color: 'var(--cor-texto-suave)',
