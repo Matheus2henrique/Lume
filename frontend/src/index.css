@@ -114,6 +114,19 @@ footer {
   stroke: #fff;
 }
 
+/* Modo claro: carrinho, perfil e favoritos do header ficam pretos
+   (no escuro continuam brancos, como acima). */
+[data-theme='reading'] .header-icon-perfil,
+[data-theme='reading'] .header-icon-carrinho,
+[data-theme='reading'] .header-icon-heart path {
+  stroke: #000;
+}
+
+/* As rodinhas do carrinho são preenchidas, não só contornadas. */
+[data-theme='reading'] .header-icon-carrinho circle {
+  fill: #000;
+}
+
 ::selection {
   background: var(--cor-primaria);
   color: #fff;
@@ -253,6 +266,7 @@ footer {
   padding: 0 13px;
   color: var(--cor-texto-suave);
   margin-left: auto;
+  margin-right: 10px;
 }
 
 .header-search input {
@@ -314,6 +328,12 @@ footer {
     grid-template-columns: 1fr 1fr;
     padding: 45px 60px;
   }
+}
+
+/* Modo claro: o card "Um respiro" vira fundo preto — no modo escuro ele
+   continua com o papel (#f2ede3) de sempre. */
+[data-theme='reading'] .reading-invitation {
+  background: #000;
 }
 
 .reading-mini-brand {

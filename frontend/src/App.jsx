@@ -21,6 +21,12 @@ import { carregarCarrinho, salvarCarrinho, chaveItem, normalizarOpcoes } from '.
 
 const BASE = '/Locus'
 
+// O tema do modo claro mora na URL: /Locus/leitura é leitura, qualquer
+// outra rota (inclusive /Locus/mundos) é o modo escuro.
+function temaLeituraDaURL() {
+  return window.location.pathname.replace(BASE, '').split('/').filter(Boolean)[0] === 'leitura'
+}
+
 // O mapa estático (data/subcategorias.js) vira a mesma forma que a API
 // devolve — lista com `genero` — para menus e admin usarem um formato só.
 function listaDeSubcategoriasEstatica() {
@@ -29,7 +35,7 @@ function listaDeSubcategoriasEstatica() {
   )
 }
 
-function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, perfilCriandoConta, mostrarFavoritos, mostrarAdmin, pedidoId, subFiltro }) {
+function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, perfilCriandoConta, mostrarFavoritos, mostrarAdmin, pedidoId, subFiltro, temaLeitura = false }) {
   if (mostrarAdmin) return `${BASE}/admin`
   // Login e cadastro têm URLs próprias (voltar/avançar do navegador funciona).
   if (mostrarPerfil) return perfilCriandoConta ? `${BASE}/login/criar-conta` : `${BASE}/login`
@@ -46,7 +52,8 @@ function rotaParaURL({ generoId, pagina, produtoSelecionado, mostrarPerfil, perf
     const query = subFiltro ? `?sub=${encodeURIComponent(subFiltro)}` : ''
     return `${BASE}/${generoId}${query}`
   }
-  return `${BASE}`
+  // Home: a URL acompanha o tema — /Locus/mundos no escuro, /Locus/leitura no claro.
+  return `${BASE}/${temaLeitura ? 'leitura' : 'mundos'}`
 }
 
 function URLparaEstado(pathname, produtosLista) {
@@ -74,9 +81,13 @@ function URLparaEstado(pathname, produtosLista) {
     const produto = produtosLista.find((p) => p.id === Number(partes[2]) && p.genero === generoId)
     if (produto) return { pagina: 'detalhe', generoId, produtoSelecionado: produto }
   }
+  // Home: a URL diz qual tema está ativo (leitura = modo claro). Só com um
+  // segmento — assim /Locus/leitura/produto/5 continua sendo página de produto.
+  if (partes.length === 1 && partes[0] === 'leitura') return { pagina: 'entrada', generoId: null, temaLeitura: true }
+  if (partes.length === 1 && partes[0] === 'mundos') return { pagina: 'entrada', generoId: null, temaLeitura: false }
   if (partes[0]) return { pagina: 'genero', generoId: partes[0], subFiltro }
 
-  return { pagina: 'entrada', generoId: null }
+  return { pagina: 'entrada', generoId: null, temaLeitura: false }
 }
 
 function App() {
@@ -110,8 +121,9 @@ function App() {
   const [mostrarFormProduto, setMostrarFormProduto] = useState(false)
   const [sucesso, setSucesso] = useState('')
   // Tema claro "Locus por Leitura": ativado pelo botão da home, vale para
-  // a aplicação inteira sem mudar de página.
-  const [temaLeitura, setTemaLeitura] = useState(false)
+  // a aplicação inteira sem mudar de página. A URL é a fonte da verdade
+  // (/Locus/leitura = claro), então o estado nasce já lido dela.
+  const [temaLeitura, setTemaLeitura] = useState(temaLeituraDaURL)
 
   const genero = nichos.find((g) => g.id === generoId)
 
@@ -162,7 +174,7 @@ function App() {
     setPedidoId(proximo.pedidoId ?? null)
     setSubFiltro(proximo.subFiltro ?? null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    window.history.pushState(null, '', rotaParaURL(proximo))
+    window.history.pushState(null, '', rotaParaURL({ ...proximo, temaLeitura }))
   }
 
   useEffect(() => {
@@ -177,6 +189,8 @@ function App() {
       setMostrarAdmin(Boolean(estado.mostrarAdmin))
       setPedidoId(estado.pedidoId ?? null)
       setSubFiltro(estado.subFiltro ?? null)
+      // A home traz o tema na URL; as demais rotas mantêm o que está ativo.
+      if (typeof estado.temaLeitura === 'boolean') setTemaLeitura(estado.temaLeitura)
     }
     sincronizar()
     window.addEventListener('popstate', sincronizar)
@@ -204,6 +218,15 @@ function App() {
 
   function handleVoltarHome() {
     navegar({ generoId: null, pagina: 'entrada' })
+  }
+
+  // "Entre na Locus por Leitura" (escuro → claro) e "Encontre o seu mundo"
+  // (claro → escuro): trocam o tema e a URL da home — /Locus/leitura ou
+  // /Locus/mundos — sem rolar a página para o topo.
+  function alternarTemaLeitura() {
+    const proximo = !temaLeitura
+    setTemaLeitura(proximo)
+    window.history.pushState(null, '', `${BASE}/${proximo ? 'leitura' : 'mundos'}`)
   }
 
   function handleSelecionarProduto(produto) {
@@ -626,7 +649,7 @@ function App() {
           onExcluirNichos={handleExcluirNichos}
           onSalvarBanner={handleSalvarBanner}
           onExcluirBanner={handleExcluirBanner}
-          onAlternarTemaLeitura={() => setTemaLeitura((atual) => !atual)}
+          onAlternarTemaLeitura={alternarTemaLeitura}
           temaLeitura={temaLeitura}
         />
       )}

@@ -66,7 +66,7 @@ function Entrada({ produtos, nichos, banners = [], onSelecionarGenero, onSelecio
           onEditarNicho={setNichoEditando}
         /> */}
 
-        <SecaoPorQueLume nichos={nichos} />
+        <SecaoPorQueLume nichos={nichos} temaLeitura={temaLeitura} />
 
         <SecaoDestaques
           destaque={destaque}

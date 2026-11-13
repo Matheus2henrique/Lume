@@ -146,7 +146,7 @@ function SimuladorFrete() {
         <div>
           <span
             className="inline-block px-4 py-1.5 rounded-full text-sm font-medium"
-            style={{ background: 'var(--cor-esverdiado-bts)', color: 'var(--cor-texto)' }}
+            style={{ background: 'var(--cor-esverdiado-bts)', color: 'var(--cor-texto)' , fontsize: '0.8rem'}}
           >
             Entrega para todo o Brasil
           </span>
@@ -248,7 +248,7 @@ function SimuladorFrete() {
               type="submit"
               disabled={calculando}
               className="self-start px-8 py-3.5 rounded-lg font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ background: 'var(--cor-esverdiado-bts)', color: 'var(--cor-texto)' }}
+              style={{ background: 'var(--cor-esverdiado-bts)', color: 'var(--cor-texto)' , fontSize: '1.2rem'}}
             >
               {calculando ? 'Calculando…' : 'Calcular frete'}
             </button>

@@ -81,7 +81,7 @@ function SecaoNewsletter() {
             </label>
           </div>
           <div className="hidden lg:flex justify-center">
-            <img src={`${import.meta.env.BASE_URL}./public/IDENTIDADE VISUAL LOCUS/locu-portal.png`} alt="Lume 3D" className="w-80 h-auto rounded-lg shadow-lg" />
+            <img src={`${import.meta.env.BASE_URL}./public/IDENTIDADE VISUAL LOCUS/locu-portal.png`} alt="Lume 3D" className="w-80 h-auto " />
           </div>
         </div>
       </div>

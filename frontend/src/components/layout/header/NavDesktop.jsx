@@ -11,7 +11,7 @@ function NavDesktop({
   subcategorias = subcategoriasPadrao,
 }) {
   return (
-    <nav className="hidden lg:block">
+    <nav className="hidden lg:block ml-auto">
       <ul className="flex gap-[30px] list-none items-center">
         {generos.map((genero, indice) => {
           // Sem subpasta não existe painel: só o clique, que vai direto pra URL.
